@@ -231,9 +231,36 @@ export default function SyncTab() {
     finally { setSaving(false); }
   };
 
+  const handleAutoMapInbound = () => {
+    const newMapping = { ...fieldMapping };
+    sheetColumns.forEach((col) => {
+      const normalizedCol = col.toLowerCase().trim().replace(/\s+/g, '');
+      const matchedField = dynamicCrmFields.find((f) => {
+        if (!f.value) return false;
+        const normalizedKey = f.value.toLowerCase().replace(/\s+/g, '').replace('custom_fields.', '');
+        const normalizedLabel = f.label.toLowerCase().replace(/\s+/g, '').replace('(trường tùy chỉnh)', '');
+        return normalizedCol === normalizedKey || normalizedCol === normalizedLabel || normalizedCol.includes(normalizedLabel) || normalizedLabel.includes(normalizedCol);
+      });
+      if (matchedField) {
+        newMapping[col] = matchedField.value;
+      }
+    });
+    setFieldMapping(newMapping);
+    toast.success('Đã tự động khớp các cột dựa trên tên trường CRM!');
+  };
+
   // OUTBOUND HANDLERS
   const handleOutMappingChange = (key, value) => {
     setFieldOutMapping({ ...fieldOutMapping, [key]: value });
+  };
+
+  const handleAutoFillOutbound = () => {
+    const newMapping = {};
+    dynamicCrmExportFields.forEach((field) => {
+      newMapping[field.key] = field.defaultHeader;
+    });
+    setFieldOutMapping(newMapping);
+    toast.success('Đã tự động lấy tiêu đề mặc định của các trường CRM!');
   };
 
   const handleSaveOutbound = async () => {
@@ -449,10 +476,17 @@ export default function SyncTab() {
           {/* Step 3: Mapping */}
           {sheetColumns.length > 0 && (
             <div className="glass-card p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">3</span>
-                Mapping trường dữ liệu chiều nhập
-              </h3>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">3</span>
+                  Mapping trường dữ liệu chiều nhập
+                </h3>
+                <button type="button" onClick={handleAutoMapInbound}
+                  className="btn-secondary text-xs flex items-center gap-1 py-1.5 px-3">
+                  <HiOutlineLightningBolt className="w-3.5 h-3.5 text-primary-500" />
+                  <span>Khớp tự động trùng tên</span>
+                </button>
+              </div>
               <p className="text-xs text-surface-500">
                 Chọn mỗi cột trong Sheet tương ứng với trường dữ liệu nào trong CRM. Cột không cần đồng bộ thì chọn "Bỏ qua".
               </p>
@@ -616,10 +650,17 @@ export default function SyncTab() {
 
           {/* Step 2: Mapping */}
           <div className="glass-card p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">2</span>
-              Chọn trường & đặt tên cột trên Sheet xuất
-            </h3>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">2</span>
+                Chọn trường & đặt tên cột trên Sheet xuất
+              </h3>
+              <button type="button" onClick={handleAutoFillOutbound}
+                className="btn-secondary text-xs flex items-center gap-1 py-1.5 px-3">
+                <HiOutlineLightningBolt className="w-3.5 h-3.5 text-primary-500" />
+                <span>Sử dụng tên mặc định CRM</span>
+              </button>
+            </div>
             <p className="text-xs text-surface-500">
               Nhập tên cột tương ứng bạn muốn hiển thị trên Google Sheet xuất. Những trường để trống tên cột sẽ **không** được đồng bộ về.
             </p>
