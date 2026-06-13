@@ -75,7 +75,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
 
 -- 4. Cập nhật hàm rpc_bulk_create_leads hỗ trợ thêm child_name
 CREATE OR REPLACE FUNCTION rpc_bulk_create_leads(
