@@ -621,15 +621,50 @@ function syncOutboundRows(config) {
     }
   }
 
-  // 2. Ghi đè các lead đã có dòng và được update (ROW-BY-ROW)
+  // 2. Ghi đè các lead đã có dòng và được update (ROW-BY-ROW với cơ chế kiểm tra Mã Lead)
   if (updatedLeads.length > 0) {
+    // Tìm cột chứa "Mã Lead" (lead_code)
+    const leadCodeColIdx = activeFields.findIndex(f => f.key === 'lead_code') + 1;
+    let leadCodes = [];
+    if (leadCodeColIdx > 0 && lastRowBefore > 0) {
+      leadCodes = sheet.getRange(1, leadCodeColIdx, lastRowBefore, 1).getValues().map(r => String(r[0]).trim());
+    }
+
     updatedLeads.forEach((lead) => {
       const rowValues = mapLeadToRow(lead, activeFields);
+      let targetRow = lead.sheet_out_row;
+      let isMatch = false;
+
+      // 1. Kiểm tra nhanh: Nếu dòng lưu trong DB khớp Mã Lead thực tế trên Sheet
+      if (targetRow > 1 && targetRow <= lastRowBefore && leadCodes[targetRow - 1] === lead.lead_code) {
+        isMatch = true;
+      }
+
+      // 2. Nếu không khớp (do chèn/xóa dòng hoặc sort), quét tìm Mã Lead trên cột
+      if (!isMatch && leadCodes.length > 0) {
+        const foundIdx = leadCodes.indexOf(lead.lead_code);
+        if (foundIdx !== -1) {
+          targetRow = foundIdx + 1;
+          isMatch = true;
+          // Ghi nhận cập nhật lại số dòng mới về Supabase
+          rowUpdatesToSupabase.push({ id: lead.id, sheet_row: targetRow });
+        }
+      }
+
       try {
-        sheet.getRange(lead.sheet_out_row, 1, 1, headers.length).setValues([rowValues]);
-        updatedCount++;
+        if (isMatch) {
+          sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowValues]);
+          updatedCount++;
+        } else {
+          // 3. Nếu không tìm thấy, append như dòng mới ở cuối
+          const appendRow = sheet.getLastRow() + 1;
+          lead.sheet_out_row = appendRow;
+          sheet.getRange(appendRow, 1, 1, headers.length).setValues([rowValues]);
+          rowUpdatesToSupabase.push({ id: lead.id, sheet_row: appendRow });
+          successCount++;
+        }
       } catch (err) {
-        console.error(`❌ Lỗi update lead ${lead.lead_code} tại dòng ${lead.sheet_out_row}:`, err);
+        console.error(`❌ Lỗi update lead ${lead.lead_code} tại dòng ${targetRow}:`, err);
         failedCount++;
       }
     });
