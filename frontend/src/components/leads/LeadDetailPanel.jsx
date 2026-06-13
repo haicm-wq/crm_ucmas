@@ -107,8 +107,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
   const handleSave = async () => {
     // Frontend validation
-    if (form.phone && !/^0\d{9}$/.test(form.phone)) {
-      toast.error('SĐT phải gồm 10 chữ số, bắt đầu bằng 0');
+    if (form.phone && !/^(?:0\d{9}|[1-9]\d{8})$/.test(form.phone)) {
+      toast.error('SĐT bắt đầu bằng 0 phải đủ 10 số, không bắt đầu bằng 0 phải đủ 9 số');
       return;
     }
     const newGroup = 'L' + (form.level_code.match(/^L(\d)/)?.[1] || '0');

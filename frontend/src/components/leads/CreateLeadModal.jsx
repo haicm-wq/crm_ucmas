@@ -19,7 +19,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
 
   const handlePhoneBlur = async () => {
     const phone = form.phone.trim();
-    if (!phone || !/^0\d{9}$/.test(phone)) {
+    if (!phone || !/^(?:0\d{9}|[1-9]\d{8})$/.test(phone)) {
       setDupCheck(null);
       setDupConfirmed(false);
       return;
@@ -38,7 +38,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
 
   const handleSubmit = async () => {
     if (!form.full_name.trim()) { toast.error('Họ tên không được trống'); return; }
-    if (form.phone && !/^0\d{9}$/.test(form.phone)) { toast.error('SĐT phải gồm 10 chữ số'); return; }
+    if (form.phone && !/^(?:0\d{9}|[1-9]\d{8})$/.test(form.phone)) { toast.error('SĐT bắt đầu bằng 0 phải đủ 10 số, không bắt đầu bằng 0 phải đủ 9 số'); return; }
     if (dupCheck?.exists && !dupConfirmed) { toast.error('Vui lòng xác nhận tiếp tục'); return; }
 
     setSaving(true);
