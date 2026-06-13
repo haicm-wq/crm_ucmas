@@ -23,10 +23,34 @@ export async function fetchLeads({ page = 1, limit = 50, search, level_code, cen
       query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,lead_code.ilike.%${s}%`);
     }
   }
-  if (level_code) query = query.eq('level_code', level_code);
-  if (center_id) query = query.eq('assigned_center', center_id);
-  if (staff_id) query = query.eq('assigned_staff', staff_id);
-  if (product) query = query.contains('interested_products', [product]);
+  if (level_code) {
+    if (Array.isArray(level_code)) {
+      if (level_code.length > 0) query = query.in('level_code', level_code);
+    } else {
+      query = query.eq('level_code', level_code);
+    }
+  }
+  if (center_id) {
+    if (Array.isArray(center_id)) {
+      if (center_id.length > 0) query = query.in('assigned_center', center_id);
+    } else {
+      query = query.eq('assigned_center', center_id);
+    }
+  }
+  if (staff_id) {
+    if (Array.isArray(staff_id)) {
+      if (staff_id.length > 0) query = query.in('assigned_staff', staff_id);
+    } else {
+      query = query.eq('assigned_staff', staff_id);
+    }
+  }
+  if (product) {
+    if (Array.isArray(product)) {
+      if (product.length > 0) query = query.ov('interested_products', product);
+    } else {
+      query = query.contains('interested_products', [product]);
+    }
+  }
 
   // Advanced filters: each rule = { field, op, value }
   // op: 'eq' | 'neq' | 'contains' | 'not_contains'

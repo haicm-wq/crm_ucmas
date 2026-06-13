@@ -8,6 +8,7 @@ import BulkImportModal from '../components/leads/BulkImportModal';
 import CreateLeadModal from '../components/leads/CreateLeadModal';
 import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/SkeletonLoader';
+import MultiSelect from '../components/ui/MultiSelect';
 import toast from 'react-hot-toast';
 import {
   HiOutlineSearch, HiOutlineFilter, HiOutlinePlus,
@@ -42,7 +43,7 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 400);
-  const [filters, setFilters] = useState({ level_code: '', center_id: '', staff_id: '', product: '', sort_by: 'created_at', sort_dir: 'desc' });
+  const [filters, setFilters] = useState({ level_code: [], center_id: [], staff_id: [], product: [], sort_by: 'created_at', sort_dir: 'desc' });
   const [selectedLead, setSelectedLead] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [advancedRules, setAdvancedRules] = useState([]);
@@ -83,7 +84,27 @@ export default function LeadsPage() {
   };
 
   const activeFilterCount = [filters.level_code, filters.center_id, filters.product, filters.staff_id]
-    .filter(Boolean).length + advancedRules.filter((r) => r.value).length;
+    .filter((x) => Array.isArray(x) ? x.length > 0 : Boolean(x)).length + advancedRules.filter((r) => r.value).length;
+
+  const levelOptions = ALL_LEVEL_CODES.map((code) => ({
+    value: code,
+    label: `${code} — ${getLevelInfo(code).label}`
+  }));
+
+  const centerOptions = centers.map((c) => ({
+    value: c.id,
+    label: c.name
+  }));
+
+  const productOptions = PRODUCTS.map((p) => ({
+    value: p,
+    label: p
+  }));
+
+  const staffOptions = allStaff.map((s) => ({
+    value: s.id,
+    label: s.full_name
+  }));
 
   return (
     <div className="space-y-4">
@@ -124,29 +145,43 @@ export default function LeadsPage() {
 
         {showFilters && (
           <div className="mt-3 pt-3 border-t border-surface-200 dark:border-surface-700/50 space-y-3 animate-fade-in">
-            <div className="flex flex-wrap gap-3">
-              <select id="filter-level" value={filters.level_code}
-                onChange={(e) => setFilters({ ...filters, level_code: e.target.value })} className="select-field py-2 text-sm w-40">
-                <option value="">Tất cả Level</option>
-                {ALL_LEVEL_CODES.map((code) => (
-                  <option key={code} value={code}>{code} — {getLevelInfo(code).label}</option>
-                ))}
-              </select>
-              <select id="filter-center" value={filters.center_id}
-                onChange={(e) => setFilters({ ...filters, center_id: e.target.value })} className="select-field py-2 text-sm w-40">
-                <option value="">Tất cả Trung tâm</option>
-                {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-              </select>
-              <select id="filter-product" value={filters.product}
-                onChange={(e) => setFilters({ ...filters, product: e.target.value })} className="select-field py-2 text-sm w-40">
-                <option value="">Tất cả Sản phẩm</option>
-                {PRODUCTS.map((p) => (<option key={p} value={p}>{p}</option>))}
-              </select>
-              <select id="filter-staff" value={filters.staff_id}
-                onChange={(e) => setFilters({ ...filters, staff_id: e.target.value })} className="select-field py-2 text-sm w-44">
-                <option value="">Tất cả NV phụ trách</option>
-                {allStaff.map((s) => (<option key={s.id} value={s.id}>{s.full_name}</option>))}
-              </select>
+            <div className="flex flex-wrap items-center gap-3">
+              <MultiSelect
+                id="filter-level"
+                options={levelOptions}
+                selected={filters.level_code}
+                onChange={(vals) => setFilters({ ...filters, level_code: vals })}
+                placeholder="Tất cả Level"
+                labelPrefix="Level"
+                className="w-48"
+              />
+              <MultiSelect
+                id="filter-center"
+                options={centerOptions}
+                selected={filters.center_id}
+                onChange={(vals) => setFilters({ ...filters, center_id: vals })}
+                placeholder="Tất cả Trung tâm"
+                labelPrefix="Trung tâm"
+                className="w-52"
+              />
+              <MultiSelect
+                id="filter-product"
+                options={productOptions}
+                selected={filters.product}
+                onChange={(vals) => setFilters({ ...filters, product: vals })}
+                placeholder="Tất cả Sản phẩm"
+                labelPrefix="Sản phẩm"
+                className="w-48"
+              />
+              <MultiSelect
+                id="filter-staff"
+                options={staffOptions}
+                selected={filters.staff_id}
+                onChange={(vals) => setFilters({ ...filters, staff_id: vals })}
+                placeholder="Tất cả NV phụ trách"
+                labelPrefix="NV phụ trách"
+                className="w-56"
+              />
               <select id="filter-sort" value={filters.sort_by}
                 onChange={(e) => setFilters({ ...filters, sort_by: e.target.value })} className="select-field py-2 text-sm w-40">
                 <option value="created_at">Ngày tạo</option>
@@ -238,7 +273,7 @@ export default function LeadsPage() {
               </button>
               {activeFilterCount > 0 && (
                 <button onClick={() => {
-                  setFilters({ level_code: '', center_id: '', staff_id: '', product: '', sort_by: 'created_at', sort_dir: 'desc' });
+                  setFilters({ level_code: [], center_id: [], staff_id: [], product: [], sort_by: 'created_at', sort_dir: 'desc' });
                   setAdvancedRules([]);
                 }}
                   className="btn-ghost text-xs flex items-center gap-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10">
