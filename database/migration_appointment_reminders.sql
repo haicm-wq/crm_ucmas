@@ -51,6 +51,16 @@ CREATE POLICY "reminders_select" ON appointment_reminders FOR SELECT USING (
 -- Reminders: Insert
 CREATE POLICY "reminders_insert" ON appointment_reminders FOR INSERT WITH CHECK (
   auth.uid() = updated_by
+  AND EXISTS (
+    SELECT 1 FROM profiles p WHERE p.id = auth.uid()
+    AND (
+      p.permission_group IN ('admin','marketing')
+      OR EXISTS (
+        SELECT 1 FROM leads l WHERE l.id = appointment_reminders.lead_id 
+        AND (l.assigned_center = p.center_id OR l.assigned_staff = p.id)
+      )
+    )
+  )
 );
 
 -- Reminders: Update
@@ -77,4 +87,14 @@ CREATE POLICY "comments_select" ON appointment_comments FOR SELECT USING (
 -- Comments: Insert
 CREATE POLICY "comments_insert" ON appointment_comments FOR INSERT WITH CHECK (
   auth.uid() = author_id
+  AND EXISTS (
+    SELECT 1 FROM profiles p WHERE p.id = auth.uid()
+    AND (
+      p.permission_group IN ('admin','marketing')
+      OR EXISTS (
+        SELECT 1 FROM leads l WHERE l.id = appointment_comments.lead_id 
+        AND (l.assigned_center = p.center_id OR l.assigned_staff = p.id)
+      )
+    )
+  )
 );

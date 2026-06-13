@@ -28,6 +28,20 @@ BEGIN
     RAISE EXCEPTION 'Lead không tồn tại';
   END IF;
 
+  -- Kiểm tra quyền chỉnh sửa
+  IF auth_permission_group() = 'center' THEN
+    IF v_lead.assigned_center IS DISTINCT FROM auth_center_id() OR v_lead.level_group = 'L0' THEN
+      RAISE EXCEPTION 'Bạn chỉ có quyền cập nhật lead thuộc trung tâm của mình và đã vượt qua mức L0';
+    END IF;
+  ELSIF auth_permission_group() = 'marketing' THEN
+    -- Nếu marketing có level cap, kiểm tra xem level của lead có vượt quá cấp phép không
+    IF auth_level_cap() IS NOT NULL AND level_rank(v_lead.level_group) > level_rank(auth_level_cap()) THEN
+      RAISE EXCEPTION 'Bạn không có quyền chỉnh sửa lead ở cấp độ này';
+    END IF;
+  ELSIF auth_permission_group() != 'admin' THEN
+    RAISE EXCEPTION 'Bạn không có quyền chỉnh sửa lead';
+  END IF;
+
   v_old_level := v_lead.level_code;
   v_old_center := v_lead.assigned_center;
   v_old_staff := v_lead.assigned_staff;
@@ -102,7 +116,7 @@ BEGIN
   SELECT to_jsonb(v_lead) INTO v_result;
   RETURN v_result;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
 -- RPC: BULK ASSIGN (L0 → L1 + gán trung tâm)
@@ -112,36 +126,42 @@ CREATE OR REPLACE FUNCTION rpc_bulk_assign(
   p_center_id UUID
 ) RETURNS JSONB AS $$
 DECLARE
-  v_id UUID;
   v_success INT := 0;
-  v_failed INT := 0;
-  v_errors JSONB := '[]'::jsonb;
 BEGIN
+  -- Kiểm tra quyền gán lead
+  IF auth_permission_group() NOT IN ('admin', 'marketing') THEN
+    RAISE EXCEPTION 'Chỉ admin hoặc marketing mới được gán lead hàng loạt';
+  END IF;
+
   PERFORM set_config('app.current_user_id', auth.uid()::text, true);
 
-  FOREACH v_id IN ARRAY p_lead_ids LOOP
-    BEGIN
-      UPDATE leads SET
-        level_code = CASE WHEN level_group = 'L0' THEN 'L1' ELSE level_code END,
-        assigned_center = p_center_id
-      WHERE id = v_id;
+  -- Cập nhật hàng loạt (Set-based)
+  WITH updated AS (
+    UPDATE leads SET
+      level_code = CASE WHEN level_group = 'L0' THEN 'L1' ELSE level_code END,
+      assigned_center = p_center_id
+    WHERE id = ANY(p_lead_ids)
+    RETURNING id, full_name
+  )
+  SELECT COUNT(*) INTO v_success FROM updated;
 
-      -- Notify center manager
-      INSERT INTO notifications (user_id, type, lead_id, message)
-      SELECT p.id, 'assignment', v_id,
-        '📥 Lead mới được gán về trung tâm: ' || (SELECT full_name FROM leads WHERE id = v_id)
-      FROM profiles p WHERE p.center_id = p_center_id AND p.is_manager = true AND p.is_active = true;
+  -- Tạo thông báo hàng loạt gửi tới quản lý trung tâm
+  INSERT INTO notifications (user_id, type, lead_id, message)
+  SELECT DISTINCT p.id, 'assignment', u.id,
+    '📥 Lead mới được gán về trung tâm: ' || u.full_name
+  FROM profiles p
+  CROSS JOIN (
+    SELECT id, full_name FROM leads WHERE id = ANY(p_lead_ids)
+  ) u
+  WHERE p.center_id = p_center_id AND p.is_manager = true AND p.is_active = true;
 
-      v_success := v_success + 1;
-    EXCEPTION WHEN OTHERS THEN
-      v_failed := v_failed + 1;
-      v_errors := v_errors || jsonb_build_object('lead_id', v_id, 'error', SQLERRM);
-    END;
-  END LOOP;
-
-  RETURN jsonb_build_object('success', v_success, 'failed', v_failed, 'errors', v_errors);
+  RETURN jsonb_build_object(
+    'success', v_success,
+    'failed', cardinality(p_lead_ids) - v_success,
+    'errors', '[]'::jsonb
+  );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
 -- RPC: BULK CREATE LEADS (paste/upload hàng loạt)
@@ -158,6 +178,11 @@ DECLARE
   v_dup_count INT := 0;
   v_results JSONB := '[]'::jsonb;
 BEGIN
+  -- Kiểm tra quyền tạo lead hàng loạt
+  IF auth_permission_group() NOT IN ('admin', 'marketing') THEN
+    RAISE EXCEPTION 'Chỉ admin hoặc marketing mới được import lead hàng loạt';
+  END IF;
+
   PERFORM set_config('app.current_user_id', auth.uid()::text, true);
 
   FOR v_item IN SELECT * FROM jsonb_array_elements(p_leads)
@@ -214,7 +239,7 @@ BEGIN
     'results', v_results
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================
 -- RPC: SYNC INBOUND (từ Google Sheets — mapping động)
