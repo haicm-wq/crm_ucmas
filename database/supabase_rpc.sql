@@ -194,10 +194,11 @@ BEGIN
         SELECT COUNT(*) INTO v_dups FROM leads WHERE phone = v_item->>'phone';
       END IF;
 
-      INSERT INTO leads (full_name, phone, child_birth_year, address, source_type, ad_campaign)
+      INSERT INTO leads (full_name, phone, child_name, child_birth_year, address, source_type, ad_campaign)
       VALUES (
         v_item->>'full_name',
         NULLIF(v_item->>'phone', ''),
+        v_item->>'child_name',
         (v_item->>'child_birth_year')::int,
         v_item->>'address',
         COALESCE(v_item->>'source_type', 'PULL'),

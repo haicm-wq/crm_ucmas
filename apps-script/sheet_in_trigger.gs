@@ -337,6 +337,7 @@ function mapRowToPayload(headers, rowValues, mapping, sheetName, row) {
   const payload = {
     p_sheet_name: sheetName,
     p_sheet_row: row,
+    p_custom_fields: {},
   };
 
   headers.forEach((header, colIdx) => {
@@ -345,6 +346,12 @@ function mapRowToPayload(headers, rowValues, mapping, sheetName, row) {
     if (!crmField) return;
 
     const val = rowValues[colIdx];
+    if (crmField.startsWith('custom_fields.')) {
+      const customKey = crmField.split('.')[1];
+      payload.p_custom_fields[customKey] = val !== undefined && val !== null ? String(val).trim() : null;
+      return;
+    }
+
     switch (crmField) {
       case 'full_name':
         payload.p_full_name = val ? String(val).trim() : null;
@@ -645,7 +652,13 @@ function syncOutboundRows(config) {
 
 function mapLeadToRow(lead, activeFields) {
   return activeFields.map(f => {
-    const val = lead[f.key];
+    let val;
+    if (f.key.startsWith('custom_fields.')) {
+      const customKey = f.key.split('.')[1];
+      val = lead.custom_fields ? lead.custom_fields[customKey] : null;
+    } else {
+      val = lead[f.key];
+    }
     if (val === undefined || val === null) return '';
     if (f.key === 'interested_products' && Array.isArray(val)) {
       return val.join(', ');

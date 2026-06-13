@@ -305,11 +305,15 @@ export default function LeadsPage() {
                         </div>
                       </td>
                       <td>
-                        {lead.l4_type ? (
-                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
-                            {lead.l4_type.replace('L4 ', '')}
-                          </span>
-                        ) : ('—')}
+                        <div className="flex flex-wrap gap-1">
+                          {lead.l4_type ? (
+                            lead.l4_type.split(',').map((item) => (
+                              <span key={item.trim()} className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
+                                {item.trim().replace(/^L4\s+/, '')}
+                              </span>
+                            ))
+                          ) : ('—')}
+                        </div>
                       </td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>

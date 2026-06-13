@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { HiOutlineX, HiOutlineUpload, HiOutlineClipboardCopy } from 'react-icons/hi';
 
 const REQUIRED_COLS = ['full_name'];
-const ALL_COLS = ['full_name', 'phone', 'child_birth_year', 'address', 'source_type', 'ad_campaign'];
+const ALL_COLS = ['full_name', 'phone', 'child_name', 'child_birth_year', 'address', 'source_type', 'ad_campaign'];
 
 function parseCSV(text) {
   const lines = text.trim().split('\n').filter(Boolean);
@@ -85,7 +85,7 @@ export default function BulkImportModal({ onClose, onSuccess }) {
 
           <p className="text-xs text-surface-500">
             Dòng 1: header (cột). Cột bắt buộc: <code className="text-primary-400">full_name</code>.
-            Cột tùy chọn: <code className="text-primary-400">phone, child_birth_year, address, source_type, ad_campaign</code>.
+            Cột tùy chọn: <code className="text-primary-400">phone, child_name, child_birth_year, address, source_type, ad_campaign</code>.
             Ngăn cách bằng dấu phẩy (,) hoặc tab.
           </p>
 

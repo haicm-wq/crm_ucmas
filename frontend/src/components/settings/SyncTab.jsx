@@ -3,34 +3,7 @@ import { fetchSettings, updateSettings } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineRefresh, HiOutlineLink, HiOutlineCheck, HiOutlineExclamation, HiOutlineLightningBolt, HiOutlineClock, HiOutlineDownload, HiOutlineUpload } from 'react-icons/hi';
 
-const CRM_FIELDS = [
-  { value: '', label: '— Bỏ qua —' },
-  { value: 'full_name', label: 'Họ tên phụ huynh', required: true },
-  { value: 'phone', label: 'SĐT phụ huynh' },
-  { value: 'child_name', label: 'Tên con' },
-  { value: 'child_birth_year', label: 'Năm sinh con' },
-  { value: 'address', label: 'Địa chỉ' },
-  { value: 'source_type', label: 'Nguồn (PULL/PUSH)' },
-  { value: 'ad_campaign', label: 'Chiến dịch QC' },
-  { value: 'interested_products', label: 'Sản phẩm quan tâm' },
-];
-
-const CRM_EXPORT_FIELDS = [
-  { key: 'lead_code', label: 'Mã Lead', defaultHeader: 'Mã Lead' },
-  { key: 'full_name', label: 'Họ tên phụ huynh', defaultHeader: 'Họ tên phụ huynh' },
-  { key: 'phone', label: 'SĐT phụ huynh', defaultHeader: 'SĐT phụ huynh' },
-  { key: 'child_name', label: 'Tên con', defaultHeader: 'Tên con' },
-  { key: 'child_birth_year', label: 'Năm sinh con', defaultHeader: 'Năm sinh con' },
-  { key: 'address', label: 'Địa chỉ', defaultHeader: 'Địa chỉ' },
-  { key: 'level_code', label: 'Cấp độ/Level hiện tại', defaultHeader: 'Level' },
-  { key: 'center_name', label: 'Tên trung tâm phụ trách', defaultHeader: 'Trung tâm' },
-  { key: 'staff_name', label: 'Tên nhân viên phụ trách', defaultHeader: 'Nhân viên phụ trách' },
-  { key: 'source_type', label: 'Nguồn', defaultHeader: 'Nguồn' },
-  { key: 'ad_campaign', label: 'Chiến dịch QC', defaultHeader: 'Chiến dịch QC' },
-  { key: 'interested_products', label: 'Sản phẩm quan tâm', defaultHeader: 'Sản phẩm' },
-  { key: 'created_at', label: 'Ngày tạo', defaultHeader: 'Ngày tạo' },
-  { key: 'updated_at', label: 'Ngày cập nhật', defaultHeader: 'Ngày cập nhật' },
-];
+// Dynamic mappings are defined inside the component using customFields state
 
 function extractSheetId(url) {
   if (!url) return '';
@@ -60,12 +33,56 @@ export default function SyncTab() {
   const [fieldOutMapping, setFieldOutMapping] = useState({});
   const [syncingOut, setSyncingOut] = useState(false);
   const [syncOutDetail, setSyncOutDetail] = useState(null);
+  const [customFields, setCustomFields] = useState([]);
+
+  const dynamicCrmFields = [
+    { value: '', label: '— Bỏ qua —' },
+    { value: 'full_name', label: 'Họ tên phụ huynh', required: true },
+    { value: 'phone', label: 'SĐT phụ huynh' },
+    { value: 'child_name', label: 'Tên con' },
+    { value: 'child_birth_year', label: 'Năm sinh con' },
+    { value: 'address', label: 'Địa chỉ' },
+    { value: 'source_type', label: 'Nguồn (PULL/PUSH)' },
+    { value: 'ad_campaign', label: 'Chiến dịch QC' },
+    { value: 'interested_products', label: 'Sản phẩm quan tâm' },
+    ...customFields.map((f) => ({
+      value: `custom_fields.${f.key}`,
+      label: `${f.label} (Trường tùy chỉnh)`,
+    }))
+  ];
+
+  const dynamicCrmExportFields = [
+    { key: 'lead_code', label: 'Mã Lead', defaultHeader: 'Mã Lead' },
+    { key: 'full_name', label: 'Họ tên phụ huynh', defaultHeader: 'Họ tên phụ huynh' },
+    { key: 'phone', label: 'SĐT phụ huynh', defaultHeader: 'SĐT phụ huynh' },
+    { key: 'child_name', label: 'Tên con', defaultHeader: 'Tên con' },
+    { key: 'child_birth_year', label: 'Năm sinh con', defaultHeader: 'Năm sinh con' },
+    { key: 'address', label: 'Địa chỉ', defaultHeader: 'Địa chỉ' },
+    { key: 'level_code', label: 'Cấp độ/Level hiện tại', defaultHeader: 'Level' },
+    { key: 'center_name', label: 'Tên trung tâm phụ trách', defaultHeader: 'Trung tâm' },
+    { key: 'staff_name', label: 'Tên nhân viên phụ trách', defaultHeader: 'Nhân viên phụ trách' },
+    { key: 'source_type', label: 'Nguồn', defaultHeader: 'Nguồn' },
+    { key: 'ad_campaign', label: 'Chiến dịch QC', defaultHeader: 'Chiến dịch QC' },
+    { key: 'interested_products', label: 'Sản phẩm quan tâm', defaultHeader: 'Sản phẩm' },
+    { key: 'created_at', label: 'Ngày tạo', defaultHeader: 'Ngày tạo' },
+    { key: 'updated_at', label: 'Ngày cập nhật', defaultHeader: 'Ngày cập nhật' },
+    ...customFields.map((f) => ({
+      key: `custom_fields.${f.key}`,
+      label: `${f.label} (Trường tùy chỉnh)`,
+      defaultHeader: f.label,
+    }))
+  ];
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const s = await fetchSettings();
       setSettings(s);
+
+      // Load custom fields definition
+      if (s.crm_custom_fields) {
+        try { setCustomFields(JSON.parse(s.crm_custom_fields)); } catch { /* ignore */ }
+      }
 
       // Inbound Load
       if (s.sheet_in_id) setSheetUrl(s.sheet_in_id);
@@ -182,7 +199,7 @@ export default function SyncTab() {
     const seen = new Set();
     for (const f of mappedFields) {
       if (seen.has(f)) {
-        const label = CRM_FIELDS.find((c) => c.value === f)?.label || f;
+        const label = dynamicCrmFields.find((c) => c.value === f)?.label || f;
         toast.error(`Trường "${label}" bị mapping trùng! Mỗi trường CRM chỉ được chọn 1 lần`);
         return;
       }
@@ -463,7 +480,7 @@ export default function SyncTab() {
                       <select value={mapped}
                         onChange={(e) => setFieldMapping({ ...fieldMapping, [col]: e.target.value })}
                         className={`select-field py-1.5 text-xs ${mapped ? 'font-semibold' : 'text-surface-400'}`}>
-                        {CRM_FIELDS.map((f) => (
+                        {dynamicCrmFields.map((f) => (
                           <option key={f.value} value={f.value}>
                             {f.label}{f.required ? ' ✱' : ''}
                           </option>
@@ -609,7 +626,7 @@ export default function SyncTab() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-surface-400">Tiêu đề cột trong Sheet xuất</span>
               </div>
 
-              {CRM_EXPORT_FIELDS.map((field) => {
+              {dynamicCrmExportFields.map((field) => {
                 const headerVal = fieldOutMapping[field.key] || '';
                 return (
                   <div key={field.key}

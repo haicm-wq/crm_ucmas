@@ -321,8 +321,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                           ) : (
                             <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">
                               {field.type === 'boolean'
-                                ? (form.custom_fields?.[field.key] ? 'Có' : 'Không')
-                                : (form.custom_fields?.[field.key] || '—')}
+                                ? (lead.custom_fields?.[field.key] ? 'Có' : 'Không')
+                                : (lead.custom_fields?.[field.key] || '—')}
                             </p>
                           )}
                         </div>
@@ -345,18 +345,46 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
                 {((editing && form.level_code?.startsWith('L4.')) || (!editing && lead.level_code?.startsWith('L4.') && lead.l4_type)) && (
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Phân loại L4</label>
+                    <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1 font-semibold">Phân loại L4</label>
                     {editing ? (
-                      <select value={form.l4_type || ''} onChange={(e) => setForm({ ...form, l4_type: e.target.value })}
-                        className="select-field py-2 text-sm">
-                        <option value="">— Chưa phân loại —</option>
-                        <option value="L4 UCKID">L4 UCKID</option>
-                        <option value="L4 UCMAS">L4 UCMAS</option>
-                      </select>
+                      <div className="flex flex-wrap gap-4 mt-2">
+                        {['L4 UCKID', 'L4 UCMAS'].map((type) => {
+                          const currentTypes = form.l4_type ? form.l4_type.split(',').map(t => t.trim()) : [];
+                          const checked = currentTypes.includes(type);
+                          return (
+                            <label key={type} className="flex items-center gap-2 cursor-pointer text-sm text-surface-700 dark:text-surface-300">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  let updatedTypes;
+                                  if (e.target.checked) {
+                                    updatedTypes = [...currentTypes, type];
+                                  } else {
+                                    updatedTypes = currentTypes.filter(t => t !== type);
+                                  }
+                                  const sortedTypes = ['L4 UCKID', 'L4 UCMAS'].filter(t => updatedTypes.includes(t));
+                                  setForm({ ...form, l4_type: sortedTypes.join(', ') });
+                                }}
+                                className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500 focus:ring-primary-500 focus:ring-opacity-25"
+                              />
+                              <span>{type.replace('L4 ', '')}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
-                        {lead.l4_type}
-                      </span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {lead.l4_type ? (
+                          lead.l4_type.split(',').map((item) => (
+                            <span key={item.trim()} className="px-2 py-0.5 text-xs font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
+                              {item.trim().replace(/^L4\s+/, '')}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-surface-500">—</span>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
