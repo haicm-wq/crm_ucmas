@@ -79,36 +79,25 @@ function pushHeadersToCRM() {
     }),
   };
 
-  // Upsert vào system_settings
-  const url = SUPABASE_URL + '/rest/v1/system_settings?key=eq.sheet_columns_auto';
-  const resp = UrlFetchApp.fetch(url, {
-    method: 'patch',
+  // UPSERT: insert hoặc update nếu đã tồn tại (fix lỗi PATCH rỗng)
+  const resp = UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
+    method: 'post',
     contentType: 'application/json',
-    payload: JSON.stringify({ value: payload.value }),
+    payload: JSON.stringify(payload),
     headers: {
       'apikey': SUPABASE_ANON_KEY,
       'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-      'Prefer': 'return=minimal',
+      'Prefer': 'resolution=merge-duplicates,return=minimal',
     },
     muteHttpExceptions: true,
   });
 
-  // Nếu chưa có row → insert mới
-  if (resp.getResponseCode() === 404 || resp.getContentText().includes('0 rows')) {
-    UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Prefer': 'return=minimal',
-      },
-      muteHttpExceptions: true,
-    });
+  const code = resp.getResponseCode();
+  if (code >= 400) {
+    console.error('❌ Lỗi đẩy headers:', code, resp.getContentText());
+  } else {
+    console.log('📤 Đã đẩy ' + headers.length + ' cột lên CRM: ' + headers.join(', '));
   }
-
-  console.log('📤 Đã đẩy ' + headers.length + ' cột lên CRM: ' + headers.join(', '));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -399,32 +388,18 @@ function updateSyncStatus(result) {
   ];
 
   updates.forEach((item) => {
-    const url = SUPABASE_URL + '/rest/v1/system_settings?key=eq.' + item.key;
     try {
-      const resp = UrlFetchApp.fetch(url, {
-        method: 'patch',
+      UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
+        method: 'post',
         contentType: 'application/json',
-        payload: JSON.stringify({ value: item.value }),
+        payload: JSON.stringify(item),
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-          'Prefer': 'return=minimal',
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
         },
         muteHttpExceptions: true,
       });
-      if (resp.getResponseCode() === 404 || resp.getContentText().includes('0 rows')) {
-        UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
-          method: 'post',
-          contentType: 'application/json',
-          payload: JSON.stringify(item),
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-            'Prefer': 'return=minimal',
-          },
-          muteHttpExceptions: true,
-        });
-      }
     } catch (err) { console.error('Status update error:', err); }
   });
 }
