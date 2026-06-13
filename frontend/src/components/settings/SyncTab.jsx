@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchSettings, updateSettings } from '../../services/api';
 import toast from 'react-hot-toast';
+import { HiOutlineRefresh, HiOutlineLink, HiOutlineCheck, HiOutlineExclamation } from 'react-icons/hi';
 
 const CRM_FIELDS = [
   { value: '', label: '— Bỏ qua —' },
@@ -27,9 +28,12 @@ export default function SyncTab() {
 
   const [sheetUrl, setSheetUrl] = useState('');
   const [sheetTab, setSheetTab] = useState('');
-  const [columnsText, setColumnsText] = useState('');
   const [sheetColumns, setSheetColumns] = useState([]);
   const [fieldMapping, setFieldMapping] = useState({});
+
+  // Auto-fetched sheet info
+  const [sheetMeta, setSheetMeta] = useState(null); // { columns, tab_name, sheet_name, total_rows, pushed_at }
+  const [fetchingColumns, setFetchingColumns] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -38,37 +42,64 @@ export default function SyncTab() {
       setSettings(s);
       if (s.sheet_in_id) setSheetUrl(s.sheet_in_id);
       if (s.sheet_tab_name) setSheetTab(s.sheet_tab_name);
+
+      // Load auto-pushed columns from Apps Script
+      if (s.sheet_columns_auto) {
+        try {
+          const meta = JSON.parse(s.sheet_columns_auto);
+          setSheetMeta(meta);
+          // If no mapping saved yet, use auto columns
+          if (!s.sheet_field_mapping && meta.columns?.length > 0) {
+            setSheetColumns(meta.columns);
+            const newMapping = {};
+            meta.columns.forEach((col) => { newMapping[col] = ''; });
+            setFieldMapping(newMapping);
+          }
+        } catch { /* ignore */ }
+      }
+
+      // Load saved mapping
       if (s.sheet_field_mapping) {
         try {
           const saved = JSON.parse(s.sheet_field_mapping);
-          if (saved.columns) {
-            setSheetColumns(saved.columns);
-            setColumnsText(saved.columns.join('\n'));
-          }
+          if (saved.columns) setSheetColumns(saved.columns);
           if (saved.mapping) setFieldMapping(saved.mapping);
-        } catch { /* ignore parse errors */ }
+        } catch { /* ignore */ }
       }
     } catch { toast.error('Lỗi tải cài đặt'); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
 
-  const handleParseColumns = () => {
-    const cols = columnsText
-      .split(/[\n,]+/)
-      .map((c) => c.trim())
-      .filter(Boolean);
-    if (cols.length === 0) {
-      toast.error('Vui lòng nhập ít nhất 1 tên cột');
-      return;
+  // Fetch columns from CRM settings (pushed by Apps Script)
+  const handleFetchColumns = async () => {
+    setFetchingColumns(true);
+    try {
+      const s = await fetchSettings();
+      if (!s.sheet_columns_auto) {
+        toast.error('Chưa có dữ liệu cột từ Sheet.\nHãy cài Apps Script vào Sheet và chạy setupAutoSync() trước.');
+        return;
+      }
+      const meta = JSON.parse(s.sheet_columns_auto);
+      if (!meta.columns || meta.columns.length === 0) {
+        toast.error('Sheet không có cột nào');
+        return;
+      }
+      setSheetMeta(meta);
+      setSheetColumns(meta.columns);
+      // Preserve existing mapping for same columns, clear others
+      const newMapping = {};
+      meta.columns.forEach((col) => {
+        newMapping[col] = fieldMapping[col] || '';
+      });
+      setFieldMapping(newMapping);
+      if (meta.tab_name && !sheetTab) setSheetTab(meta.tab_name);
+      toast.success(`Đã đọc ${meta.columns.length} cột từ Sheet "${meta.sheet_name}"`);
+    } catch (err) {
+      toast.error(err.message || 'Lỗi đọc cột');
+    } finally {
+      setFetchingColumns(false);
     }
-    setSheetColumns(cols);
-    const newMapping = {};
-    cols.forEach((col) => {
-      newMapping[col] = fieldMapping[col] || '';
-    });
-    setFieldMapping(newMapping);
-    toast.success(`Đã nhận ${cols.length} cột`);
   };
 
   const handleMappingChange = (col, crmField) => {
@@ -130,7 +161,7 @@ export default function SyncTab() {
           <div className="md:col-span-2">
             <label className="block text-xs font-medium text-surface-500 mb-1">Link hoặc ID của Google Sheet *</label>
             <input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value)}
-              className="input-field py-2 text-sm" placeholder="https://docs.google.com/spreadsheets/d/1abc.../edit hoặc paste Sheet ID" />
+              className="input-field py-2 text-sm" placeholder="https://docs.google.com/spreadsheets/d/1abc.../edit" />
             {sheetId && sheetUrl && (
               <p className="text-[11px] text-green-600 dark:text-green-400 mt-1 font-mono">✅ Sheet ID: {sheetId}</p>
             )}
@@ -138,7 +169,7 @@ export default function SyncTab() {
           <div>
             <label className="block text-xs font-medium text-surface-500 mb-1">Tên tab (sheet)</label>
             <input value={sheetTab} onChange={(e) => setSheetTab(e.target.value)}
-              className="input-field py-2 text-sm" placeholder="Sheet1 (mặc định)" />
+              className="input-field py-2 text-sm" placeholder={sheetMeta?.tab_name || 'Trang tính1'} />
           </div>
           <div>
             <label className="block text-xs font-medium text-surface-500 mb-1">Tần suất đồng bộ</label>
@@ -171,28 +202,65 @@ export default function SyncTab() {
         )}
       </div>
 
-      {/* Step 2: Input columns */}
+      {/* Step 2: Fetch columns from Sheet (auto via Apps Script) */}
       <div className="glass-card p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">2</span>
-          Nhập tên cột trong Sheet
-        </h3>
-        <p className="text-xs text-surface-500">
-          Copy tên các cột (hàng tiêu đề) từ Google Sheet của bạn, mỗi cột 1 dòng hoặc cách nhau bởi dấu phẩy.
-        </p>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs flex items-center justify-center font-bold">2</span>
+            Đọc cột từ Google Sheet
+          </h3>
+          <button onClick={handleFetchColumns} disabled={fetchingColumns}
+            className="btn-primary text-sm flex items-center gap-1.5">
+            {fetchingColumns ? (
+              <><HiOutlineRefresh className="w-4 h-4 animate-spin" /> Đang đọc...</>
+            ) : (
+              <><HiOutlineLink className="w-4 h-4" /> Kết nối & đọc cột</>
+            )}
+          </button>
+        </div>
 
-        <textarea
-          value={columnsText}
-          onChange={(e) => setColumnsText(e.target.value)}
-          rows={5}
-          className="input-field py-2 text-sm font-mono resize-none"
-          placeholder={"STT\nHọ tên phụ huynh\nSố điện thoại\nNăm sinh con\nĐịa chỉ\nNguồn\nChiến dịch QC"}
-        />
+        {/* Sheet meta info */}
+        {sheetMeta && (
+          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/5 border border-green-200 dark:border-green-500/20">
+            <div className="flex items-start gap-2">
+              <HiOutlineCheck className="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              <div className="text-xs space-y-1">
+                <p className="text-green-800 dark:text-green-300 font-medium">
+                  Đã đọc được <span className="font-bold">{sheetMeta.columns?.length || 0}</span> cột từ Sheet "{sheetMeta.sheet_name}"
+                </p>
+                <p className="text-green-600 dark:text-green-400">
+                  Tab: {sheetMeta.tab_name} · {sheetMeta.total_rows} dòng dữ liệu · Cập nhật: {new Date(sheetMeta.pushed_at).toLocaleString('vi-VN')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
-        <button onClick={handleParseColumns} disabled={!columnsText.trim()}
-          className="btn-primary text-sm flex items-center gap-1.5">
-          📥 Nhận diện cột ({columnsText.split(/[\n,]+/).filter((c) => c.trim()).length} cột)
-        </button>
+        {!sheetMeta && (
+          <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20">
+            <div className="flex items-start gap-2">
+              <HiOutlineExclamation className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-yellow-800 dark:text-yellow-300 space-y-1">
+                <p className="font-medium">Chưa kết nối được với Sheet</p>
+                <p className="text-yellow-600 dark:text-yellow-400">
+                  Hãy mở Google Sheet → Extensions → Apps Script → dán code → chạy <code className="bg-yellow-200 dark:bg-yellow-800/50 px-1 rounded">setupAutoSync()</code> → sau đó quay lại đây bấm "Kết nối & đọc cột"
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show fetched columns as chips */}
+        {sheetColumns.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {sheetColumns.map((col, idx) => (
+              <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-100 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700/50 text-xs font-medium text-surface-700 dark:text-surface-300">
+                <span className="w-4 h-4 rounded bg-primary-100 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 text-[9px] font-bold flex items-center justify-center">{idx + 1}</span>
+                {col}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Step 3: Field Mapping */}

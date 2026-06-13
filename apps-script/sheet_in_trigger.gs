@@ -27,7 +27,7 @@ const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJ...YOUR_ANON_KEY...';
 
 // Tên cột trạng thái (tự thêm ở cuối Sheet)
-const STATUS_COL_HEADER = 'CRM Status';
+const STATUS_COL_HEADER = 'Trạng thái cập nhật CRM';
 
 // Timeout: dừng trước giới hạn 6 phút của Google (để còn kịp ghi status)
 const MAX_EXECUTION_MS = 5 * 60 * 1000; // 5 phút (chừa 1 phút ghi kết quả)
@@ -52,7 +52,63 @@ function setupAutoSync() {
     .everyMinutes(1)
     .create();
 
-  console.log('✅ Auto-sync trigger đã được tạo (mỗi 1 phút check CRM interval)');
+  // Đẩy headers lên CRM ngay để UI hiển thị mapping
+  pushHeadersToCRM();
+
+  console.log('✅ Auto-sync trigger đã được tạo + headers đã đẩy lên CRM');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ĐẨY HEADERS LÊN CRM (để UI tự đọc — không cần nhập tay)
+// ═══════════════════════════════════════════════════════════
+function pushHeadersToCRM() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+    .map(h => String(h).trim())
+    .filter(h => h && h !== STATUS_COL_HEADER);
+
+  const payload = {
+    key: 'sheet_columns_auto',
+    value: JSON.stringify({
+      columns: headers,
+      tab_name: sheet.getName(),
+      sheet_name: SpreadsheetApp.getActiveSpreadsheet().getName(),
+      total_rows: sheet.getLastRow() - 1,
+      pushed_at: new Date().toISOString(),
+    }),
+  };
+
+  // Upsert vào system_settings
+  const url = SUPABASE_URL + '/rest/v1/system_settings?key=eq.sheet_columns_auto';
+  const resp = UrlFetchApp.fetch(url, {
+    method: 'patch',
+    contentType: 'application/json',
+    payload: JSON.stringify({ value: payload.value }),
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+      'Prefer': 'return=minimal',
+    },
+    muteHttpExceptions: true,
+  });
+
+  // Nếu chưa có row → insert mới
+  if (resp.getResponseCode() === 404 || resp.getContentText().includes('0 rows')) {
+    UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Prefer': 'return=minimal',
+      },
+      muteHttpExceptions: true,
+    });
+  }
+
+  console.log('📤 Đã đẩy ' + headers.length + ' cột lên CRM: ' + headers.join(', '));
 }
 
 // ═══════════════════════════════════════════════════════════
