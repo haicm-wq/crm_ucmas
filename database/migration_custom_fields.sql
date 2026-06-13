@@ -130,7 +130,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- 5. Cập nhật hàm rpc_get_leads_for_outbound_sync để trả về cột custom_fields
+-- 5. Cập nhật hàm rpc_get_leads_for_outbound_sync để trả về cột custom_fields và các cột thông tin bổ sung
+DROP FUNCTION IF EXISTS rpc_get_leads_for_outbound_sync(TIMESTAMPTZ);
 CREATE OR REPLACE FUNCTION rpc_get_leads_for_outbound_sync(
   p_last_sync_at TIMESTAMPTZ DEFAULT NULL
 ) RETURNS TABLE (
@@ -150,7 +151,12 @@ CREATE OR REPLACE FUNCTION rpc_get_leads_for_outbound_sync(
   created_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ,
   sheet_out_row INTEGER,
-  custom_fields JSONB
+  custom_fields JSONB,
+  l4_type VARCHAR,
+  entered_l1_at TIMESTAMPTZ,
+  entered_l2_at TIMESTAMPTZ,
+  entered_l3_at TIMESTAMPTZ,
+  entered_l4_at TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -171,7 +177,12 @@ BEGIN
     l.created_at,
     l.updated_at,
     l.sheet_out_row,
-    l.custom_fields
+    l.custom_fields,
+    l.l4_type,
+    l.entered_l1_at,
+    l.entered_l2_at,
+    l.entered_l3_at,
+    l.entered_l4_at
   FROM leads l
   LEFT JOIN centers c ON l.assigned_center = c.id
   LEFT JOIN profiles p ON l.assigned_staff = p.id

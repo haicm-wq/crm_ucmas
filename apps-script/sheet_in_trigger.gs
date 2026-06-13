@@ -44,11 +44,16 @@ const CRM_EXPORT_FIELDS = [
   { key: 'child_birth_year', label: 'Năm sinh con', defaultHeader: 'Năm sinh con' },
   { key: 'address', label: 'Địa chỉ', defaultHeader: 'Địa chỉ' },
   { key: 'level_code', label: 'Cấp độ/Level hiện tại', defaultHeader: 'Level' },
+  { key: 'l4_type', label: 'Phân loại L4 (UCMAS/UCKID)', defaultHeader: 'Phân loại L4' },
   { key: 'center_name', label: 'Tên trung tâm phụ trách', defaultHeader: 'Trung tâm' },
   { key: 'staff_name', label: 'Tên nhân viên phụ trách', defaultHeader: 'Nhân viên phụ trách' },
   { key: 'source_type', label: 'Nguồn', defaultHeader: 'Nguồn' },
   { key: 'ad_campaign', label: 'Chiến dịch QC', defaultHeader: 'Chiến dịch QC' },
   { key: 'interested_products', label: 'Sản phẩm quan tâm', defaultHeader: 'Sản phẩm' },
+  { key: 'entered_l1_at', label: 'Thời điểm lên L1', defaultHeader: 'Mốc L1' },
+  { key: 'entered_l2_at', label: 'Thời điểm lên L2', defaultHeader: 'Mốc L2' },
+  { key: 'entered_l3_at', label: 'Thời điểm lên L3', defaultHeader: 'Mốc L3' },
+  { key: 'entered_l4_at', label: 'Thời điểm lên L4', defaultHeader: 'Mốc L4' },
   { key: 'created_at', label: 'Ngày tạo', defaultHeader: 'Ngày tạo' },
   { key: 'updated_at', label: 'Ngày cập nhật', defaultHeader: 'Ngày cập nhật' },
 ];
@@ -663,7 +668,7 @@ function mapLeadToRow(lead, activeFields) {
     if (f.key === 'interested_products' && Array.isArray(val)) {
       return val.join(', ');
     }
-    if (f.key === 'created_at' || f.key === 'updated_at') {
+    if (f.key === 'created_at' || f.key === 'updated_at' || f.key.endsWith('_at')) {
       try {
         return Utilities.formatDate(new Date(val), 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd HH:mm:ss');
       } catch (e) {
