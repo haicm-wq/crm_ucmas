@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { updateLead, fetchNotes, addNote, fetchLevelHistory, fetchSiblings, fetchStaffByCenter } from '../../services/api';
+import { updateLead, fetchNotes, addNote, fetchLevelHistory, fetchSiblings, fetchStaffByCenter, fetchSettings } from '../../services/api';
 import { getLevelInfo, ALL_LEVEL_CODES } from '../../config/levels';
 import toast from 'react-hot-toast';
 import { HiOutlineX, HiOutlinePencil, HiOutlineChatAlt, HiOutlineClock, HiOutlineUserGroup } from 'react-icons/hi';
@@ -44,6 +44,17 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   const [siblings, setSiblings] = useState([]);
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
+  const [customFieldsDef, setCustomFieldsDef] = useState([]);
+
+  useEffect(() => {
+    fetchSettings()
+      .then((s) => {
+        if (s.crm_custom_fields) {
+          try { setCustomFieldsDef(JSON.parse(s.crm_custom_fields)); } catch (e) { /* ignore */ }
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     setForm({
@@ -61,6 +72,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       interested_products: lead.interested_products || [],
       l4_type: lead.l4_type || '',
       child_name: lead.child_name || '',
+      custom_fields: lead.custom_fields || {},
     });
     setLevelNote('');
     setNoteContent('');
@@ -259,6 +271,65 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                     </div>
                   )}
                 </div>
+
+                {customFieldsDef.length > 0 && (
+                  <div className="col-span-2 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-surface-500 mb-3">Thông tin bổ sung</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {customFieldsDef.map((field) => (
+                        <div key={field.key} className={field.type === 'text' && field.key.includes('dia_chi') ? 'col-span-2' : ''}>
+                          <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{field.label}</label>
+                          {editing ? (
+                            field.type === 'select' ? (
+                              <select
+                                value={form.custom_fields?.[field.key] || ''}
+                                onChange={(e) => setForm({
+                                  ...form,
+                                  custom_fields: { ...form.custom_fields, [field.key]: e.target.value }
+                                })}
+                                className="select-field py-2 text-sm"
+                              >
+                                <option value="">— Chọn —</option>
+                                {field.options?.map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : field.type === 'boolean' ? (
+                              <label className="flex items-center gap-2 cursor-pointer py-2 text-sm text-surface-700 dark:text-surface-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!form.custom_fields?.[field.key]}
+                                  onChange={(e) => setForm({
+                                    ...form,
+                                    custom_fields: { ...form.custom_fields, [field.key]: e.target.checked }
+                                  })}
+                                  className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500 focus:ring-primary-500"
+                                />
+                                <span>{field.label}</span>
+                              </label>
+                            ) : (
+                              <input
+                                type={field.type === 'number' ? 'number' : 'text'}
+                                value={form.custom_fields?.[field.key] || ''}
+                                onChange={(e) => setForm({
+                                  ...form,
+                                  custom_fields: { ...form.custom_fields, [field.key]: e.target.value }
+                                })}
+                                className="input-field py-2 text-sm"
+                              />
+                            )
+                          ) : (
+                            <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">
+                              {field.type === 'boolean'
+                                ? (form.custom_fields?.[field.key] ? 'Có' : 'Không')
+                                : (form.custom_fields?.[field.key] || '—')}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Level</label>

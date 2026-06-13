@@ -261,16 +261,16 @@ export default function LeadsPage() {
           <table className="data-table" id="lead-table">
             <thead>
               <tr>
-                <th>Mã Lead</th><th>Họ tên</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Sản phẩm</th><th>Trạng thái</th><th>Trung tâm</th><th>NV phụ trách</th>
+                <th>Mã Lead</th><th>Họ tên</th><th>Tên con</th><th>SĐT</th><th>Năm sinh con</th>
+                <th>Sản phẩm</th><th>Trạng thái</th><th>Level UCMAS/UCKID</th><th>Trung tâm</th><th>NV phụ trách</th>
                 <th>Liên hệ cuối</th><th>Follow-up</th><th>Nguồn</th>
               </tr>
             </thead>
             <tbody className={loading && leads.length > 0 ? "opacity-60 transition-opacity duration-200 pointer-events-none" : "transition-opacity duration-200"}>
               {loading && leads.length === 0 ? (
-                <tr><td colSpan={11} className="p-0"><TableSkeleton rows={8} cols={11} /></td></tr>
+                <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan={11}>
+                <tr><td colSpan={13}>
                   <EmptyState icon={HiOutlineUsers} title="Không tìm thấy lead nào"
                     description="Thử thay đổi bộ lọc hoặc thêm lead mới" />
                 </td></tr>
@@ -284,12 +284,8 @@ export default function LeadsPage() {
                       <td className="font-mono text-xs text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
                       <td>
                         <div className="font-medium text-surface-800 dark:text-surface-100">{lead.full_name}</div>
-                        {lead.child_name && (
-                          <div className="text-[11px] text-surface-500 dark:text-surface-400 mt-0.5 font-normal">
-                            Con: {lead.child_name}
-                          </div>
-                        )}
                       </td>
+                      <td className="text-sm font-medium text-surface-800 dark:text-surface-200">{lead.child_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 font-mono text-xs font-medium">{lead.phone || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.child_birth_year || '—'}</td>
                       <td>
@@ -306,12 +302,14 @@ export default function LeadsPage() {
                       <td>
                         <div className="flex items-center gap-1.5">
                           <span className={`badge ${levelInfo.bgClass}`} style={{ borderLeft: `3px solid ${levelInfo.color}` }}>{lead.level_code}</span>
-                          {lead.level_code?.startsWith('L4.') && lead.l4_type && (
-                            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
-                              {lead.l4_type.replace('L4 ', '')}
-                            </span>
-                          )}
                         </div>
+                      </td>
+                      <td>
+                        {lead.l4_type ? (
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
+                            {lead.l4_type.replace('L4 ', '')}
+                          </span>
+                        ) : ('—')}
                       </td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
