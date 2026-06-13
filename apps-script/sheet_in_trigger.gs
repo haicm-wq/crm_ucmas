@@ -64,9 +64,18 @@ function setupAutoSync() {
 function pushHeadersToCRM() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const lastCol = sheet.getLastColumn();
+  if (lastCol < 1) {
+    console.warn('⚠️ Sheet rỗng hoặc không tìm thấy cột nào để đẩy.');
+    return;
+  }
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
     .map(h => String(h).trim())
     .filter(h => h && h !== STATUS_COL_HEADER);
+
+  if (headers.length === 0) {
+    console.warn('⚠️ Không tìm thấy tiêu đề cột hợp lệ.');
+    return;
+  }
 
   const payload = {
     key: 'sheet_columns_auto',
@@ -74,7 +83,7 @@ function pushHeadersToCRM() {
       columns: headers,
       tab_name: sheet.getName(),
       sheet_name: SpreadsheetApp.getActiveSpreadsheet().getName(),
-      total_rows: sheet.getLastRow() - 1,
+      total_rows: Math.max(0, sheet.getLastRow() - 1),
       pushed_at: new Date().toISOString(),
     }),
   };
@@ -94,7 +103,7 @@ function pushHeadersToCRM() {
 
   const code = resp.getResponseCode();
   if (code >= 400) {
-    console.error('❌ Lỗi đẩy headers:', code, resp.getContentText());
+    console.error('❌ Lỗi đẩy headers (HTTP ' + code + '):', resp.getContentText());
   } else {
     console.log('📤 Đã đẩy ' + headers.length + ' cột lên CRM: ' + headers.join(', '));
   }
@@ -128,15 +137,20 @@ function autoSyncTick() {
   if (!config) return;
 
   const { sync_enabled, sync_interval, last_sync_at, field_mapping } = config;
-
-  if (sync_enabled !== 'true' || !sync_interval || sync_interval === '0') return;
-
-  const intervalMs = parseInt(sync_interval) * 60 * 1000;
-  const now = Date.now();
   const lastSync = last_sync_at ? new Date(last_sync_at).getTime() : 0;
-  if (now - lastSync < intervalMs) return;
 
-  console.log('🔄 Bắt đầu đồng bộ...');
+  // Kiểm tra nếu là yêu cầu đồng bộ thủ công từ CRM (last_sync_at được set về năm 2000)
+  const isManualTrigger = lastSync > 0 && lastSync < new Date('2010-01-01').getTime();
+
+  if (!isManualTrigger) {
+    if (sync_enabled !== 'true' || !sync_interval || sync_interval === '0') return;
+
+    const intervalMs = parseInt(sync_interval) * 60 * 1000;
+    const now = Date.now();
+    if (now - lastSync < intervalMs) return;
+  }
+
+  console.log(isManualTrigger ? '🔄 Bắt đầu đồng bộ thủ công (yêu cầu từ CRM)...' : '🔄 Bắt đầu đồng bộ định kỳ...');
   const result = syncNewRows(field_mapping);
   updateSyncStatus(result);
 }
@@ -212,6 +226,10 @@ function syncNewRows(fieldMapping) {
         } else if (result.reason === 'phone_reinterest') {
           statusUpdates.push({
             row, text: '⚠️ SĐT trùng (' + result.existing_count + ' lead)', color: '#E65100',
+          });
+        } else {
+          statusUpdates.push({
+            row, text: '⏭️ Bỏ qua · ' + (result.reason || 'không xác định'), color: '#757575',
           });
         }
       }
@@ -362,6 +380,11 @@ function getSyncConfig() {
       },
       muteHttpExceptions: true,
     });
+    const code = response.getResponseCode();
+    if (code >= 400) {
+      console.error('❌ Lỗi đọc cấu hình từ CRM (HTTP ' + code + '):', response.getContentText());
+      return null;
+    }
     const data = JSON.parse(response.getContentText());
     const config = {};
     (data || []).forEach((row) => { config[row.key] = row.value; });
@@ -372,7 +395,7 @@ function getSyncConfig() {
     }
     return config;
   } catch (err) {
-    console.error('Error loading config:', err);
+    console.error('❌ Lỗi kết nối Supabase khi đọc config:', err);
     return null;
   }
 }
@@ -389,7 +412,7 @@ function updateSyncStatus(result) {
 
   updates.forEach((item) => {
     try {
-      UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
+      const resp = UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/system_settings', {
         method: 'post',
         contentType: 'application/json',
         payload: JSON.stringify(item),
@@ -400,6 +423,10 @@ function updateSyncStatus(result) {
         },
         muteHttpExceptions: true,
       });
+      const code = resp.getResponseCode();
+      if (code >= 400) {
+        console.error('❌ Lỗi cập nhật trạng thái sync key ' + item.key + ' (HTTP ' + code + '):', resp.getContentText());
+      }
     } catch (err) { console.error('Status update error:', err); }
   });
 }
@@ -416,4 +443,17 @@ function manualSyncAll() {
   const result = syncNewRows(config.field_mapping);
   updateSyncStatus(result);
   console.log('Manual sync done:', JSON.stringify(result));
+}
+
+// ═══════════════════════════════════════════════════════════
+// TỰ ĐỘNG THÊM MENU VÀO GOOGLE SHEETS
+// ═══════════════════════════════════════════════════════════
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('⚡ CRM UCMAS')
+    .addItem('1. Kích hoạt tự động đồng bộ (setup)', 'setupAutoSync')
+    .addItem('2. Đẩy danh sách cột lên CRM', 'pushHeadersToCRM')
+    .addSeparator()
+    .addItem('3. Đồng bộ dữ liệu ngay lập tức', 'manualSyncAll')
+    .addToUi();
 }

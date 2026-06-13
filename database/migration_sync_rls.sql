@@ -9,6 +9,22 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- ============================================================
 -- 1. HÀM ĐỒNG BỘ: Nhận data từ Apps Script → tạo lead
 -- ============================================================
+
+-- Dọn dẹp tất cả các phiên bản nạp chồng (overloaded) cũ của rpc_sync_inbound để tránh lỗi "is not unique"
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN 
+        SELECT oid::regprocedure AS func_signature
+        FROM pg_proc 
+        WHERE proname = 'rpc_sync_inbound'
+    LOOP
+        EXECUTE 'DROP FUNCTION ' || r.func_signature || ' CASCADE';
+    END LOOP;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION rpc_sync_inbound(
   p_full_name TEXT,
   p_phone TEXT,
@@ -75,12 +91,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 2. RLS: Cho phép Apps Script (anon key) đọc/ghi sync config
 -- ============================================================
 
--- Cho phép ĐỌC cấu hình sync
+-- Dọn dẹp các policy cũ nếu đã tồn tại để tránh lỗi "already exists" khi chạy lại
+DROP POLICY IF EXISTS "settings_anon_read_sync" ON system_settings;
+DROP POLICY IF EXISTS "settings_anon_write_sync" ON system_settings;
+DROP POLICY IF EXISTS "settings_anon_update_sync" ON system_settings;
+
+-- Cho phép ĐỌC cấu hình sync (Bổ sung last_sync_result và last_sync_detail để UPSERT hoạt động chính xác)
 CREATE POLICY "settings_anon_read_sync" ON system_settings
   FOR SELECT
   USING (
     key IN ('sync_enabled', 'sync_interval', 'last_sync_at',
-            'sheet_field_mapping', 'sheet_columns_auto')
+            'sheet_field_mapping', 'sheet_columns_auto',
+            'last_sync_result', 'last_sync_detail')
   );
 
 -- Cho phép GHI kết quả sync (INSERT)
@@ -102,3 +124,6 @@ CREATE POLICY "settings_anon_update_sync" ON system_settings
     key IN ('last_sync_at', 'last_sync_result',
             'last_sync_detail', 'sheet_columns_auto')
   );
+
+-- Đảm bảo quyền thực thi hàm sync cho anon và authenticated
+GRANT EXECUTE ON FUNCTION rpc_sync_inbound TO anon, authenticated;

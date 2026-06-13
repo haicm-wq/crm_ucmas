@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchSettings, updateSettings } from '../../services/api';
 import toast from 'react-hot-toast';
-import { HiOutlineRefresh, HiOutlineLink, HiOutlineCheck, HiOutlineExclamation } from 'react-icons/hi';
+import { HiOutlineRefresh, HiOutlineLink, HiOutlineCheck, HiOutlineExclamation, HiOutlineLightningBolt, HiOutlineClock } from 'react-icons/hi';
 
 const CRM_FIELDS = [
   { value: '', label: '— Bỏ qua —' },
@@ -32,10 +32,14 @@ export default function SyncTab() {
   const [fieldMapping, setFieldMapping] = useState({});
 
   // Auto-fetched sheet info
-  const [sheetMeta, setSheetMeta] = useState(null); // { columns, tab_name, sheet_name, total_rows, pushed_at }
+  const [sheetMeta, setSheetMeta] = useState(null);
   const [fetchingColumns, setFetchingColumns] = useState(false);
 
-  const load = async () => {
+  // Manual sync
+  const [syncing, setSyncing] = useState(false);
+  const [syncDetail, setSyncDetail] = useState(null);
+
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const s = await fetchSettings();
@@ -43,12 +47,16 @@ export default function SyncTab() {
       if (s.sheet_in_id) setSheetUrl(s.sheet_in_id);
       if (s.sheet_tab_name) setSheetTab(s.sheet_tab_name);
 
+      // Load sync detail
+      if (s.last_sync_detail) {
+        try { setSyncDetail(JSON.parse(s.last_sync_detail)); } catch { /* ignore */ }
+      }
+
       // Load auto-pushed columns from Apps Script
       if (s.sheet_columns_auto) {
         try {
           const meta = JSON.parse(s.sheet_columns_auto);
           setSheetMeta(meta);
-          // If no mapping saved yet, use auto columns
           if (!s.sheet_field_mapping && meta.columns?.length > 0) {
             setSheetColumns(meta.columns);
             const newMapping = {};
@@ -68,8 +76,9 @@ export default function SyncTab() {
       }
     } catch { toast.error('Lỗi tải cài đặt'); }
     finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   // Fetch columns from CRM settings (pushed by Apps Script)
   const handleFetchColumns = async () => {
@@ -87,7 +96,6 @@ export default function SyncTab() {
       }
       setSheetMeta(meta);
       setSheetColumns(meta.columns);
-      // Preserve existing mapping for same columns, clear others
       const newMapping = {};
       meta.columns.forEach((col) => {
         newMapping[col] = fieldMapping[col] || '';
@@ -100,6 +108,51 @@ export default function SyncTab() {
     } finally {
       setFetchingColumns(false);
     }
+  };
+
+  // Trigger manual sync: reset last_sync_at → Apps Script sẽ sync ngay lần chạy tới (≤1 phút)
+  const handleManualSync = async () => {
+    setSyncing(true);
+    try {
+      await updateSettings({
+        last_sync_at: '2000-01-01T00:00:00Z',
+        sync_enabled: 'true',
+      });
+      toast.success('Đã yêu cầu đồng bộ! Apps Script sẽ chạy trong vòng 1 phút.\nQuay lại kiểm tra sau 1-2 phút.', { duration: 6000 });
+
+      // Poll kết quả sau 70 giây
+      setTimeout(async () => {
+        try {
+          const s = await fetchSettings();
+          setSettings(s);
+          if (s.last_sync_detail) {
+            const detail = JSON.parse(s.last_sync_detail);
+            setSyncDetail(detail);
+            if (detail.success > 0) {
+              toast.success(`✅ Đồng bộ xong! ${detail.success} lead mới đã được tạo.`, { duration: 5000 });
+            } else if (detail.already_synced > 0) {
+              toast('ℹ️ Không có dữ liệu mới — tất cả đã được đồng bộ trước đó.', { duration: 5000 });
+            }
+          }
+        } catch { /* ignore poll error */ }
+      }, 70000);
+    } catch (err) {
+      toast.error(err.message || 'Lỗi');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Refresh sync status
+  const handleRefreshStatus = async () => {
+    try {
+      const s = await fetchSettings();
+      setSettings(s);
+      if (s.last_sync_detail) {
+        setSyncDetail(JSON.parse(s.last_sync_detail));
+      }
+      toast.success('Đã cập nhật trạng thái');
+    } catch { toast.error('Lỗi tải trạng thái'); }
   };
 
   const handleMappingChange = (col, crmField) => {
@@ -186,23 +239,9 @@ export default function SyncTab() {
             </select>
           </div>
         </div>
-
-        {settings.last_sync_at && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50">
-            <span className="text-xs text-surface-500">Đồng bộ lần cuối:</span>
-            <span className="text-xs font-mono text-surface-700 dark:text-surface-300">
-              {new Date(settings.last_sync_at).toLocaleString('vi-VN')}
-            </span>
-            {settings.last_sync_result && (
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${settings.last_sync_result === 'success' ? 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400'}`}>
-                {settings.last_sync_result === 'success' ? '✅ Thành công' : '❌ Lỗi'}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Step 2: Fetch columns from Sheet (auto via Apps Script) */}
+      {/* Step 2: Fetch columns from Sheet */}
       <div className="glass-card p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-2">
@@ -219,7 +258,6 @@ export default function SyncTab() {
           </button>
         </div>
 
-        {/* Sheet meta info */}
         {sheetMeta && (
           <div className="p-3 rounded-lg bg-green-50 dark:bg-green-500/5 border border-green-200 dark:border-green-500/20">
             <div className="flex items-start gap-2">
@@ -250,7 +288,6 @@ export default function SyncTab() {
           </div>
         )}
 
-        {/* Show fetched columns as chips */}
         {sheetColumns.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {sheetColumns.map((col, idx) => (
@@ -329,16 +366,84 @@ export default function SyncTab() {
         </div>
       )}
 
-      {/* Save All */}
-      <div className="glass-card p-5 flex items-center justify-between">
-        <div className="text-xs text-surface-500">
-          {sheetId ? `Sheet ID: ${sheetId.slice(0, 20)}...` : 'Chưa kết nối Sheet'}
-          {sheetColumns.length > 0 && ` · ${sheetColumns.length} cột · ${mappedCount} đã map`}
+      {/* Step 4: Save + Manual Sync */}
+      <div className="glass-card p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-surface-500">
+            {sheetId ? `Sheet ID: ${sheetId.slice(0, 20)}...` : 'Chưa kết nối Sheet'}
+            {sheetColumns.length > 0 && ` · ${sheetColumns.length} cột · ${mappedCount} đã map`}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleManualSync} disabled={syncing || !hasFullName}
+              className="text-sm flex items-center gap-1.5 px-4 py-2 rounded-lg font-semibold transition-colors bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed">
+              {syncing ? (
+                <><HiOutlineRefresh className="w-4 h-4 animate-spin" /> Đang yêu cầu...</>
+              ) : (
+                <><HiOutlineLightningBolt className="w-4 h-4" /> Đồng bộ ngay</>
+              )}
+            </button>
+            <button onClick={handleSaveAll} disabled={saving || !sheetId}
+              className="btn-primary text-sm flex items-center gap-1.5">
+              {saving ? 'Đang lưu...' : '💾 Lưu cấu hình'}
+            </button>
+          </div>
         </div>
-        <button onClick={handleSaveAll} disabled={saving || !sheetId}
-          className="btn-primary text-sm flex items-center gap-1.5">
-          {saving ? 'Đang lưu...' : '💾 Lưu cấu hình đồng bộ'}
-        </button>
+
+        {/* Sync status panel */}
+        {(settings.last_sync_at || syncDetail) && (
+          <div className="p-4 rounded-lg bg-surface-50 dark:bg-surface-800/30 border border-surface-200 dark:border-surface-700/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-surface-600 dark:text-surface-300 flex items-center gap-1.5">
+                <HiOutlineClock className="w-3.5 h-3.5" />
+                Trạng thái đồng bộ
+              </h4>
+              <button onClick={handleRefreshStatus} className="text-[10px] text-primary-500 hover:text-primary-600 font-medium flex items-center gap-1">
+                <HiOutlineRefresh className="w-3 h-3" /> Làm mới
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {settings.last_sync_at && (
+                <div className="text-center p-2 rounded-lg bg-white dark:bg-surface-800/50">
+                  <p className="text-[10px] text-surface-400 mb-0.5">Lần cuối</p>
+                  <p className="text-xs font-mono text-surface-700 dark:text-surface-300">
+                    {new Date(settings.last_sync_at).toLocaleString('vi-VN')}
+                  </p>
+                </div>
+              )}
+              {settings.last_sync_result && (
+                <div className="text-center p-2 rounded-lg bg-white dark:bg-surface-800/50">
+                  <p className="text-[10px] text-surface-400 mb-0.5">Kết quả</p>
+                  <p className={`text-xs font-semibold ${settings.last_sync_result === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                    {settings.last_sync_result === 'success' ? '✅ Thành công' : '❌ Lỗi'}
+                  </p>
+                </div>
+              )}
+              {syncDetail && (
+                <>
+                  <div className="text-center p-2 rounded-lg bg-white dark:bg-surface-800/50">
+                    <p className="text-[10px] text-surface-400 mb-0.5">Lead mới</p>
+                    <p className="text-lg font-bold text-green-600">{syncDetail.success || 0}</p>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-white dark:bg-surface-800/50">
+                    <p className="text-[10px] text-surface-400 mb-0.5">Tổng quét</p>
+                    <p className="text-lg font-bold text-surface-700 dark:text-surface-300">{syncDetail.total_checked || 0}</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {syncDetail && (
+              <div className="flex flex-wrap gap-3 text-[11px] text-surface-500">
+                {syncDetail.already_synced > 0 && <span>📋 Đã sync trước: {syncDetail.already_synced}</span>}
+                {syncDetail.skipped > 0 && <span>⏭ Bỏ qua: {syncDetail.skipped}</span>}
+                {syncDetail.failed > 0 && <span className="text-red-500">❌ Lỗi: {syncDetail.failed}</span>}
+                {syncDetail.elapsed_seconds && <span>⏱ {syncDetail.elapsed_seconds}s</span>}
+                {syncDetail.timed_out && <span className="text-amber-500">⚠️ Timeout — sẽ tiếp tục lần sau</span>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
