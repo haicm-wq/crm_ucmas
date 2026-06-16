@@ -165,6 +165,17 @@ export async function updateLead(leadId, changes, note) {
   return data;
 }
 
+export async function updateLeadLevelAndProducts(leadId, levelCode, note) {
+  const { data, error } = await supabase.rpc('rpc_update_lead_level_and_products', {
+    p_lead_id: leadId,
+    p_level_code: levelCode,
+    p_note: note || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+
 export async function checkPhone(phone) {
   const { data, error } = await supabase
     .from('leads')

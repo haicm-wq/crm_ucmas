@@ -2,15 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseRealtime } from '../hooks/useShared';
-import { fetchL0Pool, bulkAssign, fetchL0UnprocessedStats } from '../services/api';
+import { fetchL0Pool, bulkAssign, fetchL0UnprocessedStats, updateLead, updateLeadLevelAndProducts } from '../services/api';
 import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/SkeletonLoader';
 import toast from 'react-hot-toast';
 import { HiOutlineRefresh, HiOutlineInbox, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
+import MultiSelect from '../components/ui/MultiSelect';
 
 export default function LeadPoolPage() {
-  const { centers } = useSharedData();
+  const { centers, allStaff } = useSharedData();
   const { canViewL0, user } = useAuth();
   const isTelesale = user?.permission_group === 'telesale';
   const [pool, setPool] = useState([]);
@@ -21,6 +22,8 @@ export default function LeadPoolPage() {
   const [targetCenter, setTargetCenter] = useState('');
   const [selectedLead, setSelectedLead] = useState(null);
   const [unprocessedStats, setUnprocessedStats] = useState(0);
+  const [pageSize, setPageSize] = useState(100);
+  const [savingLeads, setSavingLeads] = useState({}); // { [leadId]: { [field]: boolean } }
   const loadRef = useRef(null);
 
   const isOver3Hours = (createdAt) => {
@@ -32,7 +35,7 @@ export default function LeadPoolPage() {
   const loadPool = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const result = await fetchL0Pool({ page, limit: 100 });
+      const result = await fetchL0Pool({ page, limit: pageSize });
       setPool(result.data);
       setPagination(result.pagination);
       setSelected(new Set());
@@ -45,7 +48,160 @@ export default function LeadPoolPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pageSize]);
+
+  useEffect(() => {
+    loadPool(1);
+  }, [pageSize]);
+
+  const handleInputChange = (leadId, field, value) => {
+    setPool(prevPool => prevPool.map(lead => {
+      if (lead.id === leadId) {
+        return { ...lead, [field]: value };
+      }
+      return lead;
+    }));
+  };
+
+  const handleInputBlur = async (leadId, field, originalValue, currentValue) => {
+    if (currentValue === originalValue) return;
+
+    if (field === 'phone') {
+      if (currentValue && !/^(?:0\d{9}|[1-9]\d{8})$/.test(currentValue)) {
+        toast.error('SĐT bắt đầu bằng 0 phải đủ 10 số, không bắt đầu bằng 0 phải đủ 9 số');
+        handleInputChange(leadId, field, originalValue);
+        return;
+      }
+    }
+
+    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], [field]: true } }));
+    try {
+      const cleanVal = currentValue === '' ? null : currentValue;
+      let changes = { [field]: cleanVal };
+      if (field === 'child_birth_year' && cleanVal) {
+        changes.child_birth_year = parseInt(cleanVal);
+      }
+      await updateLead(leadId, changes);
+      toast.success('Đã lưu thay đổi');
+      
+      if (field === 'phone') {
+        loadPool(pagination.page);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật');
+      handleInputChange(leadId, field, originalValue);
+    } finally {
+      setSavingLeads(prev => {
+        const next = { ...prev };
+        if (next[leadId]) {
+          delete next[leadId][field];
+          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
+        }
+        return next;
+      });
+    }
+  };
+
+  const handleCenterChange = async (leadId, centerId) => {
+    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], assigned_center: true } }));
+    try {
+      const cleanVal = centerId === '' ? null : centerId;
+      await updateLead(leadId, { assigned_center: cleanVal });
+      
+      setPool(prevPool => prevPool.map(lead => {
+        if (lead.id === leadId) {
+          const center = centers.find(c => c.id === centerId);
+          return { ...lead, assigned_center: cleanVal, center_name: center ? center.name : null };
+        }
+        return lead;
+      }));
+      toast.success('Đã cập nhật trung tâm');
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật trung tâm');
+    } finally {
+      setSavingLeads(prev => {
+        const next = { ...prev };
+        if (next[leadId]) {
+          delete next[leadId].assigned_center;
+          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
+        }
+        return next;
+      });
+    }
+  };
+
+  const handleStaffChange = async (leadId, staffId) => {
+    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], assigned_staff: true } }));
+    try {
+      const cleanVal = staffId === '' ? null : staffId;
+      await updateLead(leadId, { assigned_staff: cleanVal });
+      
+      setPool(prevPool => prevPool.map(lead => {
+        if (lead.id === leadId) {
+          return { ...lead, assigned_staff: cleanVal };
+        }
+        return lead;
+      }));
+      toast.success('Đã cập nhật nhân viên');
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật nhân viên');
+    } finally {
+      setSavingLeads(prev => {
+        const next = { ...prev };
+        if (next[leadId]) {
+          delete next[leadId].assigned_staff;
+          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
+        }
+        return next;
+      });
+    }
+  };
+
+  const handleLevelChange = async (leadId, levelCode) => {
+    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], level_code: true } }));
+    try {
+      await updateLeadLevelAndProducts(leadId, levelCode);
+      toast.success('Đã cập nhật level');
+      loadPool(pagination.page);
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật level');
+    } finally {
+      setSavingLeads(prev => {
+        const next = { ...prev };
+        if (next[leadId]) {
+          delete next[leadId].level_code;
+          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
+        }
+        return next;
+      });
+    }
+  };
+
+  const handleProductsChange = async (leadId, selectedProds) => {
+    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], interested_products: true } }));
+    try {
+      await updateLead(leadId, { interested_products: selectedProds });
+      
+      setPool(prevPool => prevPool.map(lead => {
+        if (lead.id === leadId) {
+          return { ...lead, interested_products: selectedProds };
+        }
+        return lead;
+      }));
+      toast.success('Đã cập nhật sản phẩm');
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật sản phẩm');
+    } finally {
+      setSavingLeads(prev => {
+        const next = { ...prev };
+        if (next[leadId]) {
+          delete next[leadId].interested_products;
+          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
+        }
+        return next;
+      });
+    }
+  };
 
   useEffect(() => { loadRef.current = loadPool; }, [loadPool]);
   useEffect(() => { loadPool(); }, [loadPool]);
@@ -142,14 +298,14 @@ export default function LeadPoolPage() {
       )}
 
       {/* Data Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden relative">
         {loading && pool.length > 0 && (
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary-500/20 overflow-hidden z-10">
             <div className="h-full bg-primary-500 animate-pulse w-full" />
           </div>
         )}
-        <div className="overflow-x-auto">
-          <table className="data-table">
+        <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
+          <table className="data-table" style={{ minWidth: '1700px' }}>
             <thead>
               <tr>
                 <th className="w-10">
@@ -157,15 +313,25 @@ export default function LeadPoolPage() {
                     onChange={toggleAll}
                     className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500" />
                 </th>
-                <th>Mã Lead</th><th>Họ tên</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Địa chỉ</th><th>Nguồn</th><th>Ngày tạo</th>
+                <th>Mã Lead</th>
+                <th>Họ tên phụ huynh</th>
+                <th>Tên con</th>
+                <th>SĐT</th>
+                <th>Năm sinh con</th>
+                <th>Địa chỉ</th>
+                <th>Trung tâm</th>
+                <th>Sale đặt lịch</th>
+                <th>Sản phẩm</th>
+                <th>Level</th>
+                <th>Nguồn</th>
+                <th>Ngày tạo</th>
               </tr>
             </thead>
             <tbody>
               {loading && pool.length === 0 ? (
-                <tr><td colSpan={8} className="p-0"><TableSkeleton rows={8} cols={8} /></td></tr>
+                <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
               ) : pool.length === 0 ? (
-                <tr><td colSpan={8}>
+                <tr><td colSpan={13}>
                   <EmptyState icon={HiOutlineInbox} title="Kho L0 trống"
                     description="Chưa có lead nào ở mức L0" />
                 </td></tr>
@@ -194,31 +360,197 @@ export default function LeadPoolPage() {
                           className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500" />
                       </td>
                       <td className="font-mono text-xs text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
-                      <td>
-                        <div className="font-medium text-surface-800 dark:text-surface-100 flex items-center gap-2">
-                          {lead.full_name}
-                          {delayed ? (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 animate-pulse" title="Quá 3 giờ chưa xử lý">
-                              Trễ &gt;3h
-                            </span>
-                          ) : unprocessed ? (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 animate-pulse">
-                              Mới
-                            </span>
-                          ) : (
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${lead.level_code === 'L0.R' ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'}`}>
-                              {lead.level_code === 'L0.R' ? 'Số rác' : lead.level_code === 'L0.K' ? 'Khu vực khác' : lead.level_code}
+                      
+                      {/* Họ tên phụ huynh */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[180px]">
+                          <input
+                            type="text"
+                            value={lead.full_name || ''}
+                            onChange={(e) => handleInputChange(lead.id, 'full_name', e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'full_name', lead.full_name, e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+                            disabled={savingLeads[lead.id]?.full_name}
+                            className="input-field py-1 px-2 text-xs w-full font-medium"
+                          />
+                          {delayed && !savingLeads[lead.id]?.full_name && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
+                              Trễ
                             </span>
                           )}
+                          {unprocessed && !delayed && !savingLeads[lead.id]?.full_name && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-850 dark:text-amber-400">
+                              Mới
+                            </span>
+                          )}
+                          {savingLeads[lead.id]?.full_name && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
                         </div>
-                        {lead.child_name && (
-                          <div className="text-[11px] text-surface-500 mt-0.5">Con: {lead.child_name}</div>
-                        )}
                       </td>
-                      <td className="font-mono text-xs text-surface-800 dark:text-surface-200">{lead.phone || '—'}</td>
-                      <td className="text-sm text-surface-800 dark:text-surface-200">{lead.child_birth_year || '—'}</td>
-                      <td className="text-xs text-surface-600 dark:text-surface-400 max-w-[200px] truncate">{lead.address || '—'}</td>
-                      <td><span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{lead.source_type}</span></td>
+
+                      {/* Tên con */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[130px]">
+                          <input
+                            type="text"
+                            value={lead.child_name || ''}
+                            placeholder="Tên con..."
+                            onChange={(e) => handleInputChange(lead.id, 'child_name', e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'child_name', lead.child_name, e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+                            disabled={savingLeads[lead.id]?.child_name}
+                            className="input-field py-1 px-2 text-xs w-full"
+                          />
+                          {savingLeads[lead.id]?.child_name && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* SĐT */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[120px]">
+                          <input
+                            type="text"
+                            value={lead.phone || ''}
+                            placeholder="SĐT..."
+                            onChange={(e) => handleInputChange(lead.id, 'phone', e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'phone', lead.phone, e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+                            disabled={savingLeads[lead.id]?.phone}
+                            className="input-field py-1 px-2 text-xs w-full font-mono"
+                          />
+                          {savingLeads[lead.id]?.phone && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Năm sinh con */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[95px]">
+                          <select
+                            value={lead.child_birth_year || ''}
+                            onChange={(e) => handleInputBlur(lead.id, 'child_birth_year', lead.child_birth_year, e.target.value)}
+                            disabled={savingLeads[lead.id]?.child_birth_year}
+                            className="select-field py-1 px-2 text-xs w-full"
+                          >
+                            <option value="">— Năm sinh —</option>
+                            {Array.from({ length: 21 }, (_, i) => 2010 + i).map(year => (
+                              <option key={year} value={year}>{year}</option>
+                            ))}
+                          </select>
+                          {savingLeads[lead.id]?.child_birth_year && (
+                            <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Địa chỉ */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[170px]">
+                          <input
+                            type="text"
+                            value={lead.address || ''}
+                            placeholder="Địa chỉ..."
+                            onChange={(e) => handleInputChange(lead.id, 'address', e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'address', lead.address, e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+                            disabled={savingLeads[lead.id]?.address}
+                            className="input-field py-1 px-2 text-xs w-full"
+                          />
+                          {savingLeads[lead.id]?.address && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Trung tâm */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[140px]">
+                          <select
+                            value={lead.assigned_center || ''}
+                            onChange={(e) => handleCenterChange(lead.id, e.target.value)}
+                            disabled={savingLeads[lead.id]?.assigned_center}
+                            className="select-field py-1 px-2 text-xs w-full"
+                          >
+                            <option value="">— Chưa gán —</option>
+                            {centers.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                          {savingLeads[lead.id]?.assigned_center && (
+                            <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Sale đặt lịch */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[140px]">
+                          <select
+                            value={lead.assigned_staff || ''}
+                            onChange={(e) => handleStaffChange(lead.id, e.target.value)}
+                            disabled={savingLeads[lead.id]?.assigned_staff}
+                            className="select-field py-1 px-2 text-xs w-full"
+                          >
+                            <option value="">— Chưa gán —</option>
+                            {allStaff.map(s => (
+                              <option key={s.id} value={s.id}>{s.full_name}</option>
+                            ))}
+                          </select>
+                          {savingLeads[lead.id]?.assigned_staff && (
+                            <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Sản phẩm quan tâm */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[140px]">
+                          <MultiSelect
+                            options={['UCMAS', 'UCKID', 'ROBOT', 'TRẠI HÈ'].map(p => ({ value: p, label: p }))}
+                            selected={lead.interested_products || []}
+                            onChange={(vals) => handleProductsChange(lead.id, vals)}
+                            placeholder="Chọn..."
+                            className="w-full text-xs text-left"
+                            searchable={false}
+                          />
+                          {savingLeads[lead.id]?.interested_products && (
+                            <span className="absolute right-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Level */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[130px]">
+                          <select
+                            value={lead.level_code || 'L0'}
+                            onChange={(e) => handleLevelChange(lead.id, e.target.value)}
+                            disabled={savingLeads[lead.id]?.level_code}
+                            className="select-field py-1 px-2 text-xs w-full font-semibold"
+                          >
+                            <option value="L0">L0 — Data đầu vào</option>
+                            <option value="L1.KK">L1 Kho kiểm</option>
+                            <option value="L0.R">Số rác</option>
+                            <option value="L0.K">Khu vực khác</option>
+                          </select>
+                          {savingLeads[lead.id]?.level_code && (
+                            <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Nguồn */}
+                      <td>
+                        <span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
+                          {lead.source_type}
+                        </span>
+                      </td>
+
+                      {/* Ngày tạo */}
                       <td className="text-xs text-surface-500 font-mono">
                         {new Date(lead.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                       </td>
@@ -231,23 +563,31 @@ export default function LeadPoolPage() {
         </div>
 
         {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-surface-200 dark:border-surface-800">
-            <span className="text-sm text-surface-500">
-              {pagination.total} lead · Trang {pagination.page}/{pagination.totalPages}
-            </span>
-            <div className="flex gap-1">
-              <button onClick={() => loadPool(pagination.page - 1)} disabled={pagination.page <= 1}
-                className="btn-ghost text-sm disabled:opacity-30 flex items-center gap-1">
-                <HiOutlineChevronLeft className="w-4 h-4" /> Trước
-              </button>
-              <button onClick={() => loadPool(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
-                className="btn-ghost text-sm disabled:opacity-30 flex items-center gap-1">
-                Sau <HiOutlineChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-surface-200 dark:border-surface-800 gap-3">
+          <div className="flex items-center gap-2 text-sm text-surface-500">
+            <span>Hiển thị</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(parseInt(e.target.value))}
+              className="py-1 px-2 text-xs w-24 bg-white dark:bg-surface-800 border border-surface-300 dark:border-surface-600 rounded-lg focus:outline-none"
+            >
+              {[10, 20, 50, 100, 200].map((size) => (
+                <option key={size} value={size}>{size} dòng</option>
+              ))}
+            </select>
+            <span>/ trang (Tổng số {pagination.total} lead)</span>
           </div>
-        )}
+
+          {pagination.totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-surface-500 mr-2">Trang {pagination.page}/{pagination.totalPages}</span>
+              <button onClick={() => loadPool(pagination.page - 1)} disabled={pagination.page <= 1}
+                className="btn-ghost text-sm disabled:opacity-30 py-1.5 px-3">← Trước</button>
+              <button onClick={() => loadPool(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
+                className="btn-ghost text-sm disabled:opacity-30 py-1.5 px-3">Sau →</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {selectedLead && (
