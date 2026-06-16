@@ -280,6 +280,11 @@ function syncNewRows(fieldMapping) {
             row, text: '⏭️ Bỏ qua · ' + (result.reason || 'không xác định'), color: '#757575',
           });
         }
+      } else if (result.status === 'failed') {
+        failed++;
+        statusUpdates.push({
+          row, text: '❌ Lỗi API: ' + result.error, color: '#C62828',
+        });
       }
     } else {
       failed++;
@@ -410,14 +415,23 @@ function callSupabaseRPC(payload) {
       muteHttpExceptions: true,
     });
     const code = response.getResponseCode();
+    const text = response.getContentText();
     if (code >= 400) {
-      console.error('RPC error:', code, response.getContentText());
-      return null;
+      console.error('RPC error:', code, text);
+      let errMsg = 'HTTP ' + code;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.message) errMsg = parsed.message;
+        else if (parsed.details) errMsg = parsed.details;
+      } catch (e) {
+        if (text && text.length < 100) errMsg = text;
+      }
+      return { status: 'failed', error: errMsg };
     }
-    return JSON.parse(response.getContentText());
+    return JSON.parse(text);
   } catch (err) {
     console.error('Fetch error:', err);
-    return null;
+    return { status: 'failed', error: String(err) };
   }
 }
 
