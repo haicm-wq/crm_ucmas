@@ -132,7 +132,14 @@ export default function ProductsTab() {
         }
       }
 
-      // 2. Xóa product (cascade sẽ xóa product_levels + lead_product_levels)
+      // 2. Nullify product_code trong lead_level_history
+      // (FK là ON DELETE SET NULL nhưng RLS chặn cascade operation)
+      await supabase
+        .from('lead_level_history')
+        .update({ product_code: null })
+        .eq('product_code', product.code);
+
+      // 3. Xóa product (cascade sẽ xóa product_levels + lead_product_levels)
       const { error } = await supabase
         .from('products')
         .delete()
