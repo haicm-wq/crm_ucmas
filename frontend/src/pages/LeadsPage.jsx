@@ -50,6 +50,7 @@ export default function LeadsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [allProductLevels, setAllProductLevels] = useState([]);
+  const [pageSize, setPageSize] = useState(50);
   const loadLeadsRef = useRef(null);
 
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function LeadsPage() {
       const validRules = advancedRules
         .filter((r) => r.field && r.op && r.value && ALLOWED_FILTER_FIELDS.includes(r.field));
       const result = await fetchLeads({
-        page, limit: 50, search: debouncedSearch, ...filters,
+        page, limit: pageSize, search: debouncedSearch, ...filters,
         advanced_filters: validRules.length > 0 ? validRules : undefined,
       });
       setLeads(result.data);
@@ -119,7 +120,7 @@ export default function LeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filters, advancedRules]);
+  }, [debouncedSearch, filters, advancedRules, pageSize]);
 
   useEffect(() => { loadLeadsRef.current = loadLeads; }, [loadLeads]);
   useEffect(() => { loadLeads(); }, [loadLeads]);
@@ -343,7 +344,7 @@ export default function LeadsPage() {
             <div className="h-full bg-primary-500 animate-pulse w-full" />
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
           <table className="data-table" style={{ minWidth: '2200px' }} id="lead-table">
             <thead>
               <tr>
@@ -418,15 +419,31 @@ export default function LeadsPage() {
           </table>
         </div>
 
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-surface-200 dark:border-surface-800">
-            <span className="text-sm text-surface-500">{pagination.total} lead · Trang {pagination.page}/{pagination.totalPages}</span>
-            <div className="flex gap-1">
-              <button onClick={() => loadLeads(pagination.page - 1)} disabled={pagination.page <= 1}
-                className="btn-ghost text-sm disabled:opacity-30">← Trước</button>
-              <button onClick={() => loadLeads(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
-                className="btn-ghost text-sm disabled:opacity-30">Sau →</button>
+        {pagination.total > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-surface-200 dark:border-surface-800 gap-3">
+            <div className="flex items-center gap-2 text-sm text-surface-500">
+              <span>Hiển thị</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(parseInt(e.target.value))}
+                className="py-1 px-2 text-xs w-24 bg-white dark:bg-surface-800 border border-surface-300 dark:border-surface-600 rounded-lg focus:outline-none"
+              >
+                {[10, 20, 50, 100, 200].map((size) => (
+                  <option key={size} value={size}>{size} dòng</option>
+                ))}
+              </select>
+              <span>/ trang (Tổng số {pagination.total} lead)</span>
             </div>
+
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-surface-500 mr-2">Trang {pagination.page}/{pagination.totalPages}</span>
+                <button onClick={() => loadLeads(pagination.page - 1)} disabled={pagination.page <= 1}
+                  className="btn-ghost text-sm disabled:opacity-30 py-1.5 px-3">← Trước</button>
+                <button onClick={() => loadLeads(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages}
+                  className="btn-ghost text-sm disabled:opacity-30 py-1.5 px-3">Sau →</button>
+              </div>
+            )}
           </div>
         )}
       </div>
