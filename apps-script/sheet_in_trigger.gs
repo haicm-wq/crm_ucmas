@@ -579,20 +579,44 @@ function syncOutboundRows(config) {
     }))
   ];
 
-  const activeFields = allExportFields.filter(f => mapping[f.key] && mapping[f.key].trim() !== '');
-  const headers = activeFields.map(f => mapping[f.key].trim());
+  const activeMappedFields = allExportFields.filter(f => mapping[f.key] && mapping[f.key].trim() !== '');
 
-  if (headers.length === 0) {
+  if (activeMappedFields.length === 0) {
     console.error('⚠️ Không có trường nào được cấu hình xuất dữ liệu.');
     return { error: 'no_mapped_fields', success: 0, updated: 0, failed: 0 };
   }
 
-  // Khởi tạo headers nếu Sheet rỗng
-  if (sheet.getLastRow() === 0) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
-    sheet.getRange(1, 1, 1, headers.length).setBackground('#E8F5E9');
-    SpreadsheetApp.flush();
+  // 1. Lấy headers hiện có trên Sheet
+  const lastCol = sheet.getLastColumn();
+  let sheetHeaders = [];
+  if (lastCol > 0) {
+    sheetHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim());
+  }
+
+  // 2. Khởi tạo headers nếu Sheet rỗng
+  if (sheetHeaders.length === 0) {
+    sheetHeaders = activeMappedFields.map(f => mapping[f.key].trim());
+    if (sheetHeaders.length > 0) {
+      sheet.getRange(1, 1, 1, sheetHeaders.length).setValues([sheetHeaders]);
+      sheet.getRange(1, 1, 1, sheetHeaders.length).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, sheetHeaders.length).setBackground('#E8F5E9');
+      SpreadsheetApp.flush();
+    }
+  } else {
+    // 3. Nếu Sheet không rỗng, kiểm tra xem có cột nào mới được map cấu hình chưa có trên Sheet không -> append vào cuối
+    let headersUpdated = false;
+    activeMappedFields.forEach(f => {
+      const headerName = mapping[f.key].trim();
+      if (sheetHeaders.indexOf(headerName) === -1) {
+        sheetHeaders.push(headerName);
+        headersUpdated = true;
+      }
+    });
+    if (headersUpdated) {
+      sheet.getRange(1, 1, 1, sheetHeaders.length).setValues([sheetHeaders]);
+      sheet.getRange(1, 1, 1, sheetHeaders.length).setFontWeight('bold');
+      SpreadsheetApp.flush();
+    }
   }
 
   // Lấy leads mới/cập nhật từ CRM
@@ -632,11 +656,11 @@ function syncOutboundRows(config) {
       const targetRow = startRow + index;
       lead.sheet_out_row = targetRow;
       rowUpdatesToSupabase.push({ id: lead.id, sheet_row: targetRow });
-      return mapLeadToRow(lead, activeFields);
+      return mapLeadToRow(lead, sheetHeaders, mapping, null);
     });
 
     try {
-      sheet.getRange(startRow, 1, newRowsValues.length, headers.length).setValues(newRowsValues);
+      sheet.getRange(startRow, 1, newRowsValues.length, sheetHeaders.length).setValues(newRowsValues);
       successCount += newLeads.length;
     } catch (err) {
       console.error('❌ Lỗi batch write new leads:', err);
@@ -647,15 +671,15 @@ function syncOutboundRows(config) {
 
   // 2. Ghi đè các lead đã có dòng và được update (ROW-BY-ROW với cơ chế kiểm tra Mã Lead)
   if (updatedLeads.length > 0) {
-    // Tìm cột chứa "Mã Lead" (lead_code)
-    const leadCodeColIdx = activeFields.findIndex(f => f.key === 'lead_code') + 1;
+    // Tìm cột chứa "Mã Lead" (lead_code) dynamically
+    const leadCodeHeader = mapping.lead_code ? mapping.lead_code.trim() : 'Mã Lead';
+    const leadCodeColIdx = sheetHeaders.indexOf(leadCodeHeader) + 1;
     let leadCodes = [];
     if (leadCodeColIdx > 0 && lastRowBefore > 0) {
       leadCodes = sheet.getRange(1, leadCodeColIdx, lastRowBefore, 1).getValues().map(r => String(r[0]).trim());
     }
 
     updatedLeads.forEach((lead) => {
-      const rowValues = mapLeadToRow(lead, activeFields);
       let targetRow = lead.sheet_out_row;
       let isMatch = false;
 
@@ -676,14 +700,22 @@ function syncOutboundRows(config) {
       }
 
       try {
+        let existingRowValues = null;
+        if (isMatch && targetRow > 1 && targetRow <= lastRowBefore) {
+          existingRowValues = sheet.getRange(targetRow, 1, 1, sheetHeaders.length).getValues()[0];
+        }
+
+        const rowValues = mapLeadToRow(lead, sheetHeaders, mapping, existingRowValues);
+
         if (isMatch) {
-          sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowValues]);
+          sheet.getRange(targetRow, 1, 1, sheetHeaders.length).setValues([rowValues]);
           updatedCount++;
         } else {
           // 3. Nếu không tìm thấy, append như dòng mới ở cuối
           const appendRow = sheet.getLastRow() + 1;
           lead.sheet_out_row = appendRow;
-          sheet.getRange(appendRow, 1, 1, headers.length).setValues([rowValues]);
+          const newRowValues = mapLeadToRow(lead, sheetHeaders, mapping, null);
+          sheet.getRange(appendRow, 1, 1, sheetHeaders.length).setValues([newRowValues]);
           rowUpdatesToSupabase.push({ id: lead.id, sheet_row: appendRow });
           successCount++;
         }
@@ -714,20 +746,35 @@ function syncOutboundRows(config) {
   };
 }
 
-function mapLeadToRow(lead, activeFields) {
-  return activeFields.map(f => {
+function mapLeadToRow(lead, sheetHeaders, mapping, existingRowValues) {
+  const headerToCrmKey = {};
+  Object.entries(mapping).forEach(([crmKey, headerName]) => {
+    if (headerName && headerName.trim() !== '') {
+      headerToCrmKey[headerName.trim()] = crmKey;
+    }
+  });
+
+  return sheetHeaders.map((header, colIdx) => {
+    const crmKey = headerToCrmKey[header];
+    if (!crmKey) {
+      // Cột này không được map từ CRM (ví dụ: cột Trạng thái cập nhật CRM của chiều nhập)
+      // Giữ nguyên giá trị cũ trên Sheet nếu có, tránh ghi đè làm trống
+      return existingRowValues ? existingRowValues[colIdx] : '';
+    }
+
     let val;
-    if (f.key.startsWith('custom_fields.')) {
-      const customKey = f.key.split('.')[1];
+    if (crmKey.startsWith('custom_fields.')) {
+      const customKey = crmKey.split('.')[1];
       val = lead.custom_fields ? lead.custom_fields[customKey] : null;
     } else {
-      val = lead[f.key];
+      val = lead[crmKey];
     }
+
     if (val === undefined || val === null) return '';
-    if (f.key === 'interested_products' && Array.isArray(val)) {
+    if (crmKey === 'interested_products' && Array.isArray(val)) {
       return val.join(', ');
     }
-    if (f.key === 'created_at' || f.key === 'updated_at' || f.key.endsWith('_at')) {
+    if (crmKey === 'created_at' || crmKey === 'updated_at' || crmKey.endsWith('_at')) {
       try {
         return Utilities.formatDate(new Date(val), 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd HH:mm:ss');
       } catch (e) {
