@@ -160,6 +160,19 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       }
     }
 
+    // Xác nhận khi đổi Họ tên phụ huynh hoặc SĐT
+    const hasNameChanged = form.full_name !== lead.full_name;
+    const hasPhoneChanged = (form.phone || '') !== (lead.phone || '');
+    if (hasNameChanged || hasPhoneChanged) {
+      const msg = `Bạn đang thay đổi thông tin quan trọng:\n` +
+        (hasNameChanged ? ` - Họ tên: "${lead.full_name || '—'}" -> "${form.full_name || '—'}"\n` : '') +
+        (hasPhoneChanged ? ` - SĐT: "${lead.phone || '—'}" -> "${form.phone || '—'}"\n` : '') +
+        `Bạn có đồng ý thực hiện thay đổi này không?`;
+      if (!window.confirm(msg)) {
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const changes = cleanChanges(form);

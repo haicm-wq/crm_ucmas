@@ -366,30 +366,18 @@ export default function LeadPoolPage() {
                       <td className="font-mono text-xs text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
                       
                       {/* Họ tên phụ huynh */}
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[180px]">
-                          <input
-                            type="text"
-                            value={lead.full_name || ''}
-                            onFocus={(e) => setFocusedValue(e.target.value)}
-                            onChange={(e) => handleInputChange(lead.id, 'full_name', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'full_name', focusedValue, e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-                            disabled={savingLeads[lead.id]?.full_name}
-                            className="input-field py-1 px-2 text-xs w-full font-medium"
-                          />
-                          {delayed && !savingLeads[lead.id]?.full_name && (
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
+                      <td>
+                        <div className="flex items-center gap-1.5 min-w-[180px] font-medium text-xs">
+                          <span>{lead.full_name || '—'}</span>
+                          {delayed && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
                               Trễ
                             </span>
                           )}
-                          {unprocessed && !delayed && !savingLeads[lead.id]?.full_name && (
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-850 dark:text-amber-400">
+                          {unprocessed && !delayed && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-850 dark:text-amber-400">
                               Mới
                             </span>
-                          )}
-                          {savingLeads[lead.id]?.full_name && (
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
                           )}
                         </div>
                       </td>
@@ -415,22 +403,9 @@ export default function LeadPoolPage() {
                       </td>
 
                       {/* SĐT */}
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[120px]">
-                          <input
-                            type="text"
-                            value={lead.phone || ''}
-                            placeholder="SĐT..."
-                            onFocus={(e) => setFocusedValue(e.target.value)}
-                            onChange={(e) => handleInputChange(lead.id, 'phone', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'phone', focusedValue, e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-                            disabled={savingLeads[lead.id]?.phone}
-                            className="input-field py-1 px-2 text-xs w-full font-mono"
-                          />
-                          {savingLeads[lead.id]?.phone && (
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
-                          )}
+                      <td>
+                        <div className="min-w-[120px] font-mono text-xs text-surface-700 dark:text-surface-300">
+                          {lead.phone || '—'}
                         </div>
                       </td>
 
