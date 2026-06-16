@@ -171,7 +171,8 @@ function autoSyncTick() {
     runInbound = true;
   } else if (sync_enabled === 'true' && sync_interval && sync_interval !== '0') {
     const intervalMs = parseInt(sync_interval) * 60 * 1000;
-    if (Date.now() - lastSync >= intervalMs) {
+    const bufferMs = Math.min(2 * 60 * 1000, intervalMs * 0.1); // Grace period: 2 phút hoặc 10% chu kỳ
+    if (Date.now() - lastSync >= (intervalMs - bufferMs)) {
       runInbound = true;
     }
   }
@@ -191,7 +192,8 @@ function autoSyncTick() {
     runOutbound = true;
   } else if (sheet_out_sync_enabled === 'true' && sync_interval && sync_interval !== '0') {
     const intervalMs = parseInt(sync_interval) * 60 * 1000;
-    if (Date.now() - lastOutSync >= intervalMs) {
+    const bufferMs = Math.min(2 * 60 * 1000, intervalMs * 0.1); // Grace period: 2 phút hoặc 10% chu kỳ
+    if (Date.now() - lastOutSync >= (intervalMs - bufferMs)) {
       runOutbound = true;
     }
   }
