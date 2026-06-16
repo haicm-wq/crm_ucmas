@@ -393,6 +393,11 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                       form.interested_products.map((p_code) => {
                         const prodLvls = allProductLevels.filter(l => l.product_code === p_code);
                         const filteredProdLvls = prodLvls.filter((lvl) => {
+                          // Leads đã tốt nghiệp (level_group != 'L0') → ẩn L0 base levels
+                          if (lead.level_group !== 'L0' && ['L1.KK', 'L0.R', 'L0.K', 'L0'].includes(lvl.level_code)) {
+                            return false;
+                          }
+                          // Leads còn ở L0 → chỉ hiện L1.KK/L0.R/L0.K nếu lead gốc là L0 hoặc đang chọn
                           if (['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
                             const isOriginalL0 = lead.level_code === 'L0';
                             const isCurrentlySelected = formProductLevels[p_code] === lvl.level_code;
@@ -408,7 +413,10 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                               onChange={(e) => setFormProductLevels({ ...formProductLevels, [p_code]: e.target.value })}
                               className="select-field py-2 text-sm"
                             >
-                              <option value="L0">L0 — Data đầu vào</option>
+                              {/* L0 option chỉ hiện cho leads trong Kho L0 */}
+                              {lead.level_group === 'L0' && (
+                                <option value="L0">L0 — Data đầu vào</option>
+                              )}
                               {filteredProdLvls.map((lvl) => (
                                 <option key={lvl.level_code} value={lvl.level_code}>
                                   {lvl.level_code} — {lvl.label}
