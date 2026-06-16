@@ -103,21 +103,27 @@ export default function UsersTab() {
             </div>
             <div>
               <label className="block text-xs text-surface-500 mb-1">Nhóm quyền</label>
-              <select value={newUser.permission_group} onChange={(e) => setNewUser({ ...newUser, permission_group: e.target.value })}
+              <select value={newUser.permission_group} onChange={(e) => {
+                const val = e.target.value;
+                setNewUser({ ...newUser, permission_group: val, center_id: val === 'center' ? newUser.center_id : '' });
+              }}
                 className="select-field py-2 text-sm">
                 <option value="admin">Admin</option>
                 <option value="marketing">Marketing</option>
+                <option value="telesale">Sale đặt lịch</option>
                 <option value="center">Center</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-surface-500 mb-1">Trung tâm</label>
-              <select value={newUser.center_id} onChange={(e) => setNewUser({ ...newUser, center_id: e.target.value })}
-                className="select-field py-2 text-sm">
-                <option value="">— Không gán —</option>
-                {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-              </select>
-            </div>
+            {newUser.permission_group === 'center' && (
+              <div>
+                <label className="block text-xs text-surface-500 mb-1">Trung tâm *</label>
+                <select value={newUser.center_id} onChange={(e) => setNewUser({ ...newUser, center_id: e.target.value })}
+                  className="select-field py-2 text-sm">
+                  <option value="">— Chọn trung tâm —</option>
+                  {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+            )}
             <div className="flex items-end gap-3">
               <label className="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-400">
                 <input type="checkbox" checked={newUser.can_view_l0_pool}
@@ -170,28 +176,40 @@ export default function UsersTab() {
                     <td>
                       {editingId === u.id ? (
                         <select value={editForm.permission_group}
-                          onChange={(e) => setEditForm({ ...editForm, permission_group: e.target.value })}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditForm({ ...editForm, permission_group: val, center_id: val === 'center' ? editForm.center_id : '' });
+                          }}
                           className="select-field py-1 text-xs">
                           <option value="admin">Admin</option>
                           <option value="marketing">Marketing</option>
+                          <option value="telesale">Sale đặt lịch</option>
                           <option value="center">Center</option>
                         </select>
                       ) : (
                         <span className={`badge text-[10px] ${
                           u.permission_group === 'admin' ? 'bg-red-500/10 text-red-500' :
                           u.permission_group === 'marketing' ? 'bg-blue-500/10 text-blue-500' :
+                          u.permission_group === 'telesale' ? 'bg-purple-500/10 text-purple-500' :
                           'bg-green-500/10 text-green-500'
-                        }`}>{u.permission_group}</span>
+                        }`}>{
+                          u.permission_group === 'admin' ? 'Admin' :
+                          u.permission_group === 'marketing' ? 'Marketing' :
+                          u.permission_group === 'telesale' ? 'Sale đặt lịch' :
+                          'Center'
+                        }</span>
                       )}
                     </td>
                     <td className="text-surface-500 text-xs">
                       {editingId === u.id ? (
-                        <select value={editForm.center_id || ''}
-                          onChange={(e) => setEditForm({ ...editForm, center_id: e.target.value })}
-                          className="select-field py-1 text-xs">
-                          <option value="">—</option>
-                          {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                        </select>
+                        editForm.permission_group === 'center' ? (
+                          <select value={editForm.center_id || ''}
+                            onChange={(e) => setEditForm({ ...editForm, center_id: e.target.value })}
+                            className="select-field py-1 text-xs">
+                            <option value="">— Chọn trung tâm —</option>
+                            {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                          </select>
+                        ) : '—'
                       ) : (
                         u.center_name || '—'
                       )}

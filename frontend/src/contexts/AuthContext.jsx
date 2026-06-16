@@ -84,14 +84,15 @@ export function AuthProvider({ children }) {
   const isAdmin = profile?.permission_group === 'admin';
   const isMarketing = profile?.permission_group === 'marketing';
   const isCenter = profile?.permission_group === 'center';
-  const canViewL0 = profile?.can_view_l0_pool || isAdmin;
+  const isTelesale = profile?.permission_group === 'telesale';
+  const canViewL0 = profile?.can_view_l0_pool || isAdmin || isTelesale;
 
   return (
     <AuthContext.Provider value={{
       user: profile, // Giữ interface cũ: user = profile data
       authUser: user, // Raw Supabase auth user
       login, logout, loading,
-      isAdmin, isMarketing, isCenter, canViewL0,
+      isAdmin, isMarketing, isCenter, isTelesale, canViewL0,
     }}>
       {children}
     </AuthContext.Provider>

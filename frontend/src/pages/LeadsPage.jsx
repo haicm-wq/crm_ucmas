@@ -21,7 +21,7 @@ const PRODUCTS = ['UCMAS', 'UCKID', 'ROBOT', 'TRẠI HÈ'];
 const ADVANCED_FIELDS = [
   { value: 'level_code', label: 'Level', type: 'select', options: ALL_LEVEL_CODES },
   { value: 'assigned_center', label: 'Trung tâm', type: 'center' },
-  { value: 'assigned_staff', label: 'NV phụ trách', type: 'staff' },
+  { value: 'assigned_staff', label: 'Sale đặt lịch', type: 'staff' },
   { value: 'interested_products', label: 'Sản phẩm', type: 'product' },
   { value: 'source_type', label: 'Nguồn', type: 'select', options: ['PULL', 'PUSH'] },
 ];
@@ -230,8 +230,8 @@ export default function LeadsPage() {
                 options={staffOptions}
                 selected={filters.staff_id}
                 onChange={(vals) => setFilters({ ...filters, staff_id: vals })}
-                placeholder="Tất cả NV phụ trách"
-                labelPrefix="NV phụ trách"
+                placeholder="Tất cả Sale đặt lịch"
+                labelPrefix="Sale đặt lịch"
                 className="w-56"
               />
               <select id="filter-sort" value={filters.sort_by}
@@ -349,7 +349,7 @@ export default function LeadsPage() {
             <thead>
               <tr>
                 <th>Mã Lead</th><th>Họ tên</th><th>Tên con</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Trung tâm</th><th>NV phụ trách</th><th>Nguồn</th><th>Sản phẩm</th><th>Level UCMAS</th><th>Level UCKID</th>
+                <th>Trung tâm</th><th>Sale đặt lịch</th><th>Nguồn</th><th>Sản phẩm</th><th>Level UCMAS</th><th>Level UCKID</th>
                 <th>L1 UCMAS</th><th>L2 UCMAS</th><th>L3 UCMAS</th><th>L4 UCMAS</th>
                 <th>L1 UCKID</th><th>L2 UCKID</th><th>L3 UCKID</th><th>L4 UCKID</th>
                 <th>Liên hệ cuối</th><th>Follow-up</th>

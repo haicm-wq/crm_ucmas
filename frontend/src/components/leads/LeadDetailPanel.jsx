@@ -121,19 +121,14 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     if (activeTab === 'siblings' && siblings.length === 0 && lead.phone) loadSiblings();
   }, [activeTab, lead.id]);
 
-  // Bug10 fix: clear staff list immediately when center changes, show loading
+  // Load toàn bộ Sale đặt lịch (telesale) một lần duy nhất khi panel mount
   useEffect(() => {
-    if (form.assigned_center) {
-      setStaffLoading(true);
-      setStaff([]); // clear old staff immediately
-      fetchStaffByCenter(form.assigned_center)
-        .then(setStaff)
-        .catch(console.error)
-        .finally(() => setStaffLoading(false));
-    } else {
-      setStaff([]);
-    }
-  }, [form.assigned_center]);
+    setStaffLoading(true);
+    fetchStaffByCenter()
+      .then(setStaff)
+      .catch(console.error)
+      .finally(() => setStaffLoading(false));
+  }, []);
 
   const loadNotes = useCallback(async () => {
     try { setNotes(await fetchNotes(lead.id)); } catch (err) { console.error(err); }
@@ -449,9 +444,9 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   )}
                 </div>
 
-                {editing && form.assigned_center && (
+                {editing && (
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 mb-1">NV phụ trách</label>
+                    <label className="block text-xs font-medium text-surface-500 mb-1">Sale đặt lịch</label>
                     {staffLoading ? (
                       <p className="text-xs text-surface-500 py-2">Đang tải...</p>
                     ) : (

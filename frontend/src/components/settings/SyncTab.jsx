@@ -61,7 +61,7 @@ export default function SyncTab() {
     { key: 'level_code', label: 'Cấp độ/Level hiện tại', defaultHeader: 'Level' },
     { key: 'l4_type', label: 'Phân loại L4 (UCMAS/UCKID)', defaultHeader: 'Phân loại L4' },
     { key: 'center_name', label: 'Tên trung tâm phụ trách', defaultHeader: 'Trung tâm' },
-    { key: 'staff_name', label: 'Tên nhân viên phụ trách', defaultHeader: 'Nhân viên phụ trách' },
+    { key: 'staff_name', label: 'Tên Sale đặt lịch', defaultHeader: 'Sale đặt lịch' },
     { key: 'source_type', label: 'Nguồn', defaultHeader: 'Nguồn' },
     { key: 'ad_campaign', label: 'Chiến dịch QC', defaultHeader: 'Chiến dịch QC' },
     { key: 'interested_products', label: 'Sản phẩm quan tâm', defaultHeader: 'Sản phẩm' },

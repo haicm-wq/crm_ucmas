@@ -10,7 +10,8 @@ import { HiOutlineRefresh, HiOutlineInbox, HiOutlineChevronLeft, HiOutlineChevro
 
 export default function LeadPoolPage() {
   const { centers } = useSharedData();
-  const { canViewL0 } = useAuth();
+  const { canViewL0, user } = useAuth();
+  const isTelesale = user?.permission_group === 'telesale';
   const [pool, setPool] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 100, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -107,7 +108,7 @@ export default function LeadPoolPage() {
           </select>
           <button onClick={handleBulkAssign} disabled={assigning || !targetCenter}
             className="btn-primary text-sm disabled:opacity-50">
-            {assigning ? 'Đang gán...' : `Phân bổ ${selected.size} lead`}
+            {assigning ? 'Đang gán...' : isTelesale ? `Nhận ${selected.size} lead` : `Phân bổ ${selected.size} lead`}
           </button>
           <button onClick={() => setSelected(new Set())} className="btn-ghost text-sm text-red-500">Bỏ chọn</button>
         </div>

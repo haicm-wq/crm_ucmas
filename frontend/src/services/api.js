@@ -103,6 +103,7 @@ export async function fetchAllStaff() {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, center_id')
+    .eq('permission_group', 'telesale')
     .eq('is_active', true)
     .order('full_name');
   if (error) throw error;
@@ -541,7 +542,7 @@ export async function fetchStaffByCenter(centerId) {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name')
-    .eq('center_id', centerId)
+    .eq('permission_group', 'telesale')
     .eq('is_active', true)
     .order('full_name');
   if (error) throw error;
