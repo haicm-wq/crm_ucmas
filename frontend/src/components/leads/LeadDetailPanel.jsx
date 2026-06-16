@@ -4,6 +4,7 @@ import { getLevelInfo, ALL_LEVEL_CODES } from '../../config/levels';
 import toast from 'react-hot-toast';
 import { HiOutlineX, HiOutlinePencil, HiOutlineChatAlt, HiOutlineClock, HiOutlineUserGroup } from 'react-icons/hi';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Bug9 fix: safely extract datetime-local value
 function toDatetimeLocal(val) {
@@ -33,6 +34,7 @@ function cleanChanges(form) {
 }
 
 export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
+  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('info');
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
@@ -481,6 +483,23 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                       className="input-field py-2 text-sm" />
                   ) : (
                     <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{formatDt(lead.next_followup_at)}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Nguồn</label>
+                  {editing ? (
+                    <select
+                      value={form.source_type || 'PULL'}
+                      onChange={(e) => setForm({ ...form, source_type: e.target.value })}
+                      disabled={!isAdmin}
+                      className="select-field py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="PULL">PULL</option>
+                      <option value="PUSH">PUSH</option>
+                    </select>
+                  ) : (
+                    <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{lead.source_type || 'PULL'}</p>
                   )}
                 </div>
               </div>
