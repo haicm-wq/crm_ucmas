@@ -187,6 +187,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS trg_sync_lead_product_levels ON leads;
 CREATE OR REPLACE TRIGGER trg_sync_lead_product_levels
   AFTER INSERT OR UPDATE OF interested_products, level_code ON leads
   FOR EACH ROW EXECUTE FUNCTION fn_sync_lead_product_levels();
@@ -196,7 +197,10 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_levels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lead_product_levels ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "products_select" ON products;
 CREATE POLICY "products_select" ON products FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "products_admin" ON products;
 CREATE POLICY "products_admin" ON products FOR ALL USING (
   EXISTS (
     SELECT 1 FROM profiles 
@@ -204,7 +208,10 @@ CREATE POLICY "products_admin" ON products FOR ALL USING (
   )
 );
 
+DROP POLICY IF EXISTS "product_levels_select" ON product_levels;
 CREATE POLICY "product_levels_select" ON product_levels FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "product_levels_admin" ON product_levels;
 CREATE POLICY "product_levels_admin" ON product_levels FOR ALL USING (
   EXISTS (
     SELECT 1 FROM profiles 
@@ -212,9 +219,12 @@ CREATE POLICY "product_levels_admin" ON product_levels FOR ALL USING (
   )
 );
 
+DROP POLICY IF EXISTS "lpl_select" ON lead_product_levels;
 CREATE POLICY "lpl_select" ON lead_product_levels FOR SELECT USING (
   EXISTS (SELECT 1 FROM leads WHERE leads.id = lead_product_levels.lead_id)
 );
+
+DROP POLICY IF EXISTS "lpl_write" ON lead_product_levels;
 CREATE POLICY "lpl_write" ON lead_product_levels FOR ALL USING (
   EXISTS (SELECT 1 FROM leads WHERE leads.id = lead_product_levels.lead_id)
 );
