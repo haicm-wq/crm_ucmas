@@ -382,6 +382,14 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                     form.interested_products && form.interested_products.length > 0 ? (
                       form.interested_products.map((p_code) => {
                         const prodLvls = allProductLevels.filter(l => l.product_code === p_code);
+                        const filteredProdLvls = prodLvls.filter((lvl) => {
+                          if (['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
+                            const isOriginalL0 = lead.level_code === 'L0';
+                            const isCurrentlySelected = formProductLevels[p_code] === lvl.level_code;
+                            return isOriginalL0 || isCurrentlySelected;
+                          }
+                          return true;
+                        });
                         return (
                           <div key={p_code}>
                             <label className="block text-xs font-medium text-surface-500 mb-1">Level {p_code}</label>
@@ -391,7 +399,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                               className="select-field py-2 text-sm"
                             >
                               <option value="L0">L0 — Data đầu vào</option>
-                              {prodLvls.map((lvl) => (
+                              {filteredProdLvls.map((lvl) => (
                                 <option key={lvl.level_code} value={lvl.level_code}>
                                   {lvl.level_code} — {lvl.label}
                                 </option>

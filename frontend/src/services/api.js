@@ -113,10 +113,7 @@ export async function fetchAllStaff() {
 export async function fetchL0Pool({ page = 1, limit = 100 } = {}) {
   const offset = (page - 1) * limit;
   const { data, error, count } = await supabase
-    .from('leads')
-    .select('*', { count: 'exact' })
-    .eq('level_group', 'L0')
-    .order('created_at', { ascending: false })
+    .rpc('rpc_fetch_l0_pool', {}, { count: 'exact' })
     .range(offset, offset + limit - 1);
   if (error) throw error;
   return {
@@ -128,6 +125,19 @@ export async function fetchL0Pool({ page = 1, limit = 100 } = {}) {
     },
   };
 }
+
+export async function fetchL0UnprocessedStats() {
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabase
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('level_code', 'L0')
+    .is('first_processed_at', null)
+    .lt('created_at', threeHoursAgo);
+  if (error) throw error;
+  return count || 0;
+}
+
 
 export async function fetchLeadById(id) {
   const { data, error } = await supabase
