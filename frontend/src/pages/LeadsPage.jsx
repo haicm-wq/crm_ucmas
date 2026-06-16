@@ -344,14 +344,13 @@ export default function LeadsPage() {
           </div>
         )}
         <div className="overflow-x-auto">
-          <table className="data-table" id="lead-table">
+          <table className="data-table" style={{ minWidth: '2200px' }} id="lead-table">
             <thead>
               <tr>
                 <th>Mã Lead</th><th>Họ tên</th><th>Tên con</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Sản phẩm</th><th>Level UCMAS</th><th>Level UCKID</th>
+                <th>Trung tâm</th><th>NV phụ trách</th><th>Sản phẩm</th><th>Level UCMAS</th><th>Level UCKID</th>
                 <th>L1 UCMAS</th><th>L2 UCMAS</th><th>L3 UCMAS</th><th>L4 UCMAS</th>
                 <th>L1 UCKID</th><th>L2 UCKID</th><th>L3 UCKID</th><th>L4 UCKID</th>
-                <th>Trung tâm</th><th>NV phụ trách</th>
                 <th>Liên hệ cuối</th><th>Follow-up</th><th>Nguồn</th>
               </tr>
             </thead>
@@ -377,6 +376,8 @@ export default function LeadsPage() {
                       <td className="text-sm font-medium text-surface-800 dark:text-surface-200">{lead.child_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 font-mono text-xs font-medium">{lead.phone || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.child_birth_year || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
                       <td>
                         <div className="flex flex-wrap gap-1">
                           {lead.interested_products && lead.interested_products.length > 0 ? (
@@ -406,8 +407,6 @@ export default function LeadsPage() {
                       <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L2'))}</td>
                       <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L3'))}</td>
                       <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L4'))}</td>
-                      <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
-                      <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
                       <td className="text-surface-600 dark:text-surface-400 text-xs font-mono">{formatDate(lead.last_contact_at)}</td>
                       <td className="text-surface-600 dark:text-surface-400 text-xs font-mono">{formatDate(lead.next_followup_at)}</td>
                       <td><span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{lead.source_type}</span></td>
