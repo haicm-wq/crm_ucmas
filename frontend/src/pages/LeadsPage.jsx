@@ -58,6 +58,50 @@ export default function LeadsPage() {
       .catch(console.error);
   }, []);
 
+  const getProductLevelTime = (lead, productCode, levelPrefix) => {
+    const lpl = lead.lead_product_levels?.find((l) => l.product_code === productCode);
+    if (!lpl || !lpl.entered_at) return null;
+
+    const matches = Object.entries(lpl.entered_at)
+      .filter(([key]) => key.startsWith(levelPrefix))
+      .map(([_, time]) => time);
+
+    if (matches.length === 0) return null;
+    return matches.sort((a, b) => new Date(a) - new Date(b))[0];
+  };
+
+  const renderProductLevelBadge = (lead, productCode) => {
+    const lpl = lead.lead_product_levels?.find((l) => l.product_code === productCode);
+    if (!lpl) return <span className="text-surface-500">—</span>;
+
+    const lvlDef = allProductLevels.find(
+      (l) => l.product_code === productCode && l.level_code === lpl.level_code
+    ) || { label: 'Data đầu vào', color: '#6B7280' };
+    const color = lvlDef.color || '#6B7280';
+
+    return (
+      <span
+        className="px-2 py-1 text-[11px] font-bold rounded-md border flex items-center gap-1 w-max"
+        style={{
+          color: color,
+          borderColor: `${color}40`,
+          backgroundColor: `${color}10`,
+        }}
+        title={lvlDef.label || ''}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+        {lpl.level_code}
+      </span>
+    );
+  };
+
+  const renderTimeCell = (time) => {
+    if (!time) return <span className="text-surface-500">—</span>;
+    const dateStr = formatDate(time);
+    const fullTimeStr = new Date(time).toLocaleString('vi-VN');
+    return <span title={fullTimeStr}>{dateStr}</span>;
+  };
+
   const loadLeads = useCallback(async (page = 1) => {
     setLoading(true);
     try {
@@ -304,15 +348,18 @@ export default function LeadsPage() {
             <thead>
               <tr>
                 <th>Mã Lead</th><th>Họ tên</th><th>Tên con</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Sản phẩm</th><th>Trạng thái</th><th>Level theo sản phẩm</th><th>Trung tâm</th><th>NV phụ trách</th>
+                <th>Sản phẩm</th><th>Level UCMAS</th><th>Level UCKID</th>
+                <th>L1 UCMAS</th><th>L2 UCMAS</th><th>L3 UCMAS</th><th>L4 UCMAS</th>
+                <th>L1 UCKID</th><th>L2 UCKID</th><th>L3 UCKID</th><th>L4 UCKID</th>
+                <th>Trung tâm</th><th>NV phụ trách</th>
                 <th>Liên hệ cuối</th><th>Follow-up</th><th>Nguồn</th>
               </tr>
             </thead>
             <tbody className={loading && leads.length > 0 ? "opacity-60 transition-opacity duration-200 pointer-events-none" : "transition-opacity duration-200"}>
               {loading && leads.length === 0 ? (
-                <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
+                <tr><td colSpan={21} className="p-0"><TableSkeleton rows={8} cols={21} /></td></tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan={13}>
+                <tr><td colSpan={21}>
                   <EmptyState icon={HiOutlineUsers} title="Không tìm thấy lead nào"
                     description="Thử thay đổi bộ lọc hoặc thêm lead mới" />
                 </td></tr>
@@ -341,39 +388,24 @@ export default function LeadsPage() {
                           ) : (<span className="text-surface-500">—</span>)}
                         </div>
                       </td>
+                      {/* Level UCMAS */}
                       <td>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`badge ${levelInfo.bgClass}`} style={{ borderLeft: `3px solid ${levelInfo.color}` }}>{lead.level_code}</span>
-                        </div>
+                        {renderProductLevelBadge(lead, 'UCMAS')}
                       </td>
+                      {/* Level UCKID */}
                       <td>
-                        <div className="flex flex-wrap gap-1">
-                          {lead.lead_product_levels && lead.lead_product_levels.length > 0 ? (
-                            lead.lead_product_levels.map((lpl) => {
-                              const lvlDef = allProductLevels.find(
-                                (l) => l.product_code === lpl.product_code && l.level_code === lpl.level_code
-                              ) || { label: '', color: '#6B7280' };
-                              const color = lvlDef.color || '#6B7280';
-                              return (
-                                <span
-                                  key={lpl.product_code}
-                                  className="px-1.5 py-0.5 text-[10px] font-bold rounded border"
-                                  style={{
-                                    color: color,
-                                    borderColor: `${color}40`,
-                                    backgroundColor: `${color}10`,
-                                  }}
-                                  title={`${lpl.product_code}: ${lpl.level_code} (${lvlDef.label || ''})`}
-                                >
-                                  {lpl.product_code}: {lpl.level_code}
-                                </span>
-                              );
-                            })
-                          ) : (
-                            <span className="text-surface-500">—</span>
-                          )}
-                        </div>
+                        {renderProductLevelBadge(lead, 'UCKID')}
                       </td>
+                      {/* L1 -> L4 UCMAS */}
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L1'))}</td>
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L2'))}</td>
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L3'))}</td>
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L4'))}</td>
+                      {/* L1 -> L4 UCKID */}
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L1'))}</td>
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L2'))}</td>
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L3'))}</td>
+                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L4'))}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
                       <td className="text-surface-600 dark:text-surface-400 text-xs font-mono">{formatDate(lead.last_contact_at)}</td>
