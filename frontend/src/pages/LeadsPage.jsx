@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useDebounce, useSupabaseRealtime } from '../hooks/useShared';
-import { fetchLeads } from '../services/api';
+import { fetchLeads, fetchProductLevels } from '../services/api';
 import { getLevelInfo, isMilestone, ALL_LEVEL_CODES } from '../config/levels';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import BulkImportModal from '../components/leads/BulkImportModal';
@@ -49,7 +49,14 @@ export default function LeadsPage() {
   const [advancedRules, setAdvancedRules] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [allProductLevels, setAllProductLevels] = useState([]);
   const loadLeadsRef = useRef(null);
+
+  useEffect(() => {
+    fetchProductLevels()
+      .then(setAllProductLevels)
+      .catch(console.error);
+  }, []);
 
   const loadLeads = useCallback(async (page = 1) => {
     setLoading(true);
@@ -297,7 +304,7 @@ export default function LeadsPage() {
             <thead>
               <tr>
                 <th>Mã Lead</th><th>Họ tên</th><th>Tên con</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Sản phẩm</th><th>Trạng thái</th><th>Level UCMAS/UCKID</th><th>Trung tâm</th><th>NV phụ trách</th>
+                <th>Sản phẩm</th><th>Trạng thái</th><th>Level theo sản phẩm</th><th>Trung tâm</th><th>NV phụ trách</th>
                 <th>Liên hệ cuối</th><th>Follow-up</th><th>Nguồn</th>
               </tr>
             </thead>
@@ -341,13 +348,30 @@ export default function LeadsPage() {
                       </td>
                       <td>
                         <div className="flex flex-wrap gap-1">
-                          {lead.l4_type ? (
-                            lead.l4_type.split(',').map((item) => (
-                              <span key={item.trim()} className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
-                                {item.trim().replace(/^L4\s+/, '')}
-                              </span>
-                            ))
-                          ) : ('—')}
+                          {lead.lead_product_levels && lead.lead_product_levels.length > 0 ? (
+                            lead.lead_product_levels.map((lpl) => {
+                              const lvlDef = allProductLevels.find(
+                                (l) => l.product_code === lpl.product_code && l.level_code === lpl.level_code
+                              ) || { label: '', color: '#6B7280' };
+                              const color = lvlDef.color || '#6B7280';
+                              return (
+                                <span
+                                  key={lpl.product_code}
+                                  className="px-1.5 py-0.5 text-[10px] font-bold rounded border"
+                                  style={{
+                                    color: color,
+                                    borderColor: `${color}40`,
+                                    backgroundColor: `${color}10`,
+                                  }}
+                                  title={`${lpl.product_code}: ${lpl.level_code} (${lvlDef.label || ''})`}
+                                >
+                                  {lpl.product_code}: {lpl.level_code}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-surface-500">—</span>
+                          )}
                         </div>
                       </td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>

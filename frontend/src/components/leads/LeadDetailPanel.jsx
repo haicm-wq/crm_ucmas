@@ -3,6 +3,7 @@ import { updateLead, fetchNotes, addNote, fetchLevelHistory, fetchSiblings, fetc
 import { getLevelInfo, ALL_LEVEL_CODES } from '../../config/levels';
 import toast from 'react-hot-toast';
 import { HiOutlineX, HiOutlinePencil, HiOutlineChatAlt, HiOutlineClock, HiOutlineUserGroup } from 'react-icons/hi';
+import { supabase } from '../../lib/supabase';
 
 // Bug9 fix: safely extract datetime-local value
 function toDatetimeLocal(val) {
@@ -46,6 +47,32 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   const [staffLoading, setStaffLoading] = useState(false);
   const [customFieldsDef, setCustomFieldsDef] = useState([]);
 
+  // States cho level theo sản phẩm
+  const [allProducts, setAllProducts] = useState([]);
+  const [allProductLevels, setAllProductLevels] = useState([]);
+  const [leadProductLevels, setLeadProductLevels] = useState([]);
+  const [formProductLevels, setFormProductLevels] = useState({});
+
+  const loadProductLevelsData = useCallback(async () => {
+    try {
+      const { data: prods } = await supabase.from('products').select('*').eq('is_active', true);
+      const { data: lvls } = await supabase.from('product_levels').select('*').order('sort_order', { ascending: true });
+      const { data: leadLvls } = await supabase.from('lead_product_levels').select('*').eq('lead_id', lead.id);
+
+      setAllProducts(prods || []);
+      setAllProductLevels(lvls || []);
+      setLeadProductLevels(leadLvls || []);
+
+      const initialFormLvls = {};
+      (leadLvls || []).forEach((l) => {
+        initialFormLvls[l.product_code] = l.level_code;
+      });
+      setFormProductLevels(initialFormLvls);
+    } catch (err) {
+      console.error('Lỗi tải thông tin level theo sản phẩm:', err);
+    }
+  }, [lead.id]);
+
   useEffect(() => {
     fetchSettings()
       .then((s) => {
@@ -82,7 +109,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     setNotes([]);
     setHistory([]);
     setSiblings([]);
-  }, [lead.id]);
+    loadProductLevelsData();
+  }, [lead.id, loadProductLevelsData]);
 
   // Lazy load tab data — only fetch when tab is first activated
   useEffect(() => {
@@ -141,6 +169,26 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       // Bug1 fix: use levelNote (not noteContent)
       const note = form.level_code !== lead.level_code ? levelNote : null;
       await updateLead(lead.id, changes, note);
+
+      // Lưu thay đổi level của từng sản phẩm
+      const levelChanges = [];
+      for (const [prodCode, lvlCode] of Object.entries(formProductLevels)) {
+        const original = leadProductLevels.find(l => l.product_code === prodCode)?.level_code || 'L0';
+        if (lvlCode !== original) {
+          levelChanges.push(supabase.rpc('rpc_update_lead_product_level', {
+            p_lead_id: lead.id,
+            p_product_code: prodCode,
+            p_level_code: lvlCode,
+            p_note: levelNote || `Cập nhật Level ${prodCode} từ giao diện chi tiết`,
+          }));
+        }
+      }
+      if (levelChanges.length > 0) {
+        const results = await Promise.all(levelChanges);
+        const firstErr = results.find(r => r.error);
+        if (firstErr) throw firstErr.error;
+      }
+
       toast.success('Cập nhật thành công!');
       setEditing(false);
       if (onUpdate) onUpdate();
@@ -331,63 +379,60 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Level</label>
+                <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
+                  <h4 className="col-span-2 text-xs font-semibold uppercase tracking-wider text-surface-500">Level theo từng sản phẩm</h4>
                   {editing ? (
-                    <select value={form.level_code} onChange={(e) => setForm({ ...form, level_code: e.target.value })}
-                      className="select-field py-2 text-sm">
-                      {ALL_LEVEL_CODES.map((code) => (<option key={code} value={code}>{code} — {getLevelInfo(code).label}</option>))}
-                    </select>
+                    form.interested_products && form.interested_products.length > 0 ? (
+                      form.interested_products.map((p_code) => {
+                        const prodLvls = allProductLevels.filter(l => l.product_code === p_code);
+                        return (
+                          <div key={p_code}>
+                            <label className="block text-xs font-medium text-surface-500 mb-1">Level {p_code}</label>
+                            <select 
+                              value={formProductLevels[p_code] || 'L0'} 
+                              onChange={(e) => setFormProductLevels({ ...formProductLevels, [p_code]: e.target.value })}
+                              className="select-field py-2 text-sm"
+                            >
+                              <option value="L0">L0 — Data đầu vào</option>
+                              {prodLvls.map((lvl) => (
+                                <option key={lvl.level_code} value={lvl.level_code}>
+                                  {lvl.level_code} — {lvl.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="col-span-2 text-xs text-surface-500">Hãy chọn sản phẩm quan tâm phía trên trước để thiết lập Level.</p>
+                    )
                   ) : (
-                    <span className={`badge ${levelInfo.bgClass}`}>{lead.level_code}</span>
+                    <div className="col-span-2 flex flex-wrap gap-2">
+                      {lead.interested_products && lead.interested_products.length > 0 ? (
+                        lead.interested_products.map((p_code) => {
+                          const currentLvlCode = formProductLevels[p_code] || 'L0';
+                          const lvlInfo = allProductLevels.find(l => l.product_code === p_code && l.level_code === currentLvlCode) || { label: 'Data đầu vào', color: '#6B7280' };
+                          return (
+                            <span 
+                              key={p_code} 
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg border flex items-center gap-1.5"
+                              style={{ 
+                                color: lvlInfo.color, 
+                                borderColor: `${lvlInfo.color}40`, 
+                                backgroundColor: `${lvlInfo.color}10` 
+                              }}
+                            >
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: lvlInfo.color }} />
+                              <span className="font-bold">{p_code}:</span> {currentLvlCode} ({lvlInfo.label})
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-surface-500">— Chưa chọn sản phẩm quan tâm</p>
+                      )}
+                    </div>
                   )}
                 </div>
-
-                {((editing && form.level_code?.startsWith('L4.')) || (!editing && lead.level_code?.startsWith('L4.') && lead.l4_type)) && (
-                  <div>
-                    <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1 font-semibold">Phân loại L4</label>
-                    {editing ? (
-                      <div className="flex flex-wrap gap-4 mt-2">
-                        {['L4 UCKID', 'L4 UCMAS'].map((type) => {
-                          const currentTypes = form.l4_type ? form.l4_type.split(',').map(t => t.trim()) : [];
-                          const checked = currentTypes.includes(type);
-                          return (
-                            <label key={type} className="flex items-center gap-2 cursor-pointer text-sm text-surface-700 dark:text-surface-300">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={(e) => {
-                                  let updatedTypes;
-                                  if (e.target.checked) {
-                                    updatedTypes = [...currentTypes, type];
-                                  } else {
-                                    updatedTypes = currentTypes.filter(t => t !== type);
-                                  }
-                                  const sortedTypes = ['L4 UCKID', 'L4 UCMAS'].filter(t => updatedTypes.includes(t));
-                                  setForm({ ...form, l4_type: sortedTypes.join(', ') });
-                                }}
-                                className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500 focus:ring-primary-500 focus:ring-opacity-25"
-                              />
-                              <span>{type.replace('L4 ', '')}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {lead.l4_type ? (
-                          lead.l4_type.split(',').map((item) => (
-                            <span key={item.trim()} className="px-2 py-0.5 text-xs font-semibold rounded bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/20">
-                              {item.trim().replace(/^L4\s+/, '')}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-surface-500">—</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Trung tâm</label>
@@ -440,25 +485,35 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 </div>
               </div>
 
-              {!editing && (
-                <div className="mt-6 pt-4 border-t border-surface-200 dark:border-surface-700/50">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-surface-500 mb-3">Mốc thời gian Level</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {[
-                      { label: 'Vào hệ thống (L0)', val: lead.entered_l0_at },
-                      { label: 'Lên L1', val: lead.entered_l1_at },
-                      { label: 'Lên L2', val: lead.entered_l2_at },
-                      { label: 'Lên L3', val: lead.entered_l3_at },
-                      { label: 'Lên L4', val: lead.entered_l4_at },
-                      { label: 'Lên L4 UCKID', val: lead.entered_l4_uckid_at },
-                      { label: 'Lên L4 UCMAS', val: lead.entered_l4_ucmas_at },
-                    ].filter(item => item.val).map((item, idx) => (
-                      <div key={idx} className="p-3 rounded-xl bg-surface-100 dark:bg-surface-800/40 border border-surface-200 dark:border-surface-700/50">
-                        <span className="block text-[11px] font-medium text-surface-500 mb-1">{item.label}</span>
-                        <span className="block text-xs text-surface-700 dark:text-surface-300 font-mono">{formatDt(item.val)}</span>
+              {!editing && lead.interested_products && lead.interested_products.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-surface-200 dark:border-surface-700/50 space-y-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-surface-500 mb-1">Mốc thời gian Level theo sản phẩm</h3>
+                  {lead.interested_products.map((p_code) => {
+                    const lpl = leadProductLevels.find(l => l.product_code === p_code);
+                    const enteredAtObj = lpl?.entered_at || {};
+                    const entries = Object.entries(enteredAtObj);
+                    if (entries.length === 0) return null;
+                    return (
+                      <div key={p_code} className="space-y-2">
+                        <p className="text-xs font-bold text-primary-500 uppercase tracking-wide">{p_code}</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                          {entries.map(([lvlCode, timestamp]) => {
+                            const lvlDef = allProductLevels.find(l => l.product_code === p_code && l.level_code === lvlCode);
+                            return (
+                              <div key={lvlCode} className="p-3 rounded-xl bg-surface-100 dark:bg-surface-800/40 border border-surface-200 dark:border-surface-700/50">
+                                <span className="block text-[11px] font-medium text-surface-500 mb-1">
+                                  {lvlCode} ({lvlDef?.label || '—'})
+                                </span>
+                                <span className="block text-xs text-surface-700 dark:text-surface-300 font-mono">
+                                  {formatDt(timestamp)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
 

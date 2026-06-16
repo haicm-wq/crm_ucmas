@@ -178,7 +178,7 @@ function autoSyncTick() {
 
   if (runInbound) {
     console.log(isInboundManual ? '🔄 Bắt đầu đồng bộ Chiều Nhập thủ công (yêu cầu từ CRM)...' : '🔄 Bắt đầu đồng bộ Chiều Nhập định kỳ...');
-    const result = syncNewRows(field_mapping);
+    const result = syncNewRows(field_mapping, config.sheet_tab_name);
     updateSyncStatus(result);
   }
 
@@ -206,14 +206,21 @@ function autoSyncTick() {
 // ═══════════════════════════════════════════════════════════
 // SYNC — OPTIMIZED: Batch read + timeout protection
 // ═══════════════════════════════════════════════════════════
-function syncNewRows(fieldMapping) {
+function syncNewRows(fieldMapping, tabName) {
   if (!fieldMapping || !fieldMapping.mapping) {
     console.error('Chưa cấu hình mapping!');
     return { error: 'no_mapping', success: 0, skipped: 0, failed: 0, total_checked: 0 };
   }
 
   const startTime = Date.now();
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = null;
+  if (tabName) {
+    sheet = ss.getSheetByName(tabName);
+  }
+  if (!sheet) {
+    sheet = ss.getActiveSheet();
+  }
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return { success: 0, skipped: 0, failed: 0, total_checked: 0 };
 
@@ -440,7 +447,7 @@ function callSupabaseRPC(payload) {
 // ═══════════════════════════════════════════════════════════
 function getSyncConfig() {
   const keys = [
-    'sync_enabled', 'sync_interval', 'last_sync_at', 'sheet_field_mapping',
+    'sync_enabled', 'sync_interval', 'last_sync_at', 'sheet_field_mapping', 'sheet_tab_name',
     'sheet_out_id', 'sheet_out_tab_name', 'sheet_out_field_mapping',
     'sheet_out_sync_enabled', 'sheet_out_last_sync_at', 'sheet_out_last_sync_result', 'sheet_out_last_sync_detail',
     'crm_custom_fields'
@@ -519,7 +526,7 @@ function manualSyncAll() {
     console.error('Chưa cấu hình mapping! Vào CRM → Cài đặt → Google Sheets');
     return;
   }
-  const result = syncNewRows(config.field_mapping);
+  const result = syncNewRows(config.field_mapping, config.sheet_tab_name);
   updateSyncStatus(result);
   console.log('Manual inbound sync done:', JSON.stringify(result));
 }

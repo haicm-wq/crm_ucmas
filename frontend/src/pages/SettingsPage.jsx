@@ -4,13 +4,15 @@ import UsersTab from '../components/settings/UsersTab';
 import CentersTab from '../components/settings/CentersTab';
 import SyncTab from '../components/settings/SyncTab';
 import FieldsTab from '../components/settings/FieldsTab';
-import { HiOutlineUsers, HiOutlineOfficeBuilding, HiOutlineRefresh, HiOutlineAdjustments } from 'react-icons/hi';
+import ProductsTab from '../components/settings/ProductsTab';
+import { HiOutlineUsers, HiOutlineOfficeBuilding, HiOutlineRefresh, HiOutlineAdjustments, HiOutlineCollection } from 'react-icons/hi';
 
 const TABS = [
   { id: 'users', label: 'Nhân viên', icon: HiOutlineUsers },
   { id: 'centers', label: 'Trung tâm', icon: HiOutlineOfficeBuilding },
   { id: 'sync', label: 'Đồng bộ Sheet', icon: HiOutlineRefresh },
   { id: 'fields', label: 'Trường dữ liệu', icon: HiOutlineAdjustments },
+  { id: 'products', label: 'Sản phẩm & Level', icon: HiOutlineCollection },
 ];
 
 export default function SettingsPage() {
@@ -48,6 +50,7 @@ export default function SettingsPage() {
       {activeTab === 'centers' && <CentersTab />}
       {activeTab === 'sync' && <SyncTab />}
       {activeTab === 'fields' && <FieldsTab />}
+      {activeTab === 'products' && <ProductsTab />}
     </div>
   );
 }
