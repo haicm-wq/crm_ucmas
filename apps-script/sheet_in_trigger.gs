@@ -54,6 +54,8 @@ const CRM_EXPORT_FIELDS = [
   { key: 'entered_l2_at', label: 'Thời điểm lên L2', defaultHeader: 'Mốc L2' },
   { key: 'entered_l3_at', label: 'Thời điểm lên L3', defaultHeader: 'Mốc L3' },
   { key: 'entered_l4_at', label: 'Thời điểm lên L4', defaultHeader: 'Mốc L4' },
+  { key: 'entered_l4_uckid_at', label: 'Thời điểm lên L4 UCKID', defaultHeader: 'Mốc L4 UCKID' },
+  { key: 'entered_l4_ucmas_at', label: 'Thời điểm lên L4 UCMAS', defaultHeader: 'Mốc L4 UCMAS' },
   { key: 'created_at', label: 'Ngày tạo', defaultHeader: 'Ngày tạo' },
   { key: 'updated_at', label: 'Ngày cập nhật', defaultHeader: 'Ngày cập nhật' },
 ];
@@ -426,7 +428,8 @@ function getSyncConfig() {
   const keys = [
     'sync_enabled', 'sync_interval', 'last_sync_at', 'sheet_field_mapping',
     'sheet_out_id', 'sheet_out_tab_name', 'sheet_out_field_mapping',
-    'sheet_out_sync_enabled', 'sheet_out_last_sync_at', 'sheet_out_last_sync_result', 'sheet_out_last_sync_detail'
+    'sheet_out_sync_enabled', 'sheet_out_last_sync_at', 'sheet_out_last_sync_result', 'sheet_out_last_sync_detail',
+    'crm_custom_fields'
   ];
   const url = SUPABASE_URL + '/rest/v1/system_settings?key=in.(' + keys.join(',') + ')&select=key,value';
   try {
@@ -555,7 +558,28 @@ function syncOutboundRows(config) {
   }
 
   const mapping = config.sheet_out_mapping.mapping;
-  const activeFields = CRM_EXPORT_FIELDS.filter(f => mapping[f.key] && mapping[f.key].trim() !== '');
+  
+  // Lấy các trường tùy chỉnh từ config
+  let customFields = [];
+  if (config.crm_custom_fields) {
+    try {
+      customFields = JSON.parse(config.crm_custom_fields);
+    } catch (e) {
+      console.error('Lỗi parse crm_custom_fields:', e);
+    }
+  }
+
+  // Kết hợp danh sách trường tĩnh và trường tùy chỉnh động
+  const allExportFields = [
+    ...CRM_EXPORT_FIELDS,
+    ...customFields.map(f => ({
+      key: 'custom_fields.' + f.key,
+      label: f.label + ' (Trường tùy chỉnh)',
+      defaultHeader: f.label
+    }))
+  ];
+
+  const activeFields = allExportFields.filter(f => mapping[f.key] && mapping[f.key].trim() !== '');
   const headers = activeFields.map(f => mapping[f.key].trim());
 
   if (headers.length === 0) {

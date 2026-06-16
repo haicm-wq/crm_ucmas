@@ -156,7 +156,9 @@ CREATE OR REPLACE FUNCTION rpc_get_leads_for_outbound_sync(
   entered_l1_at TIMESTAMPTZ,
   entered_l2_at TIMESTAMPTZ,
   entered_l3_at TIMESTAMPTZ,
-  entered_l4_at TIMESTAMPTZ
+  entered_l4_at TIMESTAMPTZ,
+  entered_l4_uckid_at TIMESTAMPTZ,
+  entered_l4_ucmas_at TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY
@@ -182,7 +184,9 @@ BEGIN
     l.entered_l1_at,
     l.entered_l2_at,
     l.entered_l3_at,
-    l.entered_l4_at
+    l.entered_l4_at,
+    l.entered_l4_uckid_at,
+    l.entered_l4_ucmas_at
   FROM leads l
   LEFT JOIN centers c ON l.assigned_center = c.id
   LEFT JOIN profiles p ON l.assigned_staff = p.id

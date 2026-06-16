@@ -69,6 +69,8 @@ export default function SyncTab() {
     { key: 'entered_l2_at', label: 'Thời điểm lên L2', defaultHeader: 'Mốc L2' },
     { key: 'entered_l3_at', label: 'Thời điểm lên L3', defaultHeader: 'Mốc L3' },
     { key: 'entered_l4_at', label: 'Thời điểm lên L4', defaultHeader: 'Mốc L4' },
+    { key: 'entered_l4_uckid_at', label: 'Thời điểm lên L4 UCKID', defaultHeader: 'Mốc L4 UCKID' },
+    { key: 'entered_l4_ucmas_at', label: 'Thời điểm lên L4 UCMAS', defaultHeader: 'Mốc L4 UCMAS' },
     { key: 'created_at', label: 'Ngày tạo', defaultHeader: 'Ngày tạo' },
     { key: 'updated_at', label: 'Ngày cập nhật', defaultHeader: 'Ngày cập nhật' },
     ...customFields.map((f) => ({
