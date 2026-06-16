@@ -187,7 +187,8 @@ BEGIN
   LEFT JOIN centers c ON l.assigned_center = c.id
   LEFT JOIN profiles p ON l.assigned_staff = p.id
   WHERE l.sheet_out_row IS NULL 
-     OR l.updated_at > COALESCE(p_last_sync_at, '1970-01-01'::timestamptz);
+     OR l.updated_at > COALESCE(p_last_sync_at, '1970-01-01'::timestamptz)
+  ORDER BY l.lead_code ASC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
