@@ -24,6 +24,7 @@ export default function LeadPoolPage() {
   const [unprocessedStats, setUnprocessedStats] = useState(0);
   const [pageSize, setPageSize] = useState(100);
   const [savingLeads, setSavingLeads] = useState({}); // { [leadId]: { [field]: boolean } }
+  const [focusedValue, setFocusedValue] = useState(null);
   const loadRef = useRef(null);
 
   const isOver3Hours = (createdAt) => {
@@ -83,6 +84,9 @@ export default function LeadPoolPage() {
       }
       await updateLead(leadId, changes);
       toast.success('Đã lưu thay đổi');
+      
+      // Cập nhật giá trị vào state
+      handleInputChange(leadId, field, cleanVal);
       
       if (field === 'phone') {
         loadPool(pagination.page);
@@ -367,8 +371,9 @@ export default function LeadPoolPage() {
                           <input
                             type="text"
                             value={lead.full_name || ''}
+                            onFocus={(e) => setFocusedValue(e.target.value)}
                             onChange={(e) => handleInputChange(lead.id, 'full_name', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'full_name', lead.full_name, e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'full_name', focusedValue, e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={savingLeads[lead.id]?.full_name}
                             className="input-field py-1 px-2 text-xs w-full font-medium"
@@ -396,8 +401,9 @@ export default function LeadPoolPage() {
                             type="text"
                             value={lead.child_name || ''}
                             placeholder="Tên con..."
+                            onFocus={(e) => setFocusedValue(e.target.value)}
                             onChange={(e) => handleInputChange(lead.id, 'child_name', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'child_name', lead.child_name, e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'child_name', focusedValue, e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={savingLeads[lead.id]?.child_name}
                             className="input-field py-1 px-2 text-xs w-full"
@@ -415,8 +421,9 @@ export default function LeadPoolPage() {
                             type="text"
                             value={lead.phone || ''}
                             placeholder="SĐT..."
+                            onFocus={(e) => setFocusedValue(e.target.value)}
                             onChange={(e) => handleInputChange(lead.id, 'phone', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'phone', lead.phone, e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'phone', focusedValue, e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={savingLeads[lead.id]?.phone}
                             className="input-field py-1 px-2 text-xs w-full font-mono"
@@ -454,8 +461,9 @@ export default function LeadPoolPage() {
                             type="text"
                             value={lead.address || ''}
                             placeholder="Địa chỉ..."
+                            onFocus={(e) => setFocusedValue(e.target.value)}
                             onChange={(e) => handleInputChange(lead.id, 'address', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'address', lead.address, e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'address', focusedValue, e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={savingLeads[lead.id]?.address}
                             className="input-field py-1 px-2 text-xs w-full"

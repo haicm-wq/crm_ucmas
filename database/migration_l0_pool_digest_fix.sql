@@ -1,12 +1,8 @@
 -- ============================================================
--- MIGRATION: L0 Pool Click-to-Edit, New Levels & 3h warning
+-- MIGRATION: Sửa lỗi hàm digest(text, unknown) does not exist
 -- Chạy file này trên Supabase SQL Editor
 -- ============================================================
 
--- 1. Thêm cột first_processed_at vào bảng leads
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS first_processed_at TIMESTAMPTZ DEFAULT NULL;
-
--- 2. Cập nhật fn_normalize_lead trigger function để tự động điền first_processed_at
 CREATE OR REPLACE FUNCTION fn_normalize_lead() RETURNS TRIGGER AS $$
 BEGIN
     -- Computed fields
@@ -80,40 +76,8 @@ BEGIN
 
     RETURN NEW;
 END;
+-- Thiết lập search_path rõ ràng để PostgreSQL tìm thấy hàm digest của pgcrypto
 $$ LANGUAGE plpgsql SET search_path = public, extensions;
-
--- 3. Tạo RPC: rpc_fetch_l0_pool()
-CREATE OR REPLACE FUNCTION rpc_fetch_l0_pool()
-RETURNS SETOF leads AS $$
-BEGIN
-  RETURN QUERY
-  SELECT * FROM leads
-  WHERE level_group = 'L0'
-  ORDER BY (level_code = 'L0') DESC, created_at DESC;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
-GRANT EXECUTE ON FUNCTION rpc_fetch_l0_pool TO anon, authenticated;
-
--- 4. Seed các level mới (L1.KK, L0.R, L0.K) vào bảng product_levels
--- L1.KK: L1 Kho kiểm, sort_order: 15, color: amber (#F59E0B)
--- L0.R: Số rác, sort_order: 5, color: red (#EF4444)
--- L0.K: Khu vực khác, sort_order: 6, color: blue (#3B82F6)
-
-INSERT INTO product_levels (product_code, level_code, label, color, sort_order)
-SELECT p.code, 'L1.KK', 'L1 Kho kiểm', '#F59E0B', 15
-FROM products p
-ON CONFLICT (product_code, level_code) DO NOTHING;
-
-INSERT INTO product_levels (product_code, level_code, label, color, sort_order)
-SELECT p.code, 'L0.R', 'Số rác', '#EF4444', 5
-FROM products p
-ON CONFLICT (product_code, level_code) DO NOTHING;
-
-INSERT INTO product_levels (product_code, level_code, label, color, sort_order)
-SELECT p.code, 'L0.K', 'Khu vực khác', '#3B82F6', 6
-FROM products p
-ON CONFLICT (product_code, level_code) DO NOTHING;
 
 -- Tái nạp schema cache
 NOTIFY pgrst, 'reload schema';
