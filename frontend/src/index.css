@@ -18,22 +18,6 @@
   .dark body {
     @apply bg-surface-950 text-surface-100;
   }
-
-  ::-webkit-scrollbar {
-    @apply w-2;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-surface-100;
-  }
-  .dark ::-webkit-scrollbar-track {
-    @apply bg-surface-900;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-surface-300 rounded-full hover:bg-surface-400;
-  }
-  .dark ::-webkit-scrollbar-thumb {
-    @apply bg-surface-600 rounded-full hover:bg-surface-500;
-  }
 }
 
 @layer components {

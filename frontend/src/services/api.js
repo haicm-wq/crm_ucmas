@@ -560,12 +560,15 @@ export async function updateSettings(settingsObj) {
 // ============================================================
 
 export async function fetchStaffByCenter(centerId) {
-  const { data, error } = await supabase
+  let query = supabase
     .from('profiles')
     .select('id, full_name')
     .eq('permission_group', 'telesale')
-    .eq('is_active', true)
-    .order('full_name');
+    .eq('is_active', true);
+  // Bug2 fix: filter by center_id if provided
+  if (centerId) query = query.eq('center_id', centerId);
+  query = query.order('full_name');
+  const { data, error } = await query;
   if (error) throw error;
   return data || [];
 }

@@ -4,6 +4,7 @@ import { useDebounce } from '../hooks/useShared';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAppointments } from '../services/api';
 import { getLevelInfo } from '../config/levels';
+import { APPOINTMENT_STATUS_MAP } from '../config/constants';
 import AppointmentDetail from '../components/calendar/AppointmentDetail';
 import EmptyState from '../components/ui/EmptyState';
 import { ListSkeleton } from '../components/ui/SkeletonLoader';
@@ -13,12 +14,7 @@ import {
   HiOutlineViewGrid, HiOutlineViewList,
 } from 'react-icons/hi';
 
-const STATUS_MAP = {
-  scheduled: { label: 'Đã hẹn', color: 'text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-500/10', dot: 'bg-blue-500' },
-  attended: { label: 'Đã học thử', color: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-500/10', dot: 'bg-green-500' },
-  missed: { label: 'Bỏ lỡ', color: 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-500/10', dot: 'bg-red-500' },
-  cancelled: { label: 'Hủy', color: 'text-surface-500 bg-surface-200 dark:bg-surface-700/50', dot: 'bg-surface-400' },
-};
+const STATUS_MAP = APPOINTMENT_STATUS_MAP;
 
 // ─── CalendarGridView ─────────────────────────────────────
 function CalendarGridView({ appointments, currentMonth, onMonthChange }) {

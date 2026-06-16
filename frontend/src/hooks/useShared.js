@@ -58,12 +58,15 @@ export function useApiQuery(queryFn, deps = []) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Bug3 fix: ref để luôn gọi queryFn mới nhất, tránh stale closure
+  const queryFnRef = useRef(queryFn);
+  useEffect(() => { queryFnRef.current = queryFn; }, [queryFn]);
 
   const refetch = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await queryFn();
+      const result = await queryFnRef.current();
       setData(result);
     } catch (err) {
       setError(err);

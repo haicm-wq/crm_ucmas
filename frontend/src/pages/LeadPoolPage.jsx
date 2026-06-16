@@ -9,6 +9,9 @@ import toast from 'react-hot-toast';
 import { HiOutlineRefresh, HiOutlineInbox, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import MultiSelect from '../components/ui/MultiSelect';
+import { PRODUCT_OPTIONS, L0_ALERT_THRESHOLD_MS, L0_POOL_LEVELS, PAGE_SIZE_OPTIONS, BIRTH_YEAR_RANGE } from '../config/constants';
+import { validatePhone } from '../utils/validation';
+import { formatDate } from '../utils/format';
 
 export default function LeadPoolPage() {
   const { centers, allStaff } = useSharedData();
@@ -24,13 +27,26 @@ export default function LeadPoolPage() {
   const [unprocessedStats, setUnprocessedStats] = useState(0);
   const [pageSize, setPageSize] = useState(100);
   const [savingLeads, setSavingLeads] = useState({}); // { [leadId]: { [field]: boolean } }
-  const [focusedValue, setFocusedValue] = useState(null);
+  // Bug1 fix: dùng ref map thay vì single shared state để tránh race condition
+  const focusedValueRef = useRef({});
   const loadRef = useRef(null);
 
   const isOver3Hours = (createdAt) => {
-    const created = new Date(createdAt);
-    const now = new Date();
-    return (now - created) > (3 * 60 * 60 * 1000); // 3 hours in milliseconds
+    return (Date.now() - new Date(createdAt).getTime()) > L0_ALERT_THRESHOLD_MS;
+  };
+
+  // DRY: helper để set/clear saving state cho từng field của từng lead
+  const markSaving = (leadId, field, isSaving) => {
+    setSavingLeads(prev => {
+      const next = { ...prev };
+      if (isSaving) {
+        next[leadId] = { ...next[leadId], [field]: true };
+      } else if (next[leadId]) {
+        delete next[leadId][field];
+        if (Object.keys(next[leadId]).length === 0) delete next[leadId];
+      }
+      return next;
+    });
   };
 
   const loadPool = useCallback(async (page = 1) => {
@@ -68,14 +84,15 @@ export default function LeadPoolPage() {
     if (currentValue === originalValue) return;
 
     if (field === 'phone') {
-      if (currentValue && !/^(?:0\d{9}|[1-9]\d{8})$/.test(currentValue)) {
-        toast.error('SĐT bắt đầu bằng 0 phải đủ 10 số, không bắt đầu bằng 0 phải đủ 9 số');
+      const phoneCheck = validatePhone(currentValue);
+      if (!phoneCheck.valid) {
+        toast.error(phoneCheck.message);
         handleInputChange(leadId, field, originalValue);
         return;
       }
     }
 
-    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], [field]: true } }));
+    markSaving(leadId, field, true);
     try {
       const cleanVal = currentValue === '' ? null : currentValue;
       let changes = { [field]: cleanVal };
@@ -84,34 +101,21 @@ export default function LeadPoolPage() {
       }
       await updateLead(leadId, changes);
       toast.success('Đã lưu thay đổi');
-      
-      // Cập nhật giá trị vào state
       handleInputChange(leadId, field, cleanVal);
-      
-      if (field === 'phone') {
-        loadPool(pagination.page);
-      }
+      if (field === 'phone') loadPool(pagination.page);
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật');
       handleInputChange(leadId, field, originalValue);
     } finally {
-      setSavingLeads(prev => {
-        const next = { ...prev };
-        if (next[leadId]) {
-          delete next[leadId][field];
-          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
-        }
-        return next;
-      });
+      markSaving(leadId, field, false);
     }
   };
 
   const handleCenterChange = async (leadId, centerId) => {
-    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], assigned_center: true } }));
+    markSaving(leadId, 'assigned_center', true);
     try {
       const cleanVal = centerId === '' ? null : centerId;
       await updateLead(leadId, { assigned_center: cleanVal });
-      
       setPool(prevPool => prevPool.map(lead => {
         if (lead.id === leadId) {
           const center = centers.find(c => c.id === centerId);
@@ -123,23 +127,15 @@ export default function LeadPoolPage() {
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật trung tâm');
     } finally {
-      setSavingLeads(prev => {
-        const next = { ...prev };
-        if (next[leadId]) {
-          delete next[leadId].assigned_center;
-          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
-        }
-        return next;
-      });
+      markSaving(leadId, 'assigned_center', false);
     }
   };
 
   const handleStaffChange = async (leadId, staffId) => {
-    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], assigned_staff: true } }));
+    markSaving(leadId, 'assigned_staff', true);
     try {
       const cleanVal = staffId === '' ? null : staffId;
       await updateLead(leadId, { assigned_staff: cleanVal });
-      
       setPool(prevPool => prevPool.map(lead => {
         if (lead.id === leadId) {
           return { ...lead, assigned_staff: cleanVal };
@@ -150,19 +146,12 @@ export default function LeadPoolPage() {
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật nhân viên');
     } finally {
-      setSavingLeads(prev => {
-        const next = { ...prev };
-        if (next[leadId]) {
-          delete next[leadId].assigned_staff;
-          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
-        }
-        return next;
-      });
+      markSaving(leadId, 'assigned_staff', false);
     }
   };
 
   const handleLevelChange = async (leadId, levelCode) => {
-    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], level_code: true } }));
+    markSaving(leadId, 'level_code', true);
     try {
       await updateLeadLevelAndProducts(leadId, levelCode);
       toast.success('Đã cập nhật level');
@@ -170,22 +159,14 @@ export default function LeadPoolPage() {
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật level');
     } finally {
-      setSavingLeads(prev => {
-        const next = { ...prev };
-        if (next[leadId]) {
-          delete next[leadId].level_code;
-          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
-        }
-        return next;
-      });
+      markSaving(leadId, 'level_code', false);
     }
   };
 
   const handleProductsChange = async (leadId, selectedProds) => {
-    setSavingLeads(prev => ({ ...prev, [leadId]: { ...prev[leadId], interested_products: true } }));
+    markSaving(leadId, 'interested_products', true);
     try {
       await updateLead(leadId, { interested_products: selectedProds });
-      
       setPool(prevPool => prevPool.map(lead => {
         if (lead.id === leadId) {
           return { ...lead, interested_products: selectedProds };
@@ -196,14 +177,7 @@ export default function LeadPoolPage() {
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật sản phẩm');
     } finally {
-      setSavingLeads(prev => {
-        const next = { ...prev };
-        if (next[leadId]) {
-          delete next[leadId].interested_products;
-          if (Object.keys(next[leadId]).length === 0) delete next[leadId];
-        }
-        return next;
-      });
+      markSaving(leadId, 'interested_products', false);
     }
   };
 
@@ -389,9 +363,9 @@ export default function LeadPoolPage() {
                             type="text"
                             value={lead.child_name || ''}
                             placeholder="Tên con..."
-                            onFocus={(e) => setFocusedValue(e.target.value)}
+                            onFocus={(e) => { focusedValueRef.current[`${lead.id}-child_name`] = e.target.value; }}
                             onChange={(e) => handleInputChange(lead.id, 'child_name', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'child_name', focusedValue, e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'child_name', focusedValueRef.current[`${lead.id}-child_name`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={savingLeads[lead.id]?.child_name}
                             className="input-field py-1 px-2 text-xs w-full"
@@ -419,7 +393,7 @@ export default function LeadPoolPage() {
                             className="select-field py-1 px-2 text-xs w-full"
                           >
                             <option value="">— Năm sinh —</option>
-                            {Array.from({ length: 21 }, (_, i) => 2010 + i).map(year => (
+                            {BIRTH_YEAR_RANGE.map(year => (
                               <option key={year} value={year}>{year}</option>
                             ))}
                           </select>
@@ -436,9 +410,9 @@ export default function LeadPoolPage() {
                             type="text"
                             value={lead.address || ''}
                             placeholder="Địa chỉ..."
-                            onFocus={(e) => setFocusedValue(e.target.value)}
+                            onFocus={(e) => { focusedValueRef.current[`${lead.id}-address`] = e.target.value; }}
                             onChange={(e) => handleInputChange(lead.id, 'address', e.target.value)}
-                            onBlur={(e) => handleInputBlur(lead.id, 'address', focusedValue, e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'address', focusedValueRef.current[`${lead.id}-address`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={savingLeads[lead.id]?.address}
                             className="input-field py-1 px-2 text-xs w-full"
@@ -493,7 +467,7 @@ export default function LeadPoolPage() {
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="relative flex items-center min-w-[140px]">
                           <MultiSelect
-                            options={['UCMAS', 'UCKID', 'ROBOT', 'TRẠI HÈ'].map(p => ({ value: p, label: p }))}
+                            options={PRODUCT_OPTIONS}
                             selected={lead.interested_products || []}
                             onChange={(vals) => handleProductsChange(lead.id, vals)}
                             placeholder="Chọn..."
@@ -515,10 +489,10 @@ export default function LeadPoolPage() {
                             disabled={savingLeads[lead.id]?.level_code}
                             className="select-field py-1 px-2 text-xs w-full font-semibold"
                           >
-                            <option value="L0">L0 — Data đầu vào</option>
-                            <option value="L1.KK">L1 Kho kiểm</option>
-                            <option value="L0.R">Số rác</option>
-                            <option value="L0.K">Khu vực khác</option>
+                            <option value="L0">{L0_POOL_LEVELS[0].label}</option>
+                            <option value="L1.KK">{L0_POOL_LEVELS[1].label}</option>
+                            <option value="L0.R">{L0_POOL_LEVELS[2].label}</option>
+                            <option value="L0.K">{L0_POOL_LEVELS[3].label}</option>
                           </select>
                           {savingLeads[lead.id]?.level_code && (
                             <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
@@ -535,7 +509,7 @@ export default function LeadPoolPage() {
 
                       {/* Ngày tạo */}
                       <td className="text-xs text-surface-500 font-mono">
-                        {new Date(lead.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                        {formatDate(lead.created_at)}
                       </td>
                     </tr>
                   );
@@ -554,7 +528,7 @@ export default function LeadPoolPage() {
               onChange={(e) => setPageSize(parseInt(e.target.value))}
               className="py-1 px-2 text-xs w-24 bg-white dark:bg-surface-800 border border-surface-300 dark:border-surface-600 rounded-lg focus:outline-none"
             >
-              {[10, 20, 50, 100, 200].map((size) => (
+              {PAGE_SIZE_OPTIONS.map((size) => (
                 <option key={size} value={size}>{size} dòng</option>
               ))}
             </select>

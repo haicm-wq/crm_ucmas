@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { fetchNotifications, markAllNotificationsRead } from '../../services/api';
+import { formatRelativeTime } from '../../utils/format';
 import { HiOutlineBell, HiOutlineLogout, HiOutlineMoon, HiOutlineSun, HiOutlineMenu } from 'react-icons/hi';
 
 export default function Header({ onMenuClick }) {
@@ -79,16 +80,7 @@ export default function Header({ onMenuClick }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
 
-  const formatTime = (dt) => {
-    if (!dt) return '';
-    const d = new Date(dt);
-    const now = new Date();
-    const diff = (now - d) / 1000;
-    if (diff < 60) return 'Vừa xong';
-    if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-    return d.toLocaleDateString('vi-VN');
-  };
+  const formatTime = formatRelativeTime;
 
   return (
     <header className="h-16 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">

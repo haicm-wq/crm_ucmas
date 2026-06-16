@@ -3,6 +3,8 @@ import { useSharedData } from '../contexts/SharedDataProvider';
 import { useDebounce, useSupabaseRealtime } from '../hooks/useShared';
 import { fetchLeads, fetchProductLevels } from '../services/api';
 import { getLevelInfo, isMilestone, ALL_LEVEL_CODES } from '../config/levels';
+import { PRODUCTS, PAGE_SIZE_OPTIONS } from '../config/constants';
+import { formatDate } from '../utils/format';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import BulkImportModal from '../components/leads/BulkImportModal';
 import CreateLeadModal from '../components/leads/CreateLeadModal';
@@ -16,7 +18,6 @@ import {
   HiOutlineX, HiOutlineTrash,
 } from 'react-icons/hi';
 
-const PRODUCTS = ['UCMAS', 'UCKID', 'ROBOT', 'TRẠI HÈ'];
 
 const ADVANCED_FIELDS = [
   { value: 'level_code', label: 'Level', type: 'select', options: ALL_LEVEL_CODES },
@@ -130,10 +131,7 @@ export default function LeadsPage() {
     loadLeadsRef.current?.(pagination.page);
   }, { debounceMs: 1000 });
 
-  const formatDate = (dt) => {
-    if (!dt) return '—';
-    return new Date(dt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' });
-  };
+  // formatDate is now imported from utils/format
 
   const activeFilterCount = [filters.level_code, filters.center_id, filters.product, filters.staff_id]
     .filter((x) => Array.isArray(x) ? x.length > 0 : Boolean(x)).length + advancedRules.filter((r) => r.value).length;
@@ -428,7 +426,7 @@ export default function LeadsPage() {
                 onChange={(e) => setPageSize(parseInt(e.target.value))}
                 className="py-1 px-2 text-xs w-24 bg-white dark:bg-surface-800 border border-surface-300 dark:border-surface-600 rounded-lg focus:outline-none"
               >
-                {[10, 20, 50, 100, 200].map((size) => (
+                {PAGE_SIZE_OPTIONS.map((size) => (
                   <option key={size} value={size}>{size} dòng</option>
                 ))}
               </select>

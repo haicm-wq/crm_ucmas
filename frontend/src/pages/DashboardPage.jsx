@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { fetchDashboardHQ, fetchDashboardCenter } from '../services/api';
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCenter, setSelectedCenter] = useState('');
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
       if (isCenter) {
@@ -91,9 +91,9 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCenter, isCenter, user?.center_id]);
 
-  useEffect(() => { loadDashboard(); }, [selectedCenter]);
+  useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
   if (loading || !data) {
     return (

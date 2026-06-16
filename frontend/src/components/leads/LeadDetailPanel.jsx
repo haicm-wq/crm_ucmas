@@ -1,37 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { updateLead, fetchNotes, addNote, fetchLevelHistory, fetchSiblings, fetchStaffByCenter, fetchSettings } from '../../services/api';
 import { getLevelInfo, ALL_LEVEL_CODES } from '../../config/levels';
+import { PRODUCTS } from '../../config/constants';
+import { validatePhone, cleanFormChanges } from '../../utils/validation';
+import { toDatetimeLocal, formatDateTime } from '../../utils/format';
 import toast from 'react-hot-toast';
 import { HiOutlineX, HiOutlinePencil, HiOutlineChatAlt, HiOutlineClock, HiOutlineUserGroup } from 'react-icons/hi';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Bug9 fix: safely extract datetime-local value
-function toDatetimeLocal(val) {
-  if (!val) return '';
-  try {
-    const d = typeof val === 'string' ? val : new Date(val).toISOString();
-    return d.slice(0, 16);
-  } catch { return ''; }
-}
+// Bug9 fix: toDatetimeLocal is now in utils/format.js
 
-// Bug2 fix: clean form → only send changed fields, '' → null
-function cleanChanges(form) {
-  const changes = {};
-  for (const [k, v] of Object.entries(form)) {
-    // Convert empty strings to null for UUID/date/select fields
-    if (v === '' && ['assigned_center', 'assigned_staff', 'trial_appointment_at', 'next_followup_at', 'l4_type'].includes(k)) {
-      changes[k] = null;
-    } else if (v === '') {
-      // skip empty optional text fields (don't send them)
-      continue;
-    } else {
-      changes[k] = v;
-    }
-  }
-  if (changes.child_birth_year) changes.child_birth_year = parseInt(changes.child_birth_year);
-  return changes;
-}
+// cleanFormChanges is now in utils/validation.js
 
 export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   const { isAdmin } = useAuth();
@@ -114,11 +94,27 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     loadProductLevelsData();
   }, [lead.id, loadProductLevelsData]);
 
-  // Lazy load tab data — only fetch when tab is first activated
+  // Bug5 fix: ref theo dõi tab đã load, cho phép reload khi cần
+  const loadedTabsRef = useRef({});
+
   useEffect(() => {
-    if (activeTab === 'notes' && notes.length === 0) loadNotes();
-    if (activeTab === 'history' && history.length === 0) loadHistory();
-    if (activeTab === 'siblings' && siblings.length === 0 && lead.phone) loadSiblings();
+    // Reset loaded flags khi lead thay đổi
+    loadedTabsRef.current = {};
+  }, [lead.id]);
+
+  useEffect(() => {
+    if (activeTab === 'notes' && !loadedTabsRef.current.notes) {
+      loadedTabsRef.current.notes = true;
+      loadNotes();
+    }
+    if (activeTab === 'history' && !loadedTabsRef.current.history) {
+      loadedTabsRef.current.history = true;
+      loadHistory();
+    }
+    if (activeTab === 'siblings' && !loadedTabsRef.current.siblings && lead.phone) {
+      loadedTabsRef.current.siblings = true;
+      loadSiblings();
+    }
   }, [activeTab, lead.id]);
 
   // Load toàn bộ Sale đặt lịch (telesale) một lần duy nhất khi panel mount
@@ -144,9 +140,12 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
   const handleSave = async () => {
     // Frontend validation
-    if (form.phone && !/^(?:0\d{9}|[1-9]\d{8})$/.test(form.phone)) {
-      toast.error('SĐT bắt đầu bằng 0 phải đủ 10 số, không bắt đầu bằng 0 phải đủ 9 số');
-      return;
+    if (form.phone) {
+      const phoneCheck = validatePhone(form.phone);
+      if (!phoneCheck.valid) {
+        toast.error(phoneCheck.message);
+        return;
+      }
     }
     const newGroup = 'L' + (form.level_code.match(/^L(\d)/)?.[1] || '0');
     if (newGroup !== 'L0') {
@@ -175,7 +174,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
     setSaving(true);
     try {
-      const changes = cleanChanges(form);
+      const changes = cleanFormChanges(form);
       // Bug1 fix: use levelNote (not noteContent)
       const note = form.level_code !== lead.level_code ? levelNote : null;
       await updateLead(lead.id, changes, note);
@@ -221,10 +220,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     }
   };
 
-  const formatDt = (dt) => {
-    if (!dt) return '—';
-    return new Date(dt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
+  const formatDt = formatDateTime;
 
   const levelInfo = getLevelInfo(lead.level_code);
 
@@ -300,7 +296,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Sản phẩm quan tâm</label>
                   {editing ? (
                     <div className="flex flex-wrap gap-4 mt-1">
-                      {['UCMAS', 'UCKID', 'ROBOT', 'TRẠI HÈ'].map((prod) => (
+                      {PRODUCTS.map((prod) => (
                         <label key={prod} className="flex items-center gap-2 cursor-pointer text-sm text-surface-700 dark:text-surface-300">
                           <input type="checkbox"
                             checked={form.interested_products?.includes(prod)}
