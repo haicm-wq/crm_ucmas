@@ -299,6 +299,9 @@ GRANT EXECUTE ON FUNCTION rpc_update_lead_product_level TO anon, authenticated;
 
 
 -- 6. Cập nhật hàm rpc_bulk_assign để hỗ trợ telesale tự chia data L0 về trung tâm của họ
+DROP FUNCTION IF EXISTS rpc_bulk_assign(UUID[], UUID);
+DROP FUNCTION IF EXISTS rpc_bulk_assign(UUID[], UUID, UUID);
+
 CREATE OR REPLACE FUNCTION rpc_bulk_assign(
   p_lead_ids UUID[],
   p_center_id UUID,
