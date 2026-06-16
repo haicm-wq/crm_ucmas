@@ -114,22 +114,39 @@ export default function ProductsTab() {
   };
 
   const handleDeleteProduct = async (product) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"? Tất cả các level và dữ liệu trạng thái level của lead liên quan sẽ bị xóa sạch.`)) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"?\n\nTất cả các level và dữ liệu trạng thái level của lead liên quan sẽ bị xóa sạch.\nSản phẩm này cũng sẽ bị xóa khỏi danh sách "Sản phẩm quan tâm" của các lead.`)) {
       return;
     }
     try {
+      // 1. Xóa product code khỏi leads.interested_products array
+      // (vì interested_products là text[], không có FK cascade)
+      const { data: affectedLeads, error: fetchErr } = await supabase
+        .from('leads')
+        .select('id, interested_products')
+        .contains('interested_products', [product.code]);
+      
+      if (!fetchErr && affectedLeads?.length > 0) {
+        for (const lead of affectedLeads) {
+          const updated = (lead.interested_products || []).filter(p => p !== product.code);
+          await supabase.from('leads').update({ interested_products: updated }).eq('id', lead.id);
+        }
+      }
+
+      // 2. Xóa product (cascade sẽ xóa product_levels + lead_product_levels)
       const { error } = await supabase
         .from('products')
         .delete()
         .eq('code', product.code);
       if (error) throw error;
-      toast.success('Đã xóa sản phẩm!');
+
+      toast.success(`Đã xóa sản phẩm "${product.name}"${affectedLeads?.length ? ` và cập nhật ${affectedLeads.length} lead` : ''}!`);
       if (selectedProduct?.code === product.code) {
         setSelectedProduct(null);
       }
       loadProducts();
     } catch (err) {
-      toast.error('Lỗi khi xóa sản phẩm');
+      console.error('Lỗi xóa sản phẩm:', err);
+      toast.error(err.message || 'Lỗi khi xóa sản phẩm');
     }
   };
 
@@ -201,7 +218,8 @@ export default function ProductsTab() {
       toast.success('Đã xóa Level!');
       loadLevels(selectedProduct.code);
     } catch (err) {
-      toast.error('Lỗi khi xóa Level');
+      console.error('Lỗi xóa Level:', err);
+      toast.error(err.message || 'Lỗi khi xóa Level');
     }
   };
 
