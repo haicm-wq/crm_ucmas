@@ -1,16 +1,20 @@
 /**
  * SharedDataProvider — Cache data dùng chung toàn app
- * Centers + AllStaff fetch 1 lần, share cho mọi page
- * Thay thế 5+ lần gọi fetchCenters() rải rác
+ * Centers, AllStaff, Products, ProductLevels, Settings → fetch 1 lần, share cho mọi page
+ * Giảm API calls từ 5+/panel → chỉ fetch lead-specific data
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchCenters, fetchAllStaff } from '../services/api';
+import { fetchCenters, fetchAllStaff, fetchProductLevels, fetchSettings } from '../services/api';
+import { supabase } from '../lib/supabase';
 
 const SharedDataContext = createContext(null);
 
 export function SharedDataProvider({ children }) {
   const [centers, setCenters] = useState([]);
   const [allStaff, setAllStaff] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [productLevels, setProductLevels] = useState([]);
+  const [customFieldsDef, setCustomFieldsDef] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadCenters = useCallback(async () => {
@@ -31,20 +35,68 @@ export function SharedDataProvider({ children }) {
     }
   }, []);
 
+  const loadProducts = useCallback(async () => {
+    try {
+      const { data: prods } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true);
+      setProducts(prods || []);
+    } catch (err) {
+      console.error('SharedData: Error loading products', err);
+    }
+  }, []);
+
+  const loadProductLevels = useCallback(async () => {
+    try {
+      const data = await fetchProductLevels();
+      setProductLevels(data);
+    } catch (err) {
+      console.error('SharedData: Error loading product levels', err);
+    }
+  }, []);
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const s = await fetchSettings();
+      if (s.crm_custom_fields) {
+        try { setCustomFieldsDef(JSON.parse(s.crm_custom_fields)); } catch { /* ignore */ }
+      }
+    } catch (err) {
+      console.error('SharedData: Error loading settings', err);
+    }
+  }, []);
+
   useEffect(() => {
-    Promise.all([loadCenters(), loadStaff()]).finally(() => setLoading(false));
-  }, [loadCenters, loadStaff]);
+    Promise.all([
+      loadCenters(),
+      loadStaff(),
+      loadProducts(),
+      loadProductLevels(),
+      loadSettings(),
+    ]).finally(() => setLoading(false));
+  }, [loadCenters, loadStaff, loadProducts, loadProductLevels, loadSettings]);
 
   const refreshCenters = useCallback(() => loadCenters(), [loadCenters]);
   const refreshStaff = useCallback(() => loadStaff(), [loadStaff]);
+  const refreshProducts = useCallback(async () => {
+    await loadProducts();
+    await loadProductLevels();
+  }, [loadProducts, loadProductLevels]);
+  const refreshSettings = useCallback(() => loadSettings(), [loadSettings]);
 
   return (
     <SharedDataContext.Provider value={{
       centers,
       allStaff,
+      products,
+      productLevels,
+      customFieldsDef,
       loading,
       refreshCenters,
       refreshStaff,
+      refreshProducts,
+      refreshSettings,
     }}>
       {children}
     </SharedDataContext.Provider>

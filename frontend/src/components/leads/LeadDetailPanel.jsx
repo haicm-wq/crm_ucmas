@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { updateLead, fetchNotes, addNote, fetchLevelHistory, fetchSiblings, fetchStaffByCenter, fetchSettings } from '../../services/api';
+import { updateLead, fetchNotes, addNote, fetchLevelHistory, fetchSiblings, fetchStaffByCenter } from '../../services/api';
 import { getLevelInfo, ALL_LEVEL_CODES } from '../../config/levels';
 import { PRODUCTS } from '../../config/constants';
 import { validatePhone, cleanFormChanges } from '../../utils/validation';
 import { toDatetimeLocal, formatDateTime } from '../../utils/format';
+import { useSharedData } from '../../contexts/SharedDataProvider';
 import toast from 'react-hot-toast';
 import { HiOutlineX, HiOutlinePencil, HiOutlineChatAlt, HiOutlineClock, HiOutlineUserGroup } from 'react-icons/hi';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 // Bug9 fix: toDatetimeLocal is now in utils/format.js
 
@@ -15,6 +17,8 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   const { isAdmin } = useAuth();
+  // Performance: dùng cached data từ SharedDataProvider thay vì fetch mỗi lần mở panel
+  const { products: allProducts, productLevels: allProductLevels, customFieldsDef } = useSharedData();
   const [activeTab, setActiveTab] = useState('info');
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
@@ -24,25 +28,19 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   const [levelNote, setLevelNote] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null });
   const [siblings, setSiblings] = useState([]);
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
-  const [customFieldsDef, setCustomFieldsDef] = useState([]);
 
-  // States cho level theo sản phẩm
-  const [allProducts, setAllProducts] = useState([]);
-  const [allProductLevels, setAllProductLevels] = useState([]);
+  // States cho level theo sản phẩm (chỉ lead-specific data)
   const [leadProductLevels, setLeadProductLevels] = useState([]);
   const [formProductLevels, setFormProductLevels] = useState({});
 
-  const loadProductLevelsData = useCallback(async () => {
+  const loadLeadProductLevels = useCallback(async () => {
     try {
-      const { data: prods } = await supabase.from('products').select('*').eq('is_active', true);
-      const { data: lvls } = await supabase.from('product_levels').select('*').order('sort_order', { ascending: true });
+      // Chỉ fetch dữ liệu lead-specific, products/productLevels đã có trong cache
       const { data: leadLvls } = await supabase.from('lead_product_levels').select('*').eq('lead_id', lead.id);
-
-      setAllProducts(prods || []);
-      setAllProductLevels(lvls || []);
       setLeadProductLevels(leadLvls || []);
 
       const initialFormLvls = {};
@@ -55,15 +53,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     }
   }, [lead.id]);
 
-  useEffect(() => {
-    fetchSettings()
-      .then((s) => {
-        if (s.crm_custom_fields) {
-          try { setCustomFieldsDef(JSON.parse(s.crm_custom_fields)); } catch (e) { /* ignore */ }
-        }
-      })
-      .catch(console.error);
-  }, []);
+  // Performance: không cần fetchSettings mỗi lần mở panel, dùng customFieldsDef từ cache
 
   useEffect(() => {
     setForm({
@@ -91,8 +81,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     setNotes([]);
     setHistory([]);
     setSiblings([]);
-    loadProductLevelsData();
-  }, [lead.id, loadProductLevelsData]);
+    loadLeadProductLevels();
+  }, [lead.id, loadLeadProductLevels]);
 
   // Bug5 fix: ref theo dõi tab đã load, cho phép reload khi cần
   const loadedTabsRef = useRef({});
@@ -167,11 +157,21 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
         (hasNameChanged ? ` - Họ tên: "${lead.full_name || '—'}" -> "${form.full_name || '—'}"\n` : '') +
         (hasPhoneChanged ? ` - SĐT: "${lead.phone || '—'}" -> "${form.phone || '—'}"\n` : '') +
         `Bạn có đồng ý thực hiện thay đổi này không?`;
-      if (!window.confirm(msg)) {
-        return;
-      }
+      setConfirmDialog({
+        open: true,
+        message: msg,
+        onConfirm: () => {
+          setConfirmDialog({ open: false, message: '', onConfirm: null });
+          executeSave();
+        },
+      });
+      return;
     }
 
+    executeSave();
+  };
+
+  const executeSave = async () => {
     setSaving(true);
     try {
       const changes = cleanFormChanges(form);
@@ -232,6 +232,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   ];
 
   return (
+    <>
     <div className="modal-overlay" onClick={onClose}>
       <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-slide-in mx-4 will-change-transform" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-surface-200 dark:border-surface-700">
@@ -634,5 +635,17 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
         </div>
       </div>
     </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.open}
+        title="Thay đổi thông tin quan trọng"
+        message={confirmDialog.message}
+        confirmLabel="Đồng ý thay đổi"
+        cancelLabel="Hủy bỏ"
+        variant="warning"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ open: false, message: '', onConfirm: null })}
+      />
+    </>
   );
 }

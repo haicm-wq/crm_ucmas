@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { createLead, checkPhone, fetchSettings } from '../../services/api';
+import { useState } from 'react';
+import { createLead, checkPhone } from '../../services/api';
+import { useSharedData } from '../../contexts/SharedDataProvider';
+import { PRODUCTS } from '../../config/constants';
+import { validatePhone } from '../../utils/validation';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineExclamation } from 'react-icons/hi';
-
-const PRODUCTS = ['UCMAS', 'UCKID', 'ROBOT', 'TRẠI HÈ'];
 
 export default function CreateLeadModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
@@ -13,17 +14,8 @@ export default function CreateLeadModal({ onClose, onCreated }) {
     interested_products: [],
     custom_fields: {},
   });
-  const [customFieldsDef, setCustomFieldsDef] = useState([]);
-
-  useEffect(() => {
-    fetchSettings()
-      .then((s) => {
-        if (s.crm_custom_fields) {
-          try { setCustomFieldsDef(JSON.parse(s.crm_custom_fields)); } catch (e) { /* ignore */ }
-        }
-      })
-      .catch(console.error);
-  }, []);
+  // Performance: dùng cached customFieldsDef từ SharedDataProvider
+  const { customFieldsDef } = useSharedData();
   const [saving, setSaving] = useState(false);
   const [dupCheck, setDupCheck] = useState(null);
   const [dupConfirmed, setDupConfirmed] = useState(false);
@@ -31,7 +23,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
 
   const handlePhoneBlur = async () => {
     const phone = form.phone.trim();
-    if (!phone || !/^(?:0\d{9}|[1-9]\d{8})$/.test(phone)) {
+    if (!phone || !validatePhone(phone).valid) {
       setDupCheck(null);
       setDupConfirmed(false);
       return;
@@ -50,7 +42,10 @@ export default function CreateLeadModal({ onClose, onCreated }) {
 
   const handleSubmit = async () => {
     if (!form.full_name.trim()) { toast.error('Họ tên không được trống'); return; }
-    if (form.phone && !/^(?:0\d{9}|[1-9]\d{8})$/.test(form.phone)) { toast.error('SĐT bắt đầu bằng 0 phải đủ 10 số, không bắt đầu bằng 0 phải đủ 9 số'); return; }
+    if (form.phone) {
+      const phoneCheck = validatePhone(form.phone);
+      if (!phoneCheck.valid) { toast.error(phoneCheck.message); return; }
+    }
     if (dupCheck?.exists && !dupConfirmed) { toast.error('Vui lòng xác nhận tiếp tục'); return; }
 
     setSaving(true);
