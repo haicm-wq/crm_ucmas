@@ -14,7 +14,8 @@ export async function fetchLeads({ page = 1, limit = 50, search, level_code, cen
 
   let query = supabase
     .from('leads')
-    .select('*, centers!assigned_center(name), profiles!assigned_staff(full_name), lead_product_levels(*)', { count: 'exact' });
+    .select('*, centers!assigned_center(name), profiles!assigned_staff(full_name), lead_product_levels(*)', { count: 'exact' })
+    .neq('level_group', 'L0'); // Danh sách Lead chỉ hiển thị leads đã "tốt nghiệp" khỏi Kho L0
 
   if (search) {
     // Bug8 fix: sanitize PostgREST special chars to prevent filter syntax errors

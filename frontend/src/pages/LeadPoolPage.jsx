@@ -5,13 +5,20 @@ import { useSupabaseRealtime } from '../hooks/useShared';
 import { fetchL0Pool, bulkAssign, fetchL0UnprocessedStats, updateLead, updateLeadLevelAndProducts } from '../services/api';
 import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/SkeletonLoader';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { HiOutlineRefresh, HiOutlineInbox, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import MultiSelect from '../components/ui/MultiSelect';
 import { PRODUCT_OPTIONS, L0_ALERT_THRESHOLD_MS, L0_POOL_LEVELS, PAGE_SIZE_OPTIONS, BIRTH_YEAR_RANGE } from '../config/constants';
+import { getLevelInfo, ALL_LEVEL_CODES } from '../config/levels';
 import { validatePhone } from '../utils/validation';
 import { formatDate } from '../utils/format';
+
+// Levels cơ bản cho L0 Pool (luôn hiển thị)
+const L0_BASE_LEVELS = ['L0', 'L1.KK', 'L0.R', 'L0.K'];
+// Levels "tốt nghiệp" — chuyển lead sang Danh sách Lead
+const GRADUATION_LEVELS = ALL_LEVEL_CODES.filter(c => !L0_BASE_LEVELS.includes(c));
 
 export default function LeadPoolPage() {
   const { centers, allStaff } = useSharedData();
@@ -27,6 +34,7 @@ export default function LeadPoolPage() {
   const [unprocessedStats, setUnprocessedStats] = useState(0);
   const [pageSize, setPageSize] = useState(100);
   const [savingLeads, setSavingLeads] = useState({}); // { [leadId]: { [field]: boolean } }
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null });
   // Bug1 fix: dùng ref map thay vì single shared state để tránh race condition
   const focusedValueRef = useRef({});
   const loadRef = useRef(null);
@@ -150,11 +158,54 @@ export default function LeadPoolPage() {
     }
   };
 
+  // Kiểm tra lead có đủ điều kiện chuyển level ≥ L1 không
+  const canGraduate = (lead) => {
+    return lead.assigned_center && (lead.interested_products?.length > 0);
+  };
+
   const handleLevelChange = async (leadId, levelCode) => {
+    const lead = pool.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const isGraduationLevel = !L0_BASE_LEVELS.includes(levelCode);
+
+    // Validation: level ≥ L1 yêu cầu trung tâm + sản phẩm
+    if (isGraduationLevel) {
+      if (!lead.assigned_center) {
+        toast.error('Cần chọn Trung tâm trước khi chuyển level này');
+        return;
+      }
+      if (!lead.interested_products?.length) {
+        toast.error('Cần chọn Sản phẩm trước khi chuyển level này');
+        return;
+      }
+
+      // ConfirmDialog: cảnh báo lead sẽ chuyển sang Danh sách Lead
+      const levelInfo = getLevelInfo(levelCode);
+      setConfirmDialog({
+        open: true,
+        message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Level "${levelInfo.label}" (${levelCode}).\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L0 và xuất hiện ở Danh sách Lead.\n\nBạn có chắc chắn muốn thực hiện?`,
+        onConfirm: () => {
+          setConfirmDialog({ open: false, message: '', onConfirm: null });
+          executeLevelChange(leadId, levelCode);
+        },
+      });
+      return;
+    }
+
+    // Level cơ bản L0 — chuyển trực tiếp
+    executeLevelChange(leadId, levelCode);
+  };
+
+  const executeLevelChange = async (leadId, levelCode) => {
     markSaving(leadId, 'level_code', true);
     try {
       await updateLeadLevelAndProducts(leadId, levelCode);
-      toast.success('Đã cập nhật level');
+      const isGraduation = !L0_BASE_LEVELS.includes(levelCode);
+      toast.success(isGraduation
+        ? '✅ Lead đã chuyển sang Danh sách Lead'
+        : 'Đã cập nhật level'
+      );
       loadPool(pagination.page);
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật level');
@@ -480,19 +531,30 @@ export default function LeadPoolPage() {
                         </div>
                       </td>
 
-                      {/* Level */}
+                      {/* Level — dynamic dropdown */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[130px]">
+                        <div className="relative flex items-center min-w-[180px]">
                           <select
                             value={lead.level_code || 'L0'}
                             onChange={(e) => handleLevelChange(lead.id, e.target.value)}
                             disabled={savingLeads[lead.id]?.level_code}
                             className="select-field py-1 px-2 text-xs w-full font-semibold"
                           >
-                            <option value="L0">{L0_POOL_LEVELS[0].label}</option>
-                            <option value="L1.KK">{L0_POOL_LEVELS[1].label}</option>
-                            <option value="L0.R">{L0_POOL_LEVELS[2].label}</option>
-                            <option value="L0.K">{L0_POOL_LEVELS[3].label}</option>
+                            {/* Nhóm 1: Xử lý trong Kho L0 */}
+                            <optgroup label="── Xử lý trong Kho L0 ──">
+                              {L0_POOL_LEVELS.map(lvl => (
+                                <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
+                              ))}
+                            </optgroup>
+                            {/* Nhóm 2: Chuyển sang Danh sách Lead (chỉ hiện khi đủ điều kiện) */}
+                            {canGraduate(lead) && (
+                              <optgroup label="── Chuyển sang Danh sách Lead ──">
+                                {GRADUATION_LEVELS.map(code => {
+                                  const info = getLevelInfo(code);
+                                  return <option key={code} value={code}>{code} — {info.label}</option>;
+                                })}
+                              </optgroup>
+                            )}
                           </select>
                           {savingLeads[lead.id]?.level_code && (
                             <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
@@ -552,6 +614,17 @@ export default function LeadPoolPage() {
           onClose={() => setSelectedLead(null)}
           onUpdate={() => { setSelectedLead(null); loadPool(pagination.page); }} />
       )}
+
+      <ConfirmDialog
+        isOpen={confirmDialog.open}
+        title="Chuyển Lead sang Danh sách Lead"
+        message={confirmDialog.message}
+        confirmLabel="Đồng ý chuyển"
+        cancelLabel="Hủy bỏ"
+        variant="info"
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog({ open: false, message: '', onConfirm: null })}
+      />
     </div>
   );
 }
