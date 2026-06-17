@@ -3,6 +3,7 @@ import { useSharedData } from '../contexts/SharedDataProvider';
 import {
   fetchReportFunnel, fetchReportCenterConversion, fetchReportSalePerformance,
   fetchReportCenterComparison, fetchReportSourceCampaign, fetchReportTimeInStage,
+  fetchReportBookingSalePerformance, fetchReportProductAnalytics,
 } from '../services/api';
 import { TableSkeleton } from '../components/ui/SkeletonLoader';
 import toast from 'react-hot-toast';
@@ -12,6 +13,9 @@ const TABS = [
   { id: 'funnel', label: 'Phễu L0→L6' },
   { id: 'center_conv', label: 'Tỷ lệ chốt' },
   { id: 'sale_perf', label: 'Hiệu suất Sale' },
+  { id: 'booking_sale_perf', label: 'Sale đặt lịch' },
+  { id: 'ucmas_report', label: 'Báo cáo UCMAS' },
+  { id: 'uckid_report', label: 'Báo cáo UCKID' },
   { id: 'center_cmp', label: 'So sánh TT' },
   { id: 'source', label: 'Nguồn / QC' },
   { id: 'time', label: 'Tốc độ chuyển đổi' },
@@ -22,12 +26,23 @@ export default function ReportsPage() {
   const [tab, setTab] = useState('funnel');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ from: '', to: '', center_id: '' });
+  
+  const getFirstDayOfMonth = () => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  };
+  const getToday = () => new Date().toISOString().split('T')[0];
+
+  const [filters, setFilters] = useState({ 
+    from: getFirstDayOfMonth(), 
+    to: getToday(), 
+    center_id: '' 
+  });
+  
   // Cache report results per tab — avoids refetch when switching tabs
   const cacheRef = useRef({});
 
   const loadReport = useCallback(async (forceRefresh = false) => {
-    // Use cache if available and not forced
     const cacheKey = `${tab}_${JSON.stringify(filters)}`;
     if (!forceRefresh && cacheRef.current[cacheKey]) {
       setData(cacheRef.current[cacheKey]);
@@ -38,14 +53,42 @@ export default function ReportsPage() {
     setData(null);
     try {
       let result;
+      const apiFilters = {
+        from: filters.from ? `${filters.from}T00:00:00Z` : null,
+        to: filters.to ? `${filters.to}T23:59:59Z` : null,
+        center_id: filters.center_id || null,
+      };
+
       switch (tab) {
-        case 'funnel': result = await fetchReportFunnel(filters); break;
-        case 'center_conv': result = await fetchReportCenterConversion(); break;
-        case 'sale_perf': result = await fetchReportSalePerformance(); break;
-        case 'center_cmp': result = await fetchReportCenterComparison(); break;
-        case 'source': result = await fetchReportSourceCampaign(); break;
-        case 'time': result = await fetchReportTimeInStage(filters.center_id || null); break;
-        default: result = null;
+        case 'funnel': 
+          result = await fetchReportFunnel(apiFilters); 
+          break;
+        case 'center_conv': 
+          result = await fetchReportCenterConversion(); 
+          break;
+        case 'sale_perf': 
+          result = await fetchReportSalePerformance(); 
+          break;
+        case 'booking_sale_perf': 
+          result = await fetchReportBookingSalePerformance(apiFilters); 
+          break;
+        case 'ucmas_report': 
+          result = await fetchReportProductAnalytics({ ...apiFilters, product_code: 'UCMAS' }); 
+          break;
+        case 'uckid_report': 
+          result = await fetchReportProductAnalytics({ ...apiFilters, product_code: 'UCKID' }); 
+          break;
+        case 'center_cmp': 
+          result = await fetchReportCenterComparison(); 
+          break;
+        case 'source': 
+          result = await fetchReportSourceCampaign(); 
+          break;
+        case 'time': 
+          result = await fetchReportTimeInStage(filters.center_id || null); 
+          break;
+        default: 
+          result = null;
       }
       setData(result);
       cacheRef.current[cacheKey] = result;
@@ -80,6 +123,9 @@ export default function ReportsPage() {
     );
   };
 
+  const showFilterBar = tab === 'funnel' || tab === 'time' || tab === 'booking_sale_perf' || tab === 'ucmas_report' || tab === 'uckid_report';
+  const showDateFilters = tab === 'funnel' || tab === 'booking_sale_perf' || tab === 'ucmas_report' || tab === 'uckid_report';
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -103,10 +149,10 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      {/* Filters for funnel/time */}
-      {(tab === 'funnel' || tab === 'time') && (
-        <div className="glass-card p-4 flex flex-wrap items-end gap-3">
-          {tab === 'funnel' && (
+      {/* Filter Bar */}
+      {showFilterBar && (
+        <div className="glass-card p-4 flex flex-wrap items-end gap-3 bg-surface-50/50 dark:bg-surface-800/10">
+          {showDateFilters && (
             <>
               <div>
                 <label className="block text-xs text-surface-500 mb-1">Từ ngày</label>
@@ -128,7 +174,7 @@ export default function ReportsPage() {
               {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
-          <button onClick={loadReport} className="btn-primary text-sm">Xem</button>
+          <button onClick={() => loadReport(true)} className="btn-primary text-sm px-4 py-2">Xem</button>
         </div>
       )}
 
@@ -180,6 +226,51 @@ export default function ReportsPage() {
               { key: 'booked', label: 'Đã hẹn', className: 'text-right' },
               { key: 'converted', label: 'Đã chốt', className: 'text-right text-green-600 dark:text-green-400 font-semibold' },
             ], data)}
+
+            {tab === 'booking_sale_perf' && renderTable([
+              { key: 'sale_name', label: 'Nhân viên Sale' },
+              { key: 'l1_count', label: 'Đạt L1', className: 'text-right' },
+              { key: 'l2_booked_count', label: 'Lịch hẹn (L2.2B)', className: 'text-right text-blue-600 dark:text-blue-400 font-semibold' },
+              { key: 'l3_attended_count', label: 'Đến test (L3.1)', className: 'text-right' },
+              { key: 'l3_total_count', label: 'Mốc L3 tổng', className: 'text-right' },
+              { key: 'l2_l1_rate', label: 'Tỷ lệ L2.2B/L1', className: 'text-right font-bold text-primary-600 dark:text-primary-400',
+                render: (r) => r.l2_l1_rate != null ? `${r.l2_l1_rate}%` : '—' },
+              { key: 'l3_l1_rate', label: 'Tỷ lệ L3/L1', className: 'text-right font-bold text-green-600 dark:text-green-400',
+                render: (r) => r.l3_l1_rate != null ? `${r.l3_l1_rate}%` : '—' },
+            ], data)}
+
+            {(tab === 'ucmas_report' || tab === 'uckid_report') && data && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-semibold text-surface-850 dark:text-surface-200 mb-3">
+                    Phễu chuyển đổi rút gọn (L1 → L4)
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    {(data.funnel || []).map((item) => (
+                      <div key={item.level} className="p-3 bg-surface-100 dark:bg-surface-800/30 rounded-xl text-center border border-surface-200/50 dark:border-surface-700/50">
+                        <p className="text-[10px] text-surface-500 uppercase font-semibold tracking-wider">Mốc {item.level}</p>
+                        <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-1">{item.count}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-surface-200 dark:border-surface-700 pt-6">
+                  <h3 className="text-sm font-semibold text-surface-850 dark:text-surface-200 mb-3">
+                    Thống kê chi tiết trạng thái
+                  </h3>
+                  {renderTable([
+                    { key: 'level_code', label: 'Mã Level', className: 'font-mono' },
+                    { key: 'label', label: 'Tên trạng thái' },
+                    { key: 'count', label: 'Số lượng chuyển dịch', className: 'text-right font-semibold text-primary-600 dark:text-primary-400',
+                      render: (r) => (
+                        <span style={{ color: r.color }} className="font-semibold">{r.count}</span>
+                      )
+                    },
+                  ], data.details)}
+                </div>
+              </div>
+            )}
 
             {tab === 'center_cmp' && renderTable([
               { key: 'center_name', label: 'Trung tâm' },

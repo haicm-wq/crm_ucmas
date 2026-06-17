@@ -422,6 +422,47 @@ export async function fetchDashboardCenter(centerId) {
   }, 60000);
 }
 
+export async function fetchDashboardAnalytics({ from, to, center_ids, product_codes } = {}) {
+  const sortedCenters = Array.isArray(center_ids) ? [...center_ids].sort() : center_ids;
+  const sortedProducts = Array.isArray(product_codes) ? [...product_codes].sort() : product_codes;
+  
+  return withCache('fetchDashboardAnalytics', { from, to, center_ids: sortedCenters, product_codes: sortedProducts }, async () => {
+    const { data, error } = await supabase.rpc('rpc_dashboard_analytics', {
+      p_from: from || null,
+      p_to: to || null,
+      p_center_ids: sortedCenters || null,
+      p_product_codes: sortedProducts || null,
+    });
+    if (error) throw error;
+    return data;
+  }, 30000);
+}
+
+export async function fetchReportBookingSalePerformance({ from, to, center_id } = {}) {
+  return withCache('fetchReportBookingSalePerformance', { from, to, center_id }, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_booking_sale_performance', {
+      p_from: from || null,
+      p_to: to || null,
+      p_center_id: center_id || null,
+    });
+    if (error) throw error;
+    return data;
+  }, 30000);
+}
+
+export async function fetchReportProductAnalytics({ from, to, center_id, product_code } = {}) {
+  return withCache('fetchReportProductAnalytics', { from, to, center_id, product_code }, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_product_analytics', {
+      p_from: from || null,
+      p_to: to || null,
+      p_center_id: center_id || null,
+      p_product_code: product_code || 'UCMAS',
+    });
+    if (error) throw error;
+    return data;
+  }, 30000);
+}
+
 export async function fetchReportFunnel({ from, to, center_id } = {}) {
   return withCache('fetchReportFunnel', { from, to, center_id }, async () => {
     const { data, error } = await supabase.rpc('rpc_report_funnel', {

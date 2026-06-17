@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSharedData } from '../contexts/SharedDataProvider';
-import { fetchDashboardHQ, fetchDashboardCenter } from '../services/api';
+import { fetchDashboardAnalytics } from '../services/api';
 import { CardSkeleton, ChartSkeleton } from '../components/ui/SkeletonLoader';
 import toast from 'react-hot-toast';
 import {
@@ -69,31 +69,128 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
+// Custom Premium Multi-select Dropdown
+function MultiSelectDropdown({ label, options, selectedValues, onChange, disabled, placeholder = 'Tất cả' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleToggle = (value) => {
+    if (selectedValues.includes(value)) {
+      onChange(selectedValues.filter((v) => v !== value));
+    } else {
+      onChange([...selectedValues, value]);
+    }
+  };
+
+  const selectedLabels = options
+    .filter((o) => selectedValues.includes(o.value))
+    .map((o) => o.label);
+
+  const displayValue = selectedLabels.length === 0 
+    ? placeholder 
+    : selectedLabels.length <= 2 
+      ? selectedLabels.join(', ') 
+      : `Đã chọn ${selectedLabels.length}`;
+
+  return (
+    <div ref={containerRef} className="relative min-w-[150px] max-w-[220px] text-sm">
+      <label className="block text-xs text-surface-500 mb-1">{label}</label>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full text-left bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg px-3 py-2 text-surface-700 dark:text-surface-200 flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-60 disabled:cursor-not-allowed select-field"
+      >
+        <span className="truncate">{displayValue}</span>
+        <svg className="w-4 h-4 text-surface-400 flex-shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg shadow-lg py-1">
+          {options.map((option) => (
+            <label
+              key={option.value}
+              className="flex items-center px-3 py-2 hover:bg-surface-100 dark:hover:bg-surface-700 cursor-pointer select-none text-surface-700 dark:text-surface-200"
+            >
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(option.value)}
+                onChange={() => handleToggle(option.value)}
+                className="rounded text-primary-600 focus:ring-primary-500 h-4 w-4 mr-2 border-surface-300 dark:border-surface-600"
+              />
+              <span className="truncate">{option.label}</span>
+            </label>
+          ))}
+          {options.length === 0 && (
+            <div className="px-3 py-2 text-surface-500 text-xs">Không có lựa chọn</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+  const getFirstDayOfMonth = () => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+  };
+  const getToday = () => new Date().toISOString().split('T')[0];
+
   const { user, isAdmin, isMarketing, isCenter } = useAuth();
-  const { centers } = useSharedData();
+  const { centers, products } = useSharedData();
+
+  // Filters State
+  const [from, setFrom] = useState(getFirstDayOfMonth());
+  const [to, setTo] = useState(getToday());
+  const [selectedCenters, setSelectedCenters] = useState(isCenter ? [user.center_id] : []);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedCenter, setSelectedCenter] = useState('');
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      if (isCenter) {
-        setData(await fetchDashboardCenter(user.center_id));
-      } else if (selectedCenter) {
-        setData(await fetchDashboardCenter(selectedCenter));
-      } else {
-        setData(await fetchDashboardHQ());
-      }
-    } catch {
-      toast.error('Lỗi tải dashboard');
+      // Force center role filter to their center_id
+      const centerFilter = isCenter ? [user.center_id] : selectedCenters;
+
+      const result = await fetchDashboardAnalytics({
+        from: from ? `${from}T00:00:00Z` : null,
+        to: to ? `${to}T23:59:59Z` : null,
+        center_ids: centerFilter.length > 0 ? centerFilter : null,
+        product_codes: selectedProducts.length > 0 ? selectedProducts : null,
+      });
+      setData(result);
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi tải dữ liệu dashboard');
     } finally {
       setLoading(false);
     }
-  }, [selectedCenter, isCenter, user?.center_id]);
+  }, [from, to, selectedCenters, selectedProducts, isCenter, user?.center_id]);
 
-  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const handleResetFilters = () => {
+    setFrom(getFirstDayOfMonth());
+    setTo(getToday());
+    setSelectedCenters(isCenter ? [user.center_id] : []);
+    setSelectedProducts([]);
+  };
 
   if (loading || !data) {
     return (
@@ -106,7 +203,8 @@ export default function DashboardPage() {
     );
   }
 
-  const isHQ = !isCenter && !selectedCenter;
+  // View state is single center if user is center OR selected exactly one center
+  const isHQ = !isCenter && (selectedCenters.length !== 1);
   const funnel = data.funnel || [];
   const maxFunnel = Math.max(...funnel.map((f) => parseInt(f.count) || 0), 1);
 
@@ -121,9 +219,13 @@ export default function DashboardPage() {
     leads: parseInt(c.count),
   }));
 
+  // Map dropdown choices
+  const centerOptions = (centers || []).map((c) => ({ label: c.name, value: c.id }));
+  const productOptions = (products || []).map((p) => ({ label: p.name, value: p.code }));
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">
             {isHQ ? 'Dashboard Tổng quan' : `Dashboard ${data.center?.name || ''}`}
@@ -133,31 +235,75 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(isAdmin || isMarketing) && (
-            <select value={selectedCenter} onChange={(e) => setSelectedCenter(e.target.value)}
-              className="select-field py-2 text-sm">
-              <option value="">Tổng quan HQ</option>
-              {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-          )}
           <button onClick={loadDashboard} className="btn-ghost" aria-label="Làm mới">
             <HiOutlineRefresh className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Premium Filter Bar */}
+      <div className="glass-card p-4 flex flex-wrap items-end gap-3 bg-surface-50/50 dark:bg-surface-800/10">
+        <div>
+          <label className="block text-xs text-surface-500 mb-1">Từ ngày</label>
+          <input 
+            type="date" 
+            value={from} 
+            onChange={(e) => setFrom(e.target.value)}
+            className="input-field py-2 text-sm" 
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-surface-500 mb-1">Đến ngày</label>
+          <input 
+            type="date" 
+            value={to} 
+            onChange={(e) => setTo(e.target.value)}
+            className="input-field py-2 text-sm" 
+          />
+        </div>
+
+        {/* Center Multi-select (Admin/Marketing only) */}
+        {(isAdmin || isMarketing) && (
+          <MultiSelectDropdown
+            label="Trung tâm"
+            options={centerOptions}
+            selectedValues={selectedCenters}
+            onChange={setSelectedCenters}
+            placeholder="Tất cả trung tâm"
+          />
+        )}
+
+        {/* Product Multi-select */}
+        <MultiSelectDropdown
+          label="Sản phẩm"
+          options={productOptions}
+          selectedValues={selectedProducts}
+          onChange={setSelectedProducts}
+          placeholder="Tất cả sản phẩm"
+        />
+
+        <div className="flex gap-2">
+          <button onClick={loadDashboard} className="btn-primary text-sm px-4 py-2">
+            Lọc
+          </button>
+          <button onClick={handleResetFilters} className="btn-ghost text-sm px-3 py-2 border border-surface-200 dark:border-surface-700">
+            Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={HiOutlineUserGroup} label="Tổng lead" value={data.total || 0} />
-        <StatCard icon={HiOutlineCalendar} label="Hẹn hôm nay"
-          value={isHQ ? data.todayAppointments || 0 : (data.pendingAppointments?.length || 0)} color="blue" />
+        <StatCard icon={HiOutlineCalendar} label="Hẹn trong kỳ"
+          value={data.todayAppointments || 0} color="blue" />
         <StatCard icon={HiOutlineTrendingUp} label="Đã chốt"
-          value={isHQ ? (data.conversion?.paid || 0) : (data.funnel?.find((f) => f.level_group === 'L4')?.count || 0)} color="green" />
+          value={data.conversion?.paid || 0} color="green" />
         <StatCard icon={HiOutlineStar} label="Tỷ lệ chốt"
           value={
-            isHQ && data.conversion
+            data.conversion
               ? `${((data.conversion.paid || 0) / Math.max(data.conversion.booked || 1, 1) * 100).toFixed(1)}%`
-              : '—'
+              : '0.0%'
           } color="yellow" />
       </div>
 
@@ -204,6 +350,9 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+              {(data.staffPerformance || []).length === 0 && (
+                <p className="text-center text-sm text-surface-500 py-8">Không có dữ liệu nhân viên</p>
+              )}
             </div>
           </div>
         )}
