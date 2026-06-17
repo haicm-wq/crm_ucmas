@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useDebounce, useSupabaseRealtime } from '../hooks/useShared';
 import { fetchLeads, fetchProductLevels } from '../services/api';
@@ -39,12 +40,32 @@ const OPERATORS = {
 
 export default function LeadsPage() {
   const { centers, allStaff } = useSharedData();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 400);
   const [filters, setFilters] = useState({ level_code: [], center_id: [], staff_id: [], product: [], sort_by: 'created_at', sort_dir: 'desc' });
+
+  useEffect(() => {
+    const levelParam = searchParams.get('level_code');
+    if (levelParam) {
+      if (['L1', 'L2', 'L3', 'L4'].includes(levelParam)) {
+        // Expand group
+        const codes = ALL_LEVEL_CODES.filter(c => {
+          if (levelParam === 'L4') {
+            return c.startsWith('L4.');
+          }
+          return c.startsWith(levelParam) && c !== 'L1.KK';
+        });
+        setFilters(prev => ({ ...prev, level_code: codes }));
+      } else {
+        setFilters(prev => ({ ...prev, level_code: [levelParam] }));
+      }
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   const [selectedLead, setSelectedLead] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [advancedRules, setAdvancedRules] = useState([]);

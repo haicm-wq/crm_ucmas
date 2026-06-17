@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { fetchDashboardAnalytics } from '../services/api';
@@ -44,12 +45,12 @@ function StatCard({ icon: Icon, label, value, color = 'primary' }) {
   );
 }
 
-function FunnelBar({ group, count, maxCount }) {
+function FunnelBar({ group, count, maxCount, onClick }) {
   const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs font-mono text-surface-600 dark:text-surface-400 w-8">{group}</span>
-      <div className="flex-1 h-7 bg-surface-200 dark:bg-surface-800/50 rounded-lg overflow-hidden">
+    <div className="flex items-center gap-3 cursor-pointer group" onClick={onClick}>
+      <span className="text-xs font-mono text-surface-600 dark:text-surface-400 w-8 group-hover:text-primary-500 transition-colors">{group}</span>
+      <div className="flex-1 h-7 bg-surface-200 dark:bg-surface-800/50 rounded-lg overflow-hidden group-hover:ring-1 group-hover:ring-primary-500/50 transition-all">
         <div className="h-full rounded-lg transition-[width] duration-500 flex items-center px-2"
           style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: LEVEL_COLORS[group] || '#6366f1' }}>
           <span className="text-[10px] font-bold text-white whitespace-nowrap">{count}</span>
@@ -142,6 +143,7 @@ function MultiSelectDropdown({ label, options, selectedValues, onChange, disable
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const getFirstDayOfMonth = () => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
@@ -149,6 +151,15 @@ export default function DashboardPage() {
   const getToday = () => new Date().toISOString().split('T')[0];
 
   const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
+
+  const handleLevelClick = (code) => {
+    const l0Levels = ['L0', 'L1.KK', 'L0.R', 'L0.K'];
+    if (l0Levels.includes(code)) {
+      navigate(`/kho-l0?level_code=${code}`);
+    } else {
+      navigate(`/leads?level_code=${code}`);
+    }
+  };
   const { centers, products, productLevels } = useSharedData();
 
   // Filters State
@@ -447,7 +458,13 @@ export default function DashboardPage() {
           </h3>
           <div className="space-y-2">
             {funnel.slice(0, 5).map((f) => (
-              <FunnelBar key={f.level_group} group={f.level_group} count={parseInt(f.count)} maxCount={maxFunnel} />
+              <FunnelBar 
+                key={f.level_group} 
+                group={f.level_group} 
+                count={parseInt(f.count)} 
+                maxCount={maxFunnel} 
+                onClick={() => handleLevelClick(f.level_group)} 
+              />
             ))}
           </div>
         </div>
@@ -503,15 +520,19 @@ export default function DashboardPage() {
               </h4>
               <div className="space-y-2">
                 {items.map((item) => (
-                  <div key={item.code} className="flex items-center justify-between text-xs">
+                  <div 
+                    key={item.code} 
+                    onClick={() => handleLevelClick(item.code)}
+                    className="flex items-center justify-between text-xs cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 p-1 rounded transition-colors group"
+                  >
                     <div className="flex items-center gap-2 truncate">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="font-mono text-surface-500">{item.code}</span>
-                      <span className="text-surface-700 dark:text-surface-300 truncate" title={item.label}>
+                      <span className="font-mono text-surface-500 group-hover:text-primary-500 transition-colors">{item.code}</span>
+                      <span className="text-surface-700 dark:text-surface-300 truncate group-hover:text-surface-900 dark:group-hover:text-surface-100 transition-colors" title={item.label}>
                         {item.label}
                       </span>
                     </div>
-                    <span className="font-bold text-surface-900 dark:text-surface-100 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-md min-w-[20px] text-center">
+                    <span className="font-bold text-surface-900 dark:text-surface-100 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-md min-w-[20px] text-center group-hover:bg-primary-100 dark:group-hover:bg-primary-500/20 transition-colors">
                       {item.count}
                     </span>
                   </div>

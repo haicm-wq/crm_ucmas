@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseRealtime } from '../hooks/useShared';
@@ -24,6 +25,8 @@ export default function LeadPoolPage() {
   const { centers, allStaff } = useSharedData();
   const { canViewL0, user } = useAuth();
   const isTelesale = user?.permission_group === 'telesale';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [levelFilter, setLevelFilter] = useState('');
   const [pool, setPool] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 100, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,14 @@ export default function LeadPoolPage() {
   // Bug1 fix: dùng ref map thay vì single shared state để tránh race condition
   const focusedValueRef = useRef({});
   const loadRef = useRef(null);
+
+  useEffect(() => {
+    const levelParam = searchParams.get('level_code');
+    if (levelParam && L0_BASE_LEVELS.includes(levelParam)) {
+      setLevelFilter(levelParam);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const isOver3Hours = (createdAt) => {
     return (Date.now() - new Date(createdAt).getTime()) > L0_ALERT_THRESHOLD_MS;
@@ -246,9 +257,14 @@ export default function LeadPoolPage() {
     setSelected(next);
   };
 
+  const filteredPool = pool.filter(lead => {
+    if (!levelFilter) return true;
+    return lead.level_code === levelFilter;
+  });
+
   const toggleAll = () => {
-    if (selected.size === pool.length) setSelected(new Set());
-    else setSelected(new Set(pool.map((l) => l.id)));
+    if (selected.size === filteredPool.length) setSelected(new Set());
+    else setSelected(new Set(filteredPool.map((l) => l.id)));
   };
 
   const handleBulkAssign = async () => {
@@ -285,11 +301,27 @@ export default function LeadPoolPage() {
           <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100 flex items-center gap-2">
             <HiOutlineInbox className="w-7 h-7 text-primary-400" /> Kho Lead L0
           </h1>
-          <p className="text-sm text-surface-500">{pagination.total} lead chờ phân bổ</p>
+          <p className="text-sm text-surface-500">
+            {levelFilter ? `${filteredPool.length} lead ở level ${levelFilter}` : `${pagination.total} lead chờ phân bổ`}
+          </p>
         </div>
-        <button onClick={() => loadPool(pagination.page)} className="btn-ghost" aria-label="Làm mới">
-          <HiOutlineRefresh className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Bộ lọc Level L0 */}
+          <select 
+            value={levelFilter} 
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="select-field py-1.5 px-3 text-xs w-44 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="">Tất cả Level L0</option>
+            {L0_BASE_LEVELS.map(lvl => {
+              const info = getLevelInfo(lvl);
+              return <option key={lvl} value={lvl}>{lvl} — {info.label}</option>;
+            })}
+          </select>
+          <button onClick={() => loadPool(pagination.page)} className="btn-ghost" aria-label="Làm mới">
+            <HiOutlineRefresh className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {unprocessedStats > 0 && (
@@ -338,7 +370,7 @@ export default function LeadPoolPage() {
             <thead>
               <tr>
                 <th className="w-10">
-                  <input type="checkbox" checked={pool.length > 0 && selected.size === pool.length}
+                  <input type="checkbox" checked={filteredPool.length > 0 && selected.size === filteredPool.length}
                     onChange={toggleAll}
                     className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500" />
                 </th>
@@ -359,13 +391,13 @@ export default function LeadPoolPage() {
             <tbody>
               {loading && pool.length === 0 ? (
                 <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
-              ) : pool.length === 0 ? (
+              ) : filteredPool.length === 0 ? (
                 <tr><td colSpan={13}>
                   <EmptyState icon={HiOutlineInbox} title="Kho L0 trống"
-                    description="Chưa có lead nào ở mức L0" />
+                    description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L0"} />
                 </td></tr>
               ) : (
-                pool.map((lead) => {
+                filteredPool.map((lead) => {
                   const unprocessed = lead.level_code === 'L0';
                   const delayed = unprocessed && isOver3Hours(lead.created_at);
                   
