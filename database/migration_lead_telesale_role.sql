@@ -274,16 +274,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 6. Cập nhật hàm rpc_bulk_assign để hỗ trợ phân quyền lead_telesale (có quyền gán cho bất kỳ ai tương tự admin/marketing)
-CREATE OR REPLACE FUNCTION rpc_bulk_assign(
-  p_lead_ids UUID[],
-  p_center_id UUID,
-  p_staff_id UUID DEFAULT NULL
-) RETURNS JSONB AS $$
-DECLARE
-  v_success INT := 0;
-  v_staff_id UUID;
-END;
-$$ LANGUAGE plpgsql;
 
 -- Viết lại hàm rpc_bulk_assign hoàn chỉnh để tránh lỗi định nghĩa
 CREATE OR REPLACE FUNCTION rpc_bulk_assign(
