@@ -58,86 +58,103 @@ BEGIN
       END
       -- Lọc danh sách trung tâm
       AND (p_center_ids IS NULL OR cardinality(p_center_ids) = 0 OR l.assigned_center = ANY(p_center_ids))
-      -- Lọc danh sách sản phẩm quan tâm
-      AND (p_product_codes IS NULL OR cardinality(p_product_codes) = 0 OR l.interested_products && p_product_codes)
+      -- Lọc danh sách sản phẩm quan tâm (quan tâm cả 2 sản phẩm: @>)
+      AND (p_product_codes IS NULL OR cardinality(p_product_codes) = 0 OR l.interested_products @> p_product_codes)
   ),
   leads_with_milestones AS (
     SELECT 
       l.*,
       -- Xác định các lead đạt mốc thời gian trong khoảng lọc
       (l.entered_l0_at >= v_from AND l.entered_l0_at <= v_to) AS is_l0_in_period,
-      (
-        (('UCMAS' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l1_ucmas_at >= v_from AND l.entered_l1_ucmas_at <= v_to)
-        OR
-        (('UCKID' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l1_uckid_at >= v_from AND l.entered_l1_uckid_at <= v_to)
-        OR
-        (
-          EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
-          AND l.entered_l1_at >= v_from AND l.entered_l1_at <= v_to
+      
+      -- L1: Nếu lọc theo sản phẩm, phải đạt L1 của TẤT CẢ các sản phẩm lọc trong kỳ
+      CASE 
+        WHEN p_product_codes IS NOT NULL AND cardinality(p_product_codes) > 0 THEN (
+          (NOT ('UCMAS' = ANY(p_product_codes)) OR (l.entered_l1_ucmas_at >= v_from AND l.entered_l1_ucmas_at <= v_to))
+          AND
+          (NOT ('UCKID' = ANY(p_product_codes)) OR (l.entered_l1_uckid_at >= v_from AND l.entered_l1_uckid_at <= v_to))
+          AND
+          (
+            NOT EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
+            OR (l.entered_l1_at >= v_from AND l.entered_l1_at <= v_to)
+          )
         )
-        OR
-        (
-          (p_product_codes IS NULL OR cardinality(p_product_codes) = 0)
-          AND NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
-          AND l.entered_l1_at >= v_from AND l.entered_l1_at <= v_to
+        ELSE (
+          ('UCMAS' = ANY(l.interested_products) AND l.entered_l1_ucmas_at >= v_from AND l.entered_l1_ucmas_at <= v_to)
+          OR
+          ('UCKID' = ANY(l.interested_products) AND l.entered_l1_uckid_at >= v_from AND l.entered_l1_uckid_at <= v_to)
+          OR
+          (NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
+           AND l.entered_l1_at >= v_from AND l.entered_l1_at <= v_to)
         )
-      ) AS is_l1_in_period,
-      (
-        (('UCMAS' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l2_ucmas_at >= v_from AND l.entered_l2_ucmas_at <= v_to)
-        OR
-        (('UCKID' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l2_uckid_at >= v_from AND l.entered_l2_uckid_at <= v_to)
-        OR
-        (
-          EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
-          AND l.entered_l2_at >= v_from AND l.entered_l2_at <= v_to
+      END AS is_l1_in_period,
+
+      -- L2: Nếu lọc theo sản phẩm, phải đạt L2 của TẤT CẢ các sản phẩm lọc trong kỳ
+      CASE 
+        WHEN p_product_codes IS NOT NULL AND cardinality(p_product_codes) > 0 THEN (
+          (NOT ('UCMAS' = ANY(p_product_codes)) OR (l.entered_l2_ucmas_at >= v_from AND l.entered_l2_ucmas_at <= v_to))
+          AND
+          (NOT ('UCKID' = ANY(p_product_codes)) OR (l.entered_l2_uckid_at >= v_from AND l.entered_l2_uckid_at <= v_to))
+          AND
+          (
+            NOT EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
+            OR (l.entered_l2_at >= v_from AND l.entered_l2_at <= v_to)
+          )
         )
-        OR
-        (
-          (p_product_codes IS NULL OR cardinality(p_product_codes) = 0)
-          AND NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
-          AND l.entered_l2_at >= v_from AND l.entered_l2_at <= v_to
+        ELSE (
+          ('UCMAS' = ANY(l.interested_products) AND l.entered_l2_ucmas_at >= v_from AND l.entered_l2_ucmas_at <= v_to)
+          OR
+          ('UCKID' = ANY(l.interested_products) AND l.entered_l2_uckid_at >= v_from AND l.entered_l2_uckid_at <= v_to)
+          OR
+          (NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
+           AND l.entered_l2_at >= v_from AND l.entered_l2_at <= v_to)
         )
-      ) AS is_l2_in_period,
-      (
-        (('UCMAS' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l3_ucmas_at >= v_from AND l.entered_l3_ucmas_at <= v_to)
-        OR
-        (('UCKID' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l3_uckid_at >= v_from AND l.entered_l3_uckid_at <= v_to)
-        OR
-        (
-          EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
-          AND l.entered_l3_at >= v_from AND l.entered_l3_at <= v_to
+      END AS is_l2_in_period,
+
+      -- L3: Nếu lọc theo sản phẩm, phải đạt L3 của TẤT CẢ các sản phẩm lọc trong kỳ
+      CASE 
+        WHEN p_product_codes IS NOT NULL AND cardinality(p_product_codes) > 0 THEN (
+          (NOT ('UCMAS' = ANY(p_product_codes)) OR (l.entered_l3_ucmas_at >= v_from AND l.entered_l3_ucmas_at <= v_to))
+          AND
+          (NOT ('UCKID' = ANY(p_product_codes)) OR (l.entered_l3_uckid_at >= v_from AND l.entered_l3_uckid_at <= v_to))
+          AND
+          (
+            NOT EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
+            OR (l.entered_l3_at >= v_from AND l.entered_l3_at <= v_to)
+          )
         )
-        OR
-        (
-          (p_product_codes IS NULL OR cardinality(p_product_codes) = 0)
-          AND NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
-          AND l.entered_l3_at >= v_from AND l.entered_l3_at <= v_to
+        ELSE (
+          ('UCMAS' = ANY(l.interested_products) AND l.entered_l3_ucmas_at >= v_from AND l.entered_l3_ucmas_at <= v_to)
+          OR
+          ('UCKID' = ANY(l.interested_products) AND l.entered_l3_uckid_at >= v_from AND l.entered_l3_uckid_at <= v_to)
+          OR
+          (NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
+           AND l.entered_l3_at >= v_from AND l.entered_l3_at <= v_to)
         )
-      ) AS is_l3_in_period,
-      (
-        (('UCMAS' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l4_ucmas_at >= v_from AND l.entered_l4_ucmas_at <= v_to)
-        OR
-        (('UCKID' = ANY(p_product_codes) OR p_product_codes IS NULL OR cardinality(p_product_codes) = 0) 
-          AND l.entered_l4_uckid_at >= v_from AND l.entered_l4_uckid_at <= v_to)
-        OR
-        (
-          EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
-          AND l.entered_l4_at >= v_from AND l.entered_l4_at <= v_to
+      END AS is_l3_in_period,
+
+      -- L4: Nếu lọc theo sản phẩm, phải đạt L4 của TẤT CẢ các sản phẩm lọc trong kỳ (chốt cả 2)
+      CASE 
+        WHEN p_product_codes IS NOT NULL AND cardinality(p_product_codes) > 0 THEN (
+          (NOT ('UCMAS' = ANY(p_product_codes)) OR (l.entered_l4_ucmas_at >= v_from AND l.entered_l4_ucmas_at <= v_to))
+          AND
+          (NOT ('UCKID' = ANY(p_product_codes)) OR (l.entered_l4_uckid_at >= v_from AND l.entered_l4_uckid_at <= v_to))
+          AND
+          (
+            NOT EXISTS (SELECT 1 FROM unnest(p_product_codes) p WHERE p NOT IN ('UCMAS', 'UCKID'))
+            OR (l.entered_l4_at >= v_from AND l.entered_l4_at <= v_to)
+          )
         )
-        OR
-        (
-          (p_product_codes IS NULL OR cardinality(p_product_codes) = 0)
-          AND NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
-          AND l.entered_l4_at >= v_from AND l.entered_l4_at <= v_to
+        ELSE (
+          ('UCMAS' = ANY(l.interested_products) AND l.entered_l4_ucmas_at >= v_from AND l.entered_l4_ucmas_at <= v_to)
+          OR
+          ('UCKID' = ANY(l.interested_products) AND l.entered_l4_uckid_at >= v_from AND l.entered_l4_uckid_at <= v_to)
+          OR
+          (NOT ('UCMAS' = ANY(l.interested_products) OR 'UCKID' = ANY(l.interested_products))
+           AND l.entered_l4_at >= v_from AND l.entered_l4_at <= v_to)
         )
-      ) AS is_l4_in_period,
+      END AS is_l4_in_period,
+
       (l.entered_l5_at >= v_from AND l.entered_l5_at <= v_to) AS is_l5_in_period,
       (l.entered_l6_at >= v_from AND l.entered_l6_at <= v_to) AS is_l6_in_period
     FROM filtered_leads l
