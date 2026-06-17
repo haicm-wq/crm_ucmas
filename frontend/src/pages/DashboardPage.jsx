@@ -243,79 +243,38 @@ export default function DashboardPage() {
   const rateL4L1 = contacted > 0 ? ((paid / contacted) * 100).toFixed(1) : '0.0';
   const rateL2L1 = contacted > 0 ? ((booked / contacted) * 100).toFixed(1) : '0.0';
 
-  // Dynamic cards configuration based on user active role
-  let statsCards = [];
-  if (isCenter) {
-    statsCards = [
-      { icon: HiOutlineUserGroup, label: "Data L1 (Lũy kế)", value: contacted, color: "primary" },
-      { icon: HiOutlineCalendar, label: "Số Lịch hẹn (Lũy kế)", value: booked, color: "blue" },
-      { icon: HiOutlineTrendingUp, label: "Đã học thử L3 (Lũy kế)", value: trialed, color: "green" },
-      { icon: HiOutlineStar, label: "Đã chốt L4 (Lũy kế)", value: paid, color: "yellow" },
-    ];
-  } else if (isTelesale || isLeadTelesale) {
-    statsCards = [
-      { icon: HiOutlineInbox, label: "L1 cần xử lý", value: data.l1Unprocessed || 0, color: "primary" },
-      { icon: HiOutlineCalendar, label: "Số lịch hẹn (Lũy kế)", value: booked, color: "blue" },
-      { icon: HiOutlineRefresh, label: "Cần chăm lại", value: data.followupNeeded || 0, color: "yellow" },
-      {
-        isCustom: true,
-        render: () => (
-          <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1 w-full">
-                <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">Hiệu suất đặt lịch</p>
-                <div className="flex flex-col gap-1 mt-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ Hẹn/L1:</span>
-                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL2L1}%</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L3/L1:</span>
-                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
-                  </div>
+  // Unified cards configuration for all roles
+  const statsCards = [
+    { icon: HiOutlineUserGroup, label: "Tổng L1", value: contacted, color: "primary" },
+    { icon: HiOutlineCalendar, label: "Tổng L2", value: booked, color: "blue" },
+    { icon: HiOutlineTrendingUp, label: "Tổng L3", value: trialed, color: "green" },
+    { icon: HiOutlineStar, label: "Tổng L4", value: paid, color: "yellow" },
+    {
+      isCustom: true,
+      render: () => (
+        <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1 w-full font-sans">
+              <p className="text-xs text-surface-500 font-semibold uppercase tracking-wider">Hiệu suất</p>
+              <div className="flex flex-col gap-1.5 mt-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-surface-500 font-medium">Tỷ lệ L3/L1:</span>
+                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-surface-500 font-medium">Tỷ lệ L4/L1:</span>
+                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL4L1}%</span>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center flex-shrink-0 ml-2">
-                <HiOutlineTrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-green-150 dark:bg-green-500/10 flex items-center justify-center flex-shrink-0 ml-2">
+              <HiOutlineTrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
           </div>
-        )
-      }
-    ];
-  } else {
-    // Admin / Marketing
-    statsCards = [
-      { icon: HiOutlineUserGroup, label: "Tổng lead", value: data.total || 0, color: "primary" },
-      { icon: HiOutlineCalendar, label: "Hẹn trong kỳ", value: data.todayAppointments || 0, color: "blue" },
-      { icon: HiOutlineTrendingUp, label: "Đã chốt", value: paid, color: "green" },
-      {
-        isCustom: true,
-        render: () => (
-          <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1 w-full">
-                <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">Tỷ lệ chốt</p>
-                <div className="flex flex-col gap-1 mt-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L3/L1:</span>
-                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L4/L1:</span>
-                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL4L1}%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center flex-shrink-0 ml-2">
-                <HiOutlineStar className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-            </div>
-          </div>
-        )
-      }
-    ];
-  }
+        </div>
+      )
+    }
+  ];
 
   // Get counts by level code grouped baseline logic
   const baselineLevels = (productLevels || [])
@@ -435,7 +394,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {statsCards.map((card, i) => {
           if (card.isCustom) return <div key={i}>{card.render()}</div>;
           return (
