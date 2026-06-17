@@ -593,15 +593,12 @@ export default function DashboardPage() {
             <span className="text-[10px] text-surface-500">Đơn vị: data tuyển sinh</span>
           </div>
 
-          <div className="overflow-x-auto border border-surface-200 dark:border-surface-700 rounded-lg shadow-sm max-h-[500px]">
+          <div className="overflow-x-auto border border-surface-200 dark:border-surface-700 rounded-lg shadow-sm">
             <table className="w-full border-collapse text-left text-xs text-surface-500 dark:text-surface-400">
               <thead className="sticky top-0 z-30 text-[10px] font-bold uppercase tracking-wider text-surface-700 dark:text-surface-200 select-none bg-surface-100 dark:bg-surface-800">
                 <tr>
-                  <th rowSpan={2} className="p-3 sticky left-0 z-40 bg-surface-100 dark:bg-surface-800 border-b-2 border-r border-surface-200 dark:border-surface-700 w-[140px] min-w-[140px] text-center">
+                  <th rowSpan={2} className="p-3 sticky left-0 z-40 bg-surface-100 dark:bg-surface-800 border-b-2 border-r-2 border-surface-300 dark:border-surface-600 w-[140px] min-w-[140px] text-center">
                     Trung Tâm
-                  </th>
-                  <th rowSpan={2} className="p-3 sticky left-[140px] z-40 bg-surface-100 dark:bg-surface-800 border-b-2 border-r-2 border-surface-300 dark:border-surface-600 w-[70px] min-w-[70px] text-center">
-                    Mã
                   </th>
                   <th colSpan={6} className="p-2 bg-amber-500/10 text-amber-800 dark:text-amber-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
                     Nguồn PUSH Marketing
@@ -659,11 +656,8 @@ export default function DashboardPage() {
               <tbody className="divide-y divide-surface-200 dark:divide-surface-700 bg-white dark:bg-surface-900">
                 {byCenterDetailed.map((row) => (
                   <tr key={row.center_id} className="group hover:bg-surface-50 dark:hover:bg-surface-800/40">
-                    <td className="p-3 sticky left-0 z-20 bg-white dark:bg-surface-900 group-hover:bg-surface-50 dark:group-hover:bg-surface-800/40 border-r border-surface-200 dark:border-surface-700 font-semibold text-surface-800 dark:text-surface-200 truncate w-[140px] min-w-[140px]">
+                    <td className="p-3 sticky left-0 z-20 bg-white dark:bg-surface-900 group-hover:bg-surface-50 dark:group-hover:bg-surface-800/40 border-r-2 border-surface-300 dark:border-surface-600 font-semibold text-surface-800 dark:text-surface-200 truncate w-[140px] min-w-[140px]">
                       {row.center_name?.replace('Trung tâm ', '')}
-                    </td>
-                    <td className="p-3 sticky left-[140px] z-20 bg-white dark:bg-surface-900 group-hover:bg-surface-50 dark:group-hover:bg-surface-800/40 border-r-2 border-surface-300 dark:border-surface-600 font-mono text-[11px] text-surface-500 text-center w-[70px] min-w-[70px]">
-                      {row.center_code}
                     </td>
                     
                     {/* PUSH */}
@@ -708,11 +702,8 @@ export default function DashboardPage() {
               </tbody>
               <tfoot className="sticky bottom-0 z-20 bg-surface-100 dark:bg-surface-800 font-bold border-t-2 border-surface-300 dark:border-surface-600">
                 <tr className="bg-surface-150 dark:bg-surface-800 text-surface-900 dark:text-surface-100">
-                  <td className="p-3 sticky left-0 z-20 bg-surface-150 dark:bg-surface-800 border-r border-surface-200 dark:border-surface-700 text-center">
+                  <td className="p-3 sticky left-0 z-20 bg-surface-150 dark:bg-surface-800 border-r-2 border-surface-300 dark:border-surface-600 text-center">
                     TỔNG/TB
-                  </td>
-                  <td className="p-3 sticky left-[140px] z-20 bg-surface-150 dark:bg-surface-800 border-r-2 border-surface-300 dark:border-surface-600 text-center text-surface-500 font-mono text-[10px]">
-                    —
                   </td>
                   
                   {/* PUSH */}
