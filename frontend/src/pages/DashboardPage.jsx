@@ -168,6 +168,13 @@ export default function DashboardPage() {
   const [selectedCenters, setSelectedCenters] = useState(isCenter ? [user.center_id] : []);
   const [selectedProducts, setSelectedProducts] = useState([]);
 
+  const [activeFilters, setActiveFilters] = useState({
+    from: getFirstDayOfMonth(),
+    to: getToday(),
+    selectedCenters: isCenter ? [user.center_id] : [],
+    selectedProducts: []
+  });
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -175,13 +182,13 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       // Force center role filter to their center_id
-      const centerFilter = isCenter ? [user.center_id] : selectedCenters;
+      const centerFilter = isCenter ? [user.center_id] : activeFilters.selectedCenters;
 
       const result = await fetchDashboardAnalytics({
-        from: from ? `${from}T00:00:00Z` : null,
-        to: to ? `${to}T23:59:59Z` : null,
+        from: activeFilters.from ? `${activeFilters.from}T00:00:00Z` : null,
+        to: activeFilters.to ? `${activeFilters.to}T23:59:59Z` : null,
         center_ids: centerFilter.length > 0 ? centerFilter : null,
-        product_codes: selectedProducts.length > 0 ? selectedProducts : null,
+        product_codes: activeFilters.selectedProducts.length > 0 ? activeFilters.selectedProducts : null,
       });
       setData(result);
     } catch (err) {
@@ -190,20 +197,41 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [from, to, selectedCenters, selectedProducts, isCenter, user?.center_id]);
+  }, [activeFilters, isCenter, user?.center_id]);
 
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
 
-  const handleResetFilters = () => {
-    setFrom(getFirstDayOfMonth());
-    setTo(getToday());
-    setSelectedCenters(isCenter ? [user.center_id] : []);
-    setSelectedProducts([]);
+  const handleApplyFilters = () => {
+    setActiveFilters({
+      from,
+      to,
+      selectedCenters,
+      selectedProducts
+    });
   };
 
-  if (loading || !data) {
+  const handleResetFilters = () => {
+    const defaultFrom = getFirstDayOfMonth();
+    const defaultTo = getToday();
+    const defaultCenters = isCenter ? [user.center_id] : [];
+    const defaultProducts = [];
+
+    setFrom(defaultFrom);
+    setTo(defaultTo);
+    setSelectedCenters(defaultCenters);
+    setSelectedProducts(defaultProducts);
+
+    setActiveFilters({
+      from: defaultFrom,
+      to: defaultTo,
+      selectedCenters: defaultCenters,
+      selectedProducts: defaultProducts
+    });
+  };
+
+  if (!data) { // Skeletons only on initial load
     return (
       <div className="space-y-6">
         <CardSkeleton count={4} />
@@ -403,7 +431,7 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${loading ? 'opacity-65 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}`}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">
@@ -462,10 +490,26 @@ export default function DashboardPage() {
         />
 
         <div className="flex gap-2">
-          <button onClick={loadDashboard} className="btn-primary text-sm px-4 py-2">
-            Lọc
+          <button 
+            onClick={handleApplyFilters} 
+            disabled={loading}
+            className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Đang lọc...
+              </>
+            ) : 'Lọc'}
           </button>
-          <button onClick={handleResetFilters} className="btn-ghost text-sm px-3 py-2 border border-surface-200 dark:border-surface-700">
+          <button 
+            onClick={handleResetFilters} 
+            disabled={loading}
+            className="btn-ghost text-sm px-3 py-2 border border-surface-200 dark:border-surface-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             Reset
           </button>
         </div>
