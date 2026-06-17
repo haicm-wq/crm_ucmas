@@ -110,6 +110,7 @@ export default function UsersTab() {
                 className="select-field py-2 text-sm">
                 <option value="admin">Admin</option>
                 <option value="marketing">Marketing</option>
+                <option value="lead_telesale">Lead Sale đặt lịch</option>
                 <option value="telesale">Sale đặt lịch</option>
                 <option value="center">Center</option>
               </select>
@@ -183,6 +184,7 @@ export default function UsersTab() {
                           className="select-field py-1 text-xs">
                           <option value="admin">Admin</option>
                           <option value="marketing">Marketing</option>
+                          <option value="lead_telesale">Lead Sale đặt lịch</option>
                           <option value="telesale">Sale đặt lịch</option>
                           <option value="center">Center</option>
                         </select>
@@ -190,11 +192,13 @@ export default function UsersTab() {
                         <span className={`badge text-[10px] ${
                           u.permission_group === 'admin' ? 'bg-red-500/10 text-red-500' :
                           u.permission_group === 'marketing' ? 'bg-blue-500/10 text-blue-500' :
+                          u.permission_group === 'lead_telesale' ? 'bg-indigo-500/10 text-indigo-500' :
                           u.permission_group === 'telesale' ? 'bg-purple-500/10 text-purple-500' :
                           'bg-green-500/10 text-green-500'
                         }`}>{
                           u.permission_group === 'admin' ? 'Admin' :
                           u.permission_group === 'marketing' ? 'Marketing' :
+                          u.permission_group === 'lead_telesale' ? 'Lead Sale đặt lịch' :
                           u.permission_group === 'telesale' ? 'Sale đặt lịch' :
                           'Center'
                         }</span>

@@ -152,7 +152,7 @@ export async function fetchAllStaff() {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, center_id')
-    .eq('permission_group', 'telesale')
+    .in('permission_group', ['telesale', 'lead_telesale'])
     .eq('is_active', true)
     .order('full_name');
   if (error) throw error;
@@ -640,7 +640,7 @@ export async function fetchStaffByCenter(centerId) {
   let query = supabase
     .from('profiles')
     .select('id, full_name')
-    .eq('permission_group', 'telesale')
+    .in('permission_group', ['telesale', 'lead_telesale'])
     .eq('is_active', true);
   // Bug2 fix: filter by center_id if provided
   if (centerId) query = query.eq('center_id', centerId);
