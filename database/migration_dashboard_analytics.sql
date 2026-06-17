@@ -515,6 +515,40 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
+-- Cập nhật hàm trigger ghi lịch sử để tránh lỗi ép kiểu UUID rỗng do rò rỉ session từ connection pool
+CREATE OR REPLACE FUNCTION fn_log_level_change() RETURNS TRIGGER AS $$
+DECLARE
+    actor UUID;
+    src   VARCHAR(20);
+    lvl_note TEXT;
+    v_user_id_text TEXT;
+BEGIN
+    -- Only log on INSERT or when level_code actually changes
+    IF TG_OP = 'UPDATE' AND NEW.level_code = OLD.level_code THEN
+        RETURN NEW;
+    END IF;
+
+    -- Read session variables set by RPC functions
+    v_user_id_text := NULLIF(current_setting('app.current_user_id', true), '');
+    actor := COALESCE(v_user_id_text::uuid, auth.uid());
+    src := COALESCE(NULLIF(current_setting('app.sync_source', true), ''), 'manual');
+    lvl_note := current_setting('app.level_change_note', true);
+
+    INSERT INTO lead_level_history (lead_id, changed_by, from_level, to_level, note, center_id, source)
+    VALUES (
+        NEW.id,
+        actor,
+        CASE WHEN TG_OP = 'UPDATE' THEN OLD.level_code ELSE NULL END,
+        NEW.level_code,
+        lvl_note,
+        NEW.assigned_center,
+        src
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Cấp quyền thực thi cho các hàm RPC
 GRANT EXECUTE ON FUNCTION rpc_dashboard_analytics TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION rpc_report_booking_sale_performance TO anon, authenticated;
