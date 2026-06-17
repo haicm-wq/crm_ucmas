@@ -159,7 +159,10 @@ export default function LeadsPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">Danh sách Lead</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">Danh sách Lead</h1>
+          <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">Toàn bộ các data L1 trở lên đã được phân về trung tâm</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setShowBulkModal(true)}
             className="btn-secondary text-sm flex items-center gap-1 py-2 px-3" title="Tải / Dán dữ liệu hàng loạt">
