@@ -433,7 +433,7 @@ INSERT INTO departments (code, name) VALUES
 -- 7.2 13 trung tâm
 INSERT INTO centers (code, name) VALUES
   ('CAU_GIAY', 'Cầu Giấy'),
-  ('DOI_CAN', 'Đội Cần'),
+  ('DOI_CAN', 'Đội Cấn'),
   ('DONG_ANH', 'Đông Anh'),
   ('HA_DONG', 'Hà Đông'),
   ('HANG_CHUOI', 'Hàng Chuối'),

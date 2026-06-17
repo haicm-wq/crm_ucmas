@@ -38,7 +38,7 @@ Xây dựng **CRM web đầy đủ** cho UCMAS Vietnam — chuỗi giáo dục t
 
 ### 1.1 13 trung tâm
 
-Cầu Giấy · Đội Cần · Đông Anh · Hà Đông · Hàng Chuối · Linh Đàm · Đền Lừ · Phương Mai · Thanh Trì · Tây Hồ · Trung Hòa · Mỹ Đình · Trung Kính.
+Cầu Giấy · Đội Cấn · Đông Anh · Hà Đông · Hàng Chuối · Linh Đàm · Đền Lừ · Phương Mai · Thanh Trì · Tây Hồ · Trung Hòa · Mỹ Đình · Trung Kính.
 
 ### 1.2 Hai nguồn dữ liệu
 
@@ -972,7 +972,7 @@ INSERT INTO departments (code,name) VALUES
 
 -- 13 trung tâm
 INSERT INTO centers (code,name) VALUES
-  ('CAU_GIAY','Cầu Giấy'),('DOI_CAN','Đội Cần'),('DONG_ANH','Đông Anh'),
+  ('CAU_GIAY','Cầu Giấy'),('DOI_CAN','Đội Cấn'),('DONG_ANH','Đông Anh'),
   ('HA_DONG','Hà Đông'),('HANG_CHUOI','Hàng Chuối'),('LINH_DAM','Linh Đàm'),
   ('DEN_LU','Đền Lừ'),('PHUONG_MAI','Phương Mai'),('THANH_TRI','Thanh Trì'),
   ('TAY_HO','Tây Hồ'),('TRUNG_HOA','Trung Hòa'),('MY_DINH','Mỹ Đình'),
