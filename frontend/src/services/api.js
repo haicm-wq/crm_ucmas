@@ -94,7 +94,7 @@ export async function fetchLeads({ page = 1, limit = 50, search, level_code, cen
     }
     if (product) {
       if (Array.isArray(product)) {
-        if (product.length > 0) query = query.ov('interested_products', product);
+        if (product.length > 0) query = query.overlaps('interested_products', product);
       } else {
         query = query.contains('interested_products', [product]);
       }
