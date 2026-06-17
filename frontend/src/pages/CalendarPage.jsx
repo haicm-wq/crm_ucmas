@@ -105,13 +105,25 @@ export default function CalendarPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // list | grid
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const { user } = useAuth();
+  const { user, isAdmin, isMarketing, isLeadTelesale } = useAuth();
+  const showCenterFilter = isAdmin || isMarketing || isLeadTelesale;
+
   const [filters, setFilters] = useState({
     from: new Date(new Date().setDate(1)).toISOString().slice(0, 10),
     to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
-    center_id: '',
+    center_id: !showCenterFilter && user?.permission_group === 'center' ? (user?.center_id || '') : '',
     status: '',
   });
+
+  // Đồng bộ center_id khi thông tin user profile tải xong
+  useEffect(() => {
+    if (!showCenterFilter && user?.permission_group === 'center' && user?.center_id) {
+      setFilters((prev) => ({
+        ...prev,
+        center_id: user.center_id,
+      }));
+    }
+  }, [user, showCenterFilter]);
 
   // Debounce filter changes to avoid rapid API calls
   const debouncedFilters = useDebounce(filters, 500);
@@ -207,15 +219,17 @@ export default function CalendarPage() {
               </div>
             </>
           )}
-          <div>
-            <label className="block text-xs text-surface-500 mb-1">Trung tâm</label>
-            <select value={filters.center_id}
-              onChange={(e) => setFilters({ ...filters, center_id: e.target.value })}
-              className="select-field py-2 text-sm">
-              <option value="">Tất cả</option>
-              {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-            </select>
-          </div>
+          {showCenterFilter && (
+            <div>
+              <label className="block text-xs text-surface-500 mb-1">Trung tâm</label>
+              <select value={filters.center_id}
+                onChange={(e) => setFilters({ ...filters, center_id: e.target.value })}
+                className="select-field py-2 text-sm">
+                <option value="">Tất cả</option>
+                {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-xs text-surface-500 mb-1">Trạng thái</label>
             <select value={filters.status}
