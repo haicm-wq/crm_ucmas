@@ -324,6 +324,13 @@ export default function DashboardPage() {
     }
   });
 
+  // Filter out L1 and L1.KK from L1 group in Snapshot details as they are not processed/active leads for the dashboard
+  if (groupedBaseline['L1']) {
+    groupedBaseline['L1'] = groupedBaseline['L1'].filter(
+      (item) => item.code !== 'L1' && item.code !== 'L1.KK'
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
