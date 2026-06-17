@@ -331,6 +331,77 @@ export default function DashboardPage() {
     );
   }
 
+  // Helper functions for detailed center summary table
+  const renderNumberCell = (val, isLastInSection = false) => {
+    const borderClass = isLastInSection 
+      ? "border-r-2 border-surface-300 dark:border-surface-600" 
+      : "border-r border-surface-200 dark:border-surface-700";
+    return (
+      <td className={`text-center px-2 py-1.5 font-mono text-xs ${borderClass} ${val === 0 ? 'text-surface-400/50 dark:text-surface-600/50' : 'font-semibold text-surface-800 dark:text-surface-200'}`}>
+        {val}
+      </td>
+    );
+  };
+
+  const renderRateCell = (num, den, isLastInSection = false) => {
+    const borderClass = isLastInSection 
+      ? "border-r-2 border-surface-300 dark:border-surface-600" 
+      : "border-r border-surface-200 dark:border-surface-700";
+    if (!den || den === 0) return <td className={`text-center font-medium text-surface-400 dark:text-surface-600 ${borderClass}`}>—</td>;
+    const val = (num / den) * 100;
+    let bgClass = "bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400";
+    if (val >= 70) {
+      bgClass = "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400";
+    } else if (val >= 40) {
+      bgClass = "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400";
+    }
+    return (
+      <td className={`text-center font-bold text-xs ${borderClass} ${bgClass}`}>
+        {val.toFixed(1)}%
+      </td>
+    );
+  };
+
+  const byCenterDetailed = data.byCenterDetailed || [];
+
+  // Calculate totals for the bottom row
+  const totals = byCenterDetailed.reduce((acc, row) => {
+    acc.push_l1 += parseInt(row.push_l1) || 0;
+    acc.push_l2 += parseInt(row.push_l2) || 0;
+    acc.push_l3 += parseInt(row.push_l3) || 0;
+    acc.push_l4 += parseInt(row.push_l4) || 0;
+    
+    acc.pull_l0 += parseInt(row.pull_l0) || 0;
+    acc.pull_l1 += parseInt(row.pull_l1) || 0;
+    acc.pull_l2 += parseInt(row.pull_l2) || 0;
+    acc.pull_l3 += parseInt(row.pull_l3) || 0;
+    acc.pull_l4 += parseInt(row.pull_l4) || 0;
+
+    acc.total_l0 += parseInt(row.total_l0) || 0;
+    acc.total_l1 += parseInt(row.total_l1) || 0;
+    acc.total_l2 += parseInt(row.total_l2) || 0;
+    acc.total_l3 += parseInt(row.total_l3) || 0;
+    acc.total_l4 += parseInt(row.total_l4) || 0;
+
+    acc.ton_l1_2 += parseInt(row.ton_l1_2) || 0;
+    acc.ton_l1_3 += parseInt(row.ton_l1_3) || 0;
+    acc.ton_l2_2a += parseInt(row.ton_l2_2a) || 0;
+    acc.ton_l2_2b += parseInt(row.ton_l2_2b) || 0;
+    acc.ton_l2_3 += parseInt(row.ton_l2_3) || 0;
+    acc.ton_l3_1 += parseInt(row.ton_l3_1) || 0;
+    acc.ton_l3_3 += parseInt(row.ton_l3_3) || 0;
+    acc.ton_l4_1 += parseInt(row.ton_l4_1) || 0;
+    acc.ton_l4_2 += parseInt(row.ton_l4_2) || 0;
+    acc.ton_l4_3_plus += parseInt(row.ton_l4_3_plus) || 0;
+    return acc;
+  }, {
+    push_l1: 0, push_l2: 0, push_l3: 0, push_l4: 0,
+    pull_l0: 0, pull_l1: 0, pull_l2: 0, pull_l3: 0, pull_l4: 0,
+    total_l0: 0, total_l1: 0, total_l2: 0, total_l3: 0, total_l4: 0,
+    ton_l1_2: 0, ton_l1_3: 0, ton_l2_2a: 0, ton_l2_2b: 0, ton_l2_3: 0,
+    ton_l3_1: 0, ton_l3_3: 0, ton_l4_1: 0, ton_l4_2: 0, ton_l4_3_plus: 0
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -512,19 +583,179 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Center Comparison BarChart — HQ only */}
-      {isHQ && centerChartData.length > 0 && (
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200 mb-4">📈 So sánh Lead theo Trung tâm</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={centerChartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--grid-color, #e2e8f0)" opacity={0.3} />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="leads" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Detailed Center Summary Table — HQ only */}
+      {isHQ && byCenterDetailed.length > 0 && (
+        <div className="glass-card p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-surface-800 dark:text-surface-200">
+              📊 Báo cáo tổng hợp các Trung tâm
+            </h3>
+            <span className="text-[10px] text-surface-500">Đơn vị: data tuyển sinh</span>
+          </div>
+
+          <div className="overflow-x-auto border border-surface-200 dark:border-surface-700 rounded-lg shadow-sm max-h-[500px]">
+            <table className="w-full border-collapse text-left text-xs text-surface-500 dark:text-surface-400">
+              <thead className="sticky top-0 z-30 text-[10px] font-bold uppercase tracking-wider text-surface-700 dark:text-surface-200 select-none bg-surface-100 dark:bg-surface-800">
+                <tr>
+                  <th rowSpan={2} className="p-3 sticky left-0 z-40 bg-surface-100 dark:bg-surface-800 border-b-2 border-r border-surface-200 dark:border-surface-700 w-[140px] min-w-[140px] text-center">
+                    Trung Tâm
+                  </th>
+                  <th rowSpan={2} className="p-3 sticky left-[140px] z-40 bg-surface-100 dark:bg-surface-800 border-b-2 border-r-2 border-surface-300 dark:border-surface-600 w-[70px] min-w-[70px] text-center">
+                    Mã
+                  </th>
+                  <th colSpan={6} className="p-2 bg-amber-500/10 text-amber-800 dark:text-amber-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
+                    Nguồn PUSH Marketing
+                  </th>
+                  <th colSpan={7} className="p-2 bg-blue-500/10 text-blue-800 dark:text-blue-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
+                    Nguồn PULL Marketing
+                  </th>
+                  <th colSpan={7} className="p-2 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
+                    Tổng
+                  </th>
+                  <th colSpan={10} className="p-2 bg-red-500/10 text-red-800 dark:text-red-300 border-b border-surface-200 dark:border-surface-700 text-center font-bold">
+                    Báo cáo tồn (Cohort trong kỳ)
+                  </th>
+                </tr>
+                <tr className="bg-surface-50 dark:bg-surface-800 text-center">
+                  {/* PUSH */}
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-amber-700 dark:text-amber-400 font-extrabold">L4/L1</th>
+                  <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-amber-700 dark:text-amber-400 font-extrabold">L3/L1</th>
+                  
+                  {/* PULL */}
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L0</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-blue-700 dark:text-blue-400 font-extrabold">L4/L1</th>
+                  <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-blue-700 dark:text-blue-400 font-extrabold">L3/L1</th>
+
+                  {/* TỔNG */}
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L0</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-emerald-700 dark:text-emerald-400 font-extrabold">L4/L1</th>
+                  <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-emerald-700 dark:text-emerald-400 font-extrabold">L3/L1</th>
+
+                  {/* TỒN */}
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1.2</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1.3</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.2A</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.2B</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.3</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3.1</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3.3</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4.1</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4.2</th>
+                  <th className="p-2 border-b border-surface-200 dark:border-surface-700">L4.3+</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-200 dark:divide-surface-700 bg-white dark:bg-surface-900">
+                {byCenterDetailed.map((row) => (
+                  <tr key={row.center_id} className="group hover:bg-surface-50 dark:hover:bg-surface-800/40">
+                    <td className="p-3 sticky left-0 z-20 bg-white dark:bg-surface-900 group-hover:bg-surface-50 dark:group-hover:bg-surface-800/40 border-r border-surface-200 dark:border-surface-700 font-semibold text-surface-800 dark:text-surface-200 truncate w-[140px] min-w-[140px]">
+                      {row.center_name?.replace('Trung tâm ', '')}
+                    </td>
+                    <td className="p-3 sticky left-[140px] z-20 bg-white dark:bg-surface-900 group-hover:bg-surface-50 dark:group-hover:bg-surface-800/40 border-r-2 border-surface-300 dark:border-surface-600 font-mono text-[11px] text-surface-500 text-center w-[70px] min-w-[70px]">
+                      {row.center_code}
+                    </td>
+                    
+                    {/* PUSH */}
+                    {renderNumberCell(row.push_l1)}
+                    {renderNumberCell(row.push_l2)}
+                    {renderNumberCell(row.push_l3)}
+                    {renderNumberCell(row.push_l4)}
+                    {renderRateCell(row.push_l4, row.push_l1)}
+                    {renderRateCell(row.push_l3, row.push_l1, true)}
+
+                    {/* PULL */}
+                    {renderNumberCell(row.pull_l0)}
+                    {renderNumberCell(row.pull_l1)}
+                    {renderNumberCell(row.pull_l2)}
+                    {renderNumberCell(row.pull_l3)}
+                    {renderNumberCell(row.pull_l4)}
+                    {renderRateCell(row.pull_l4, row.pull_l1)}
+                    {renderRateCell(row.pull_l3, row.pull_l1, true)}
+
+                    {/* TỔNG */}
+                    {renderNumberCell(row.total_l0)}
+                    {renderNumberCell(row.total_l1)}
+                    {renderNumberCell(row.total_l2)}
+                    {renderNumberCell(row.total_l3)}
+                    {renderNumberCell(row.total_l4)}
+                    {renderRateCell(row.total_l4, row.total_l1)}
+                    {renderRateCell(row.total_l3, row.total_l1, true)}
+
+                    {/* TỒN */}
+                    {renderNumberCell(row.ton_l1_2)}
+                    {renderNumberCell(row.ton_l1_3)}
+                    {renderNumberCell(row.ton_l2_2a)}
+                    {renderNumberCell(row.ton_l2_2b)}
+                    {renderNumberCell(row.ton_l2_3)}
+                    {renderNumberCell(row.ton_l3_1)}
+                    {renderNumberCell(row.ton_l3_3)}
+                    {renderNumberCell(row.ton_l4_1)}
+                    {renderNumberCell(row.ton_l4_2)}
+                    {renderNumberCell(row.ton_l4_3_plus)}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="sticky bottom-0 z-20 bg-surface-100 dark:bg-surface-800 font-bold border-t-2 border-surface-300 dark:border-surface-600">
+                <tr className="bg-surface-150 dark:bg-surface-800 text-surface-900 dark:text-surface-100">
+                  <td className="p-3 sticky left-0 z-20 bg-surface-150 dark:bg-surface-800 border-r border-surface-200 dark:border-surface-700 text-center">
+                    TỔNG/TB
+                  </td>
+                  <td className="p-3 sticky left-[140px] z-20 bg-surface-150 dark:bg-surface-800 border-r-2 border-surface-300 dark:border-surface-600 text-center text-surface-500 font-mono text-[10px]">
+                    —
+                  </td>
+                  
+                  {/* PUSH */}
+                  {renderNumberCell(totals.push_l1)}
+                  {renderNumberCell(totals.push_l2)}
+                  {renderNumberCell(totals.push_l3)}
+                  {renderNumberCell(totals.push_l4)}
+                  {renderRateCell(totals.push_l4, totals.push_l1)}
+                  {renderRateCell(totals.push_l3, totals.push_l1, true)}
+
+                  {/* PULL */}
+                  {renderNumberCell(totals.pull_l0)}
+                  {renderNumberCell(totals.pull_l1)}
+                  {renderNumberCell(totals.pull_l2)}
+                  {renderNumberCell(totals.pull_l3)}
+                  {renderNumberCell(totals.pull_l4)}
+                  {renderRateCell(totals.pull_l4, totals.pull_l1)}
+                  {renderRateCell(totals.pull_l3, totals.pull_l1, true)}
+
+                  {/* TỔNG */}
+                  {renderNumberCell(totals.total_l0)}
+                  {renderNumberCell(totals.total_l1)}
+                  {renderNumberCell(totals.total_l2)}
+                  {renderNumberCell(totals.total_l3)}
+                  {renderNumberCell(totals.total_l4)}
+                  {renderRateCell(totals.total_l4, totals.total_l1)}
+                  {renderRateCell(totals.total_l3, totals.total_l1, true)}
+
+                  {/* TỒN */}
+                  {renderNumberCell(totals.ton_l1_2)}
+                  {renderNumberCell(totals.ton_l1_3)}
+                  {renderNumberCell(totals.ton_l2_2a)}
+                  {renderNumberCell(totals.ton_l2_2b)}
+                  {renderNumberCell(totals.ton_l2_3)}
+                  {renderNumberCell(totals.ton_l3_1)}
+                  {renderNumberCell(totals.ton_l3_3)}
+                  {renderNumberCell(totals.ton_l4_1)}
+                  {renderNumberCell(totals.ton_l4_2)}
+                  {renderNumberCell(totals.ton_l4_3_plus)}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       )}
 
