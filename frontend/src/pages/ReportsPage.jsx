@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSharedData } from '../contexts/SharedDataProvider';
+import { useAuth } from '../contexts/AuthContext';
 import {
   fetchReportFunnel, fetchReportCenterConversion, fetchReportSalePerformance,
   fetchReportCenterComparison, fetchReportSourceCampaign, fetchReportTimeInStage,
@@ -23,9 +24,7 @@ const TABS = [
 
 export default function ReportsPage() {
   const { centers } = useSharedData();
-  const [tab, setTab] = useState('funnel');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isCenter, isTelesale, isLeadTelesale } = useAuth();
   
   const getFirstDayOfMonth = () => {
     const d = new Date();
@@ -33,11 +32,39 @@ export default function ReportsPage() {
   };
   const getToday = () => new Date().toISOString().split('T')[0];
 
+  const filteredTabs = TABS.filter((t) => {
+    if (isCenter) {
+      return ['funnel', 'sale_perf', 'ucmas_report', 'uckid_report'].includes(t.id);
+    }
+    if (isTelesale || isLeadTelesale) {
+      return ['booking_sale_perf', 'funnel', 'ucmas_report', 'uckid_report'].includes(t.id);
+    }
+    return true; // Admin/Marketing sees all
+  });
+
+  const [tab, setTab] = useState(filteredTabs[0]?.id || 'funnel');
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const [filters, setFilters] = useState({ 
     from: getFirstDayOfMonth(), 
     to: getToday(), 
-    center_id: '' 
+    center_id: isCenter ? (user?.center_id || '') : '' 
   });
+
+  // Sync center_id if user center_id loads later
+  useEffect(() => {
+    if (isCenter && user?.center_id && filters.center_id !== user.center_id) {
+      setFilters((prev) => ({ ...prev, center_id: user.center_id }));
+    }
+  }, [isCenter, user, filters.center_id]);
+
+  // Adjust active tab if it's not allowed for the current role
+  useEffect(() => {
+    if (filteredTabs.length > 0 && !filteredTabs.some((t) => t.id === tab)) {
+      setTab(filteredTabs[0].id);
+    }
+  }, [filteredTabs, tab]);
   
   // Cache report results per tab — avoids refetch when switching tabs
   const cacheRef = useRef({});
@@ -139,7 +166,7 @@ export default function ReportsPage() {
 
       {/* Tabs */}
       <div className="glass-card p-1 flex flex-wrap gap-1">
-        {TABS.map((t) => (
+        {filteredTabs.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 ${
               tab === t.id ? 'bg-primary-500/20 text-primary-600 dark:text-primary-400' : 'text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200'
@@ -168,9 +195,13 @@ export default function ReportsPage() {
           )}
           <div>
             <label className="block text-xs text-surface-500 mb-1">Trung tâm</label>
-            <select value={filters.center_id} onChange={(e) => setFilters({ ...filters, center_id: e.target.value })}
-              className="select-field py-2 text-sm">
-              <option value="">Tất cả</option>
+            <select 
+              value={filters.center_id} 
+              disabled={isCenter}
+              onChange={(e) => setFilters({ ...filters, center_id: e.target.value })}
+              className="select-field py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {!isCenter && <option value="">Tất cả</option>}
               {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>

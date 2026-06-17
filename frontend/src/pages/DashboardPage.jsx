@@ -6,7 +6,7 @@ import { CardSkeleton, ChartSkeleton } from '../components/ui/SkeletonLoader';
 import toast from 'react-hot-toast';
 import {
   HiOutlineChartBar, HiOutlineUserGroup, HiOutlineCalendar,
-  HiOutlineTrendingUp, HiOutlineRefresh, HiOutlineStar,
+  HiOutlineTrendingUp, HiOutlineRefresh, HiOutlineStar, HiOutlineInbox,
 } from 'react-icons/hi';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -148,8 +148,8 @@ export default function DashboardPage() {
   };
   const getToday = () => new Date().toISOString().split('T')[0];
 
-  const { user, isAdmin, isMarketing, isCenter } = useAuth();
-  const { centers, products } = useSharedData();
+  const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
+  const { centers, products, productLevels } = useSharedData();
 
   // Filters State
   const [from, setFrom] = useState(getFirstDayOfMonth());
@@ -224,11 +224,135 @@ export default function DashboardPage() {
   const productOptions = (products || []).map((p) => ({ label: p.name, value: p.code }));
 
   const contacted = data.conversion?.contacted || 0;
+  const booked = data.conversion?.booked || 0;
   const trialed = data.conversion?.trialed || 0;
   const paid = data.conversion?.paid || 0;
 
   const rateL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
   const rateL4L1 = contacted > 0 ? ((paid / contacted) * 100).toFixed(1) : '0.0';
+  const rateL2L1 = contacted > 0 ? ((booked / contacted) * 100).toFixed(1) : '0.0';
+
+  // Dynamic cards configuration based on user active role
+  let statsCards = [];
+  if (isCenter) {
+    statsCards = [
+      { icon: HiOutlineUserGroup, label: "Data L1 (Lũy kế)", value: contacted, color: "primary" },
+      { icon: HiOutlineCalendar, label: "Số Lịch hẹn (Lũy kế)", value: booked, color: "blue" },
+      { icon: HiOutlineTrendingUp, label: "Đã học thử L3 (Lũy kế)", value: trialed, color: "green" },
+      { icon: HiOutlineStar, label: "Đã chốt L4 (Lũy kế)", value: paid, color: "yellow" },
+    ];
+  } else if (isTelesale || isLeadTelesale) {
+    statsCards = [
+      { icon: HiOutlineInbox, label: "L1 cần xử lý", value: data.l1Unprocessed || 0, color: "primary" },
+      { icon: HiOutlineCalendar, label: "Số lịch hẹn (Lũy kế)", value: booked, color: "blue" },
+      { icon: HiOutlineRefresh, label: "Cần chăm lại", value: data.followupNeeded || 0, color: "yellow" },
+      {
+        isCustom: true,
+        render: () => (
+          <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1 w-full">
+                <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">Hiệu suất đặt lịch</p>
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ Hẹn/L1:</span>
+                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL2L1}%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L3/L1:</span>
+                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-500/10 flex items-center justify-center flex-shrink-0 ml-2">
+                <HiOutlineTrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+          </div>
+        )
+      }
+    ];
+  } else {
+    // Admin / Marketing
+    statsCards = [
+      { icon: HiOutlineUserGroup, label: "Tổng lead", value: data.total || 0, color: "primary" },
+      { icon: HiOutlineCalendar, label: "Hẹn trong kỳ", value: data.todayAppointments || 0, color: "blue" },
+      { icon: HiOutlineTrendingUp, label: "Đã chốt", value: paid, color: "green" },
+      {
+        isCustom: true,
+        render: () => (
+          <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1 w-full">
+                <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">Tỷ lệ chốt</p>
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L3/L1:</span>
+                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L4/L1:</span>
+                    <span className="font-bold text-surface-900 dark:text-surface-100">{rateL4L1}%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center flex-shrink-0 ml-2">
+                <HiOutlineStar className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </div>
+          </div>
+        )
+      }
+    ];
+  }
+
+  // Get counts by level code grouped baseline logic
+  const baselineLevels = (productLevels || [])
+    .filter((pl) => pl.product_code === 'UCMAS')
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  const groupedBaseline = {
+    L1: [],
+    L2: [],
+    L3: [],
+    L4: []
+  };
+
+  baselineLevels.forEach((level) => {
+    const match = level.level_code.match(/^L(\d)/);
+    const group = match ? 'L' + match[1] : null;
+    if (group && groupedBaseline[group]) {
+      const countItem = (data.byLevelCode || []).find((c) => c.level_code === level.level_code);
+      groupedBaseline[group].push({
+        code: level.level_code,
+        label: level.label,
+        color: level.color,
+        count: countItem ? parseInt(countItem.count) : 0
+      });
+    }
+  });
+
+  // Append other non-baseline levels that match the group prefix
+  (data.byLevelCode || []).forEach((item) => {
+    const code = item.level_code;
+    const match = code.match(/^L(\d)/);
+    const group = match ? 'L' + match[1] : null;
+    if (group && groupedBaseline[group]) {
+      const alreadyInGroup = groupedBaseline[group].some((x) => x.code === code);
+      if (!alreadyInGroup) {
+        const levelMeta = (productLevels || []).find((pl) => pl.level_code === code) || {
+          label: code,
+          color: '#6B7280'
+        };
+        groupedBaseline[group].push({
+          code,
+          label: levelMeta.label,
+          color: levelMeta.color,
+          count: parseInt(item.count) || 0
+        });
+      }
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -301,41 +425,28 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={HiOutlineUserGroup} label="Tổng lead" value={data.total || 0} />
-        <StatCard icon={HiOutlineCalendar} label="Hẹn trong kỳ"
-          value={data.todayAppointments || 0} color="blue" />
-        <StatCard icon={HiOutlineTrendingUp} label="Đã chốt"
-          value={data.conversion?.paid || 0} color="green" />
-        <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1 w-full">
-              <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">Tỷ lệ chốt</p>
-              <div className="flex flex-col gap-1 mt-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L3/L1:</span>
-                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L4/L1:</span>
-                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL4L1}%</span>
-                </div>
-              </div>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center flex-shrink-0 ml-2">
-              <HiOutlineStar className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-            </div>
-          </div>
-        </div>
+        {statsCards.map((card, i) => {
+          if (card.isCustom) return <div key={i}>{card.render()}</div>;
+          return (
+            <StatCard
+              key={i}
+              icon={card.icon}
+              label={card.label}
+              value={card.value}
+              color={card.color}
+            />
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Funnel */}
         <div className="glass-card p-5">
           <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200 mb-4 flex items-center gap-2">
-            <HiOutlineChartBar className="w-4 h-4 text-primary-400" /> Phễu Lead L0→L6
+            <HiOutlineChartBar className="w-4 h-4 text-primary-400" /> Phễu chuyển đổi (Lũy kế)
           </h3>
           <div className="space-y-2">
-            {funnel.map((f) => (
+            {funnel.slice(0, 5).map((f) => (
               <FunnelBar key={f.level_group} group={f.level_group} count={parseInt(f.count)} maxCount={maxFunnel} />
             ))}
           </div>
@@ -358,7 +469,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         ) : (
-          /* Staff Performance — Center view */
+          /* Staff Performance — Center / Telesale view */
           <div className="glass-card p-5">
             <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4">👥 Hiệu suất nhân viên</h3>
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -366,8 +477,8 @@ export default function DashboardPage() {
                 <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/30">
                   <span className="text-sm text-surface-700 dark:text-surface-300">{s.staff_name || 'Chưa gán'}</span>
                   <div className="flex items-center gap-3 text-xs">
-                    <span className="text-surface-500">Tổng: {s.total_leads}</span>
-                    <span className="text-green-600 dark:text-green-400 font-medium">Chốt: {s.paid_leads}</span>
+                    <span className="text-surface-500">Lũy kế L1: {s.total_leads}</span>
+                    <span className="text-green-600 dark:text-green-400 font-medium">Chốt L4: {s.paid_leads}</span>
                   </div>
                 </div>
               ))}
@@ -377,6 +488,41 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Snapshot panel of current active level codes */}
+      <div className="glass-card p-5">
+        <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4 flex items-center gap-2">
+          📊 Phân bố trạng thái chi tiết hiện tại (Snapshot hoạt động)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(groupedBaseline).map(([groupName, items]) => (
+            <div key={groupName} className="p-4 bg-surface-50 dark:bg-surface-800/20 border border-surface-100 dark:border-surface-800 rounded-xl space-y-3">
+              <h4 className="text-xs font-bold text-surface-500 uppercase tracking-wider border-b border-surface-200/50 dark:border-surface-700/50 pb-2">
+                Nhóm {groupName}
+              </h4>
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <div key={item.code} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="font-mono text-surface-500">{item.code}</span>
+                      <span className="text-surface-700 dark:text-surface-300 truncate" title={item.label}>
+                        {item.label}
+                      </span>
+                    </div>
+                    <span className="font-bold text-surface-900 dark:text-surface-100 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-md min-w-[20px] text-center">
+                      {item.count}
+                    </span>
+                  </div>
+                ))}
+                {items.length === 0 && (
+                  <p className="text-center text-xs text-surface-400 py-4">Không có dữ liệu</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Center Comparison BarChart — HQ only */}
