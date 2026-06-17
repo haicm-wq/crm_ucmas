@@ -63,20 +63,7 @@ BEGIN
   ),
   leads_with_milestones AS (
     SELECT 
-      l.id,
-      l.full_name,
-      l.phone,
-      l.child_birth_year,
-      l.assigned_center,
-      l.assigned_staff,
-      l.source_type,
-      l.ad_campaign,
-      l.level_code,
-      l.level_group,
-      l.trial_appointment_at,
-      l.appointment_booked_at,
-      l.is_milestone,
-      l.last_level_change_at,
+      l.*,
       -- Xác định các lead đạt mốc thời gian trong khoảng lọc
       (l.entered_l0_at >= v_from AND l.entered_l0_at <= v_to) AS is_l0_in_period,
       (
