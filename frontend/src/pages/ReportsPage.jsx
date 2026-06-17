@@ -260,10 +260,13 @@ export default function ReportsPage() {
 
             {tab === 'booking_sale_perf' && renderTable([
               { key: 'sale_name', label: 'Nhân viên Sale' },
-              { key: 'l1_count', label: 'Đạt L1', className: 'text-right' },
-              { key: 'l2_booked_count', label: 'Lịch hẹn (L2.2B)', className: 'text-right text-blue-600 dark:text-blue-400 font-semibold' },
-              { key: 'l3_attended_count', label: 'Đến test (L3.1)', className: 'text-right' },
-              { key: 'l3_total_count', label: 'Mốc L3 tổng', className: 'text-right' },
+              { key: 'l0_count', label: 'Nhận L0', className: 'text-right font-mono' },
+              { key: 'l1_count', label: 'Đạt L1', className: 'text-right font-mono' },
+              { key: 'l2_booked_count', label: 'Lịch hẹn (L2.2B)', className: 'text-right text-blue-600 dark:text-blue-400 font-semibold font-mono' },
+              { key: 'l3_attended_count', label: 'Đến test (L3.1)', className: 'text-right font-mono' },
+              { key: 'l3_total_count', label: 'Mốc L3 tổng', className: 'text-right font-mono' },
+              { key: 'l1_l0_rate', label: 'Tỷ lệ L1/L0', className: 'text-right font-bold text-amber-600 dark:text-amber-400',
+                render: (r) => r.l1_l0_rate != null ? `${r.l1_l0_rate}%` : '—' },
               { key: 'l2_l1_rate', label: 'Tỷ lệ L2.2B/L1', className: 'text-right font-bold text-primary-600 dark:text-primary-400',
                 render: (r) => r.l2_l1_rate != null ? `${r.l2_l1_rate}%` : '—' },
               { key: 'l3_l1_rate', label: 'Tỷ lệ L3/L1', className: 'text-right font-bold text-green-600 dark:text-green-400',

@@ -1,5 +1,5 @@
 -- ============================================================
--- MIGRATION: Cho phép Telesale xem đầy đủ báo cáo hiệu suất đặt lịch (Báo cáo leaderboard)
+-- MIGRATION: Cho phép Telesale xem đầy đủ báo cáo & Bổ sung chỉ số L0, tỷ lệ L1/L0
 -- Chạy file này trên Supabase SQL Editor
 -- ============================================================
 
@@ -25,7 +25,7 @@ BEGIN
         CASE 
           WHEN auth_permission_group() = 'admin' THEN TRUE
           WHEN auth_permission_group() = 'lead_telesale' THEN TRUE
-          WHEN auth_permission_group() = 'telesale' THEN TRUE -- Thay đổi ở đây: cho phép xem toàn bộ leaderboard
+          WHEN auth_permission_group() = 'telesale' THEN TRUE -- Xem toàn bộ leaderboard
           WHEN auth_permission_group() = 'center' THEN 
             l.assigned_center = auth_center_id() AND l.level_group != 'L0' AND l.level_code != 'L1.KK'
           WHEN auth_permission_group() = 'marketing' THEN (
@@ -44,6 +44,10 @@ BEGIN
       SELECT 
         l.id,
         l.assigned_staff,
+        
+        -- L0: Vào kho L0 trong kỳ
+        (l.entered_l0_at >= v_from AND l.entered_l0_at <= v_to) AS is_l0,
+
         -- L1: Chỉ tính L1.2, L1.3 và cao hơn
         (
           (
@@ -114,10 +118,13 @@ BEGIN
     )
     SELECT 
       p.full_name as sale_name,
+      COUNT(lf.id) FILTER (WHERE lf.is_l0) as l0_count,
       COUNT(lf.id) FILTER (WHERE lf.is_l1) as l1_count,
       COUNT(lf.id) FILTER (WHERE lf.is_l2_booked) as l2_booked_count,
       COUNT(lf.id) FILTER (WHERE lf.is_l3_1) as l3_attended_count,
       COUNT(lf.id) FILTER (WHERE lf.is_l3_1 OR lf.is_l3_3 OR lf.is_l4) as l3_total_count,
+      ROUND(100.0 * COUNT(lf.id) FILTER (WHERE lf.is_l1) 
+            / NULLIF(COUNT(lf.id) FILTER (WHERE lf.is_l0), 0), 1) as l1_l0_rate,
       ROUND(100.0 * COUNT(lf.id) FILTER (WHERE lf.is_l2_booked) 
             / NULLIF(COUNT(lf.id) FILTER (WHERE lf.is_l1), 0), 1) as l2_l1_rate,
       ROUND(100.0 * COUNT(lf.id) FILTER (WHERE lf.is_l3_1 OR lf.is_l3_3 OR lf.is_l4) 
