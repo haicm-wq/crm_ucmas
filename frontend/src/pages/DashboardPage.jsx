@@ -223,6 +223,13 @@ export default function DashboardPage() {
   const centerOptions = (centers || []).map((c) => ({ label: c.name, value: c.id }));
   const productOptions = (products || []).map((p) => ({ label: p.name, value: p.code }));
 
+  const contacted = data.conversion?.contacted || 0;
+  const trialed = data.conversion?.trialed || 0;
+  const paid = data.conversion?.paid || 0;
+
+  const rateL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
+  const rateL4L1 = contacted > 0 ? ((paid / contacted) * 100).toFixed(1) : '0.0';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -299,12 +306,26 @@ export default function DashboardPage() {
           value={data.todayAppointments || 0} color="blue" />
         <StatCard icon={HiOutlineTrendingUp} label="Đã chốt"
           value={data.conversion?.paid || 0} color="green" />
-        <StatCard icon={HiOutlineStar} label="Tỷ lệ chốt"
-          value={
-            data.conversion
-              ? `${((data.conversion.paid || 0) / Math.max(data.conversion.booked || 1, 1) * 100).toFixed(1)}%`
-              : '0.0%'
-          } color="yellow" />
+        <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1 w-full">
+              <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">Tỷ lệ chốt</p>
+              <div className="flex flex-col gap-1 mt-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L3/L1:</span>
+                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL3L1}%</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-surface-600 dark:text-surface-400">Tỷ lệ L4/L1:</span>
+                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL4L1}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center flex-shrink-0 ml-2">
+              <HiOutlineStar className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

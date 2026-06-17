@@ -161,7 +161,7 @@ BEGIN
   )
   SELECT 
     -- 1. Tổng lead
-    (SELECT COUNT(*) FROM leads_with_milestones WHERE is_l0_in_period),
+    (SELECT COUNT(*) FROM leads_with_milestones WHERE is_l1_in_period),
     
     -- 2. Biểu đồ phễu chuyển đổi
     (SELECT jsonb_build_array(
@@ -178,7 +178,7 @@ BEGIN
     (SELECT COALESCE(jsonb_agg(row_to_json(src_t)), '[]'::jsonb) FROM (
       SELECT source_type, COUNT(*) as count 
       FROM leads_with_milestones 
-      WHERE is_l0_in_period
+      WHERE is_l1_in_period
       GROUP BY source_type
      ) src_t),
      
@@ -186,7 +186,7 @@ BEGIN
     (SELECT COALESCE(jsonb_agg(row_to_json(ctr_t)), '[]'::jsonb) FROM (
       SELECT c.name as center_name, c.code as center_code, COUNT(l.id) as count
       FROM leads_with_milestones l JOIN centers c ON l.assigned_center = c.id
-      WHERE l.is_l0_in_period
+      WHERE l.is_l1_in_period
       GROUP BY c.name, c.code ORDER BY count DESC
      ) ctr_t),
      
@@ -215,7 +215,7 @@ BEGIN
     -- 8. Hiệu suất nhân viên (salePerformance)
     (SELECT COALESCE(jsonb_agg(row_to_json(perf_t)), '[]'::jsonb) FROM (
       SELECT p.full_name as staff_name, 
-             COUNT(l.id) FILTER (WHERE l.is_l0_in_period) as total_leads,
+             COUNT(l.id) FILTER (WHERE l.is_l1_in_period) as total_leads,
              COUNT(l.id) FILTER (WHERE l.is_l4_in_period) as paid_leads
       FROM leads_with_milestones l
       LEFT JOIN profiles p ON l.assigned_staff = p.id
