@@ -123,5 +123,31 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- Cleanup: Sửa lỗi Database error querying schema khi các cột trong auth.users bị NULL
+  DECLARE
+    col RECORD;
+    query_str TEXT;
+  BEGIN
+    FOR col IN 
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'auth' AND table_name = 'users'
+        AND column_name IN ('confirmation_token', 'recovery_token', 'email_change_token_new', 'email_change_token_current', 'email_change', 'phone', 'phone_change', 'phone_change_token', 'reauthentication_token')
+    LOOP
+      query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = '''' WHERE ' || quote_ident(col.column_name) || ' IS NULL;';
+      EXECUTE query_str;
+    END LOOP;
+
+    FOR col IN 
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'auth' AND table_name = 'users'
+        AND column_name IN ('is_sso_user', 'is_anonymous')
+    LOOP
+      query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = false WHERE ' || quote_ident(col.column_name) || ' IS NULL;';
+      EXECUTE query_str;
+    END LOOP;
+  END;
+
   DROP TABLE temp_center_users;
 END $$;

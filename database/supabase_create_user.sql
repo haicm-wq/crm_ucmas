@@ -96,6 +96,32 @@ BEGIN
     is_active = true
   WHERE id = v_new_user_id;
 
+  -- Cleanup: Sửa lỗi Database error querying schema khi các cột trong auth.users bị NULL
+  DECLARE
+    col RECORD;
+    query_str TEXT;
+  BEGIN
+    FOR col IN 
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'auth' AND table_name = 'users'
+        AND column_name IN ('confirmation_token', 'recovery_token', 'email_change_token_new', 'email_change_token_current', 'email_change', 'phone', 'phone_change', 'phone_change_token', 'reauthentication_token')
+    LOOP
+      query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = '''' WHERE id = $1 AND ' || quote_ident(col.column_name) || ' IS NULL;';
+      EXECUTE query_str USING v_new_user_id;
+    END LOOP;
+
+    FOR col IN 
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'auth' AND table_name = 'users'
+        AND column_name IN ('is_sso_user', 'is_anonymous')
+    LOOP
+      query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = false WHERE id = $1 AND ' || quote_ident(col.column_name) || ' IS NULL;';
+      EXECUTE query_str USING v_new_user_id;
+    END LOOP;
+  END;
+
   RETURN jsonb_build_object(
     'status', 'success',
     'user_id', v_new_user_id,
