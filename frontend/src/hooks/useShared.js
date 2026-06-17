@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { clearCache } from '../services/api';
 
 /**
  * Debounce hook — returns debounced value
@@ -37,6 +38,7 @@ export function useSupabaseRealtime(table, onChangeCallback, options = {}) {
       .on('postgres_changes', channelConfig, () => {
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
+          clearCache(); // Xóa cache client để đảm bảo reload lấy dữ liệu mới nhất
           callbackRef.current?.();
         }, debounceMs);
       })

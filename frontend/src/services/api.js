@@ -6,98 +6,146 @@
 import { supabase } from '../lib/supabase';
 
 // ============================================================
+// IN-MEMORY CACHE LAYER (Tối ưu hóa bộ nhớ đệm phía Client)
+// ============================================================
+const queryCache = new Map();
+
+/**
+ * Tạo cache key duy nhất dựa trên tên hàm và các tham số truyền vào
+ */
+function getCacheKey(fnName, args) {
+  return `${fnName}:${JSON.stringify(args)}`;
+}
+
+/**
+ * Hàm bao bọc (wrapper) để tự động hóa kiểm tra cache và lưu dữ liệu.
+ * Trả về bản sao sâu (deep copy) để tránh việc thay đổi state trực tiếp trong component React làm hỏng cache.
+ */
+async function withCache(fnName, args, fetchFn, ttlMs = 30000) {
+  const key = getCacheKey(fnName, args);
+  const now = Date.now();
+  if (queryCache.has(key)) {
+    const cached = queryCache.get(key);
+    if (now - cached.timestamp < ttlMs) {
+      return JSON.parse(JSON.stringify(cached.data));
+    }
+  }
+  const data = await fetchFn();
+  queryCache.set(key, { data, timestamp: now });
+  return JSON.parse(JSON.stringify(data));
+}
+
+/**
+ * Xóa cache của các hàm cụ thể hoặc xóa toàn bộ cache khi có thay đổi dữ liệu (Mutations).
+ */
+export function clearCache(fnNames = []) {
+  if (fnNames.length === 0) {
+    queryCache.clear();
+    return;
+  }
+  for (const key of queryCache.keys()) {
+    const fnName = key.split(':')[0];
+    if (fnNames.includes(fnName)) {
+      queryCache.delete(key);
+    }
+  }
+}
+
+// ============================================================
 // LEADS
 // ============================================================
 
 export async function fetchLeads({ page = 1, limit = 50, search, level_code, center_id, staff_id, product, sort_by = 'created_at', sort_dir = 'desc', advanced_filters } = {}) {
-  const offset = (page - 1) * limit;
+  return withCache('fetchLeads', { page, limit, search, level_code, center_id, staff_id, product, sort_by, sort_dir, advanced_filters }, async () => {
+    const offset = (page - 1) * limit;
 
-  let query = supabase
-    .from('leads')
-    .select('*, centers!assigned_center(name), profiles!assigned_staff(full_name), lead_product_levels(*)', { count: 'exact' })
-    .neq('level_group', 'L0'); // Danh sách Lead chỉ hiển thị leads đã "tốt nghiệp" khỏi Kho L0
+    let query = supabase
+      .from('leads')
+      .select('*, centers!assigned_center(name), profiles!assigned_staff(full_name), lead_product_levels(*)', { count: 'exact' })
+      .neq('level_group', 'L0'); // Danh sách Lead chỉ hiển thị leads đã "tốt nghiệp" khỏi Kho L0
 
-  if (search) {
-    // Bug8 fix: sanitize PostgREST special chars to prevent filter syntax errors
-    const s = search.replace(/[%_.*,()]/g, '');
-    if (s) {
-      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,lead_code.ilike.%${s}%`);
-    }
-  }
-  if (level_code) {
-    if (Array.isArray(level_code)) {
-      if (level_code.length > 0) query = query.in('level_code', level_code);
-    } else {
-      query = query.eq('level_code', level_code);
-    }
-  }
-  if (center_id) {
-    if (Array.isArray(center_id)) {
-      if (center_id.length > 0) query = query.in('assigned_center', center_id);
-    } else {
-      query = query.eq('assigned_center', center_id);
-    }
-  }
-  if (staff_id) {
-    if (Array.isArray(staff_id)) {
-      if (staff_id.length > 0) query = query.in('assigned_staff', staff_id);
-    } else {
-      query = query.eq('assigned_staff', staff_id);
-    }
-  }
-  if (product) {
-    if (Array.isArray(product)) {
-      if (product.length > 0) query = query.ov('interested_products', product);
-    } else {
-      query = query.contains('interested_products', [product]);
-    }
-  }
-
-  // Advanced filters: each rule = { field, op, value }
-  // op: 'eq' | 'neq' | 'contains' | 'not_contains'
-  if (advanced_filters && advanced_filters.length > 0) {
-    for (const rule of advanced_filters) {
-      if (!rule.value) continue;
-      switch (rule.op) {
-        case 'eq':
-          query = query.eq(rule.field, rule.value);
-          break;
-        case 'neq':
-          query = query.neq(rule.field, rule.value);
-          break;
-        case 'contains':
-          query = query.contains(rule.field, [rule.value]);
-          break;
-        case 'not_contains':
-          // PostgREST: NOT contains
-          query = query.not(rule.field, 'cs', `{${rule.value}}`);
-          break;
+    if (search) {
+      // Bug8 fix: sanitize PostgREST special chars to prevent filter syntax errors
+      const s = search.replace(/[%_.*,()]/g, '');
+      if (s) {
+        query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,lead_code.ilike.%${s}%`);
       }
     }
-  }
+    if (level_code) {
+      if (Array.isArray(level_code)) {
+        if (level_code.length > 0) query = query.in('level_code', level_code);
+      } else {
+        query = query.eq('level_code', level_code);
+      }
+    }
+    if (center_id) {
+      if (Array.isArray(center_id)) {
+        if (center_id.length > 0) query = query.in('assigned_center', center_id);
+      } else {
+        query = query.eq('assigned_center', center_id);
+      }
+    }
+    if (staff_id) {
+      if (Array.isArray(staff_id)) {
+        if (staff_id.length > 0) query = query.in('assigned_staff', staff_id);
+      } else {
+        query = query.eq('assigned_staff', staff_id);
+      }
+    }
+    if (product) {
+      if (Array.isArray(product)) {
+        if (product.length > 0) query = query.ov('interested_products', product);
+      } else {
+        query = query.contains('interested_products', [product]);
+      }
+    }
 
-  query = query.order(sort_by, { ascending: sort_dir === 'asc' })
-    .range(offset, offset + limit - 1);
+    // Advanced filters: each rule = { field, op, value }
+    // op: 'eq' | 'neq' | 'contains' | 'not_contains'
+    if (advanced_filters && advanced_filters.length > 0) {
+      for (const rule of advanced_filters) {
+        if (!rule.value) continue;
+        switch (rule.op) {
+          case 'eq':
+            query = query.eq(rule.field, rule.value);
+            break;
+          case 'neq':
+            query = query.neq(rule.field, rule.value);
+            break;
+          case 'contains':
+            query = query.contains(rule.field, [rule.value]);
+            break;
+          case 'not_contains':
+            // PostgREST: NOT contains
+            query = query.not(rule.field, 'cs', `{${rule.value}}`);
+            break;
+        }
+      }
+    }
 
-  const { data, count, error } = await query;
-  if (error) throw error;
+    query = query.order(sort_by, { ascending: sort_dir === 'asc' })
+      .range(offset, offset + limit - 1);
 
-  // Flatten joins
-  const leads = (data || []).map((l) => ({
-    ...l,
-    center_name: l.centers?.name || null,
-    staff_name: l.profiles?.full_name || null,
-  }));
+    const { data, count, error } = await query;
+    if (error) throw error;
 
-  return {
-    data: leads,
-    pagination: {
-      page,
-      limit,
-      total: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-    },
-  };
+    // Flatten joins
+    const leads = (data || []).map((l) => ({
+      ...l,
+      center_name: l.centers?.name || null,
+      staff_name: l.profiles?.full_name || null,
+    }));
+
+    return {
+      data: leads,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    };
+  }, 30000);
 }
 
 export async function fetchAllStaff() {
@@ -112,19 +160,21 @@ export async function fetchAllStaff() {
 }
 
 export async function fetchL0Pool({ page = 1, limit = 100 } = {}) {
-  const offset = (page - 1) * limit;
-  const { data, error, count } = await supabase
-    .rpc('rpc_fetch_l0_pool', {}, { count: 'exact' })
-    .range(offset, offset + limit - 1);
-  if (error) throw error;
-  return {
-    data: data || [],
-    pagination: {
-      page, limit,
-      total: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-    },
-  };
+  return withCache('fetchL0Pool', { page, limit }, async () => {
+    const offset = (page - 1) * limit;
+    const { data, error, count } = await supabase
+      .rpc('rpc_fetch_l0_pool', {}, { count: 'exact' })
+      .range(offset, offset + limit - 1);
+    if (error) throw error;
+    return {
+      data: data || [],
+      pagination: {
+        page, limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    };
+  }, 30000);
 }
 
 export async function fetchL0UnprocessedStats() {
@@ -153,6 +203,7 @@ export async function fetchLeadById(id) {
 export async function createLead(leadData) {
   const { data, error } = await supabase.from('leads').insert(leadData).select().single();
   if (error) throw error;
+  clearCache();
   return data;
 }
 
@@ -163,6 +214,7 @@ export async function updateLead(leadId, changes, note) {
     p_note: note || null,
   });
   if (error) throw error;
+  clearCache();
   return data;
 }
 
@@ -173,6 +225,7 @@ export async function updateLeadLevelAndProducts(leadId, levelCode, note) {
     p_note: note || null,
   });
   if (error) throw error;
+  clearCache();
   return data;
 }
 
@@ -224,6 +277,7 @@ export async function addNote(leadId, content) {
     content,
   });
   if (error) throw error;
+  clearCache();
 }
 
 // ============================================================
@@ -250,6 +304,7 @@ export async function bulkAssign(leadIds, centerId) {
     p_center_id: centerId,
   });
   if (error) throw error;
+  clearCache();
   return data;
 }
 
@@ -258,6 +313,7 @@ export async function bulkCreateLeads(leadsData) {
     p_leads: leadsData,
   });
   if (error) throw error;
+  clearCache();
   return data;
 }
 
@@ -266,16 +322,18 @@ export async function bulkCreateLeads(leadsData) {
 // ============================================================
 
 export async function fetchAppointments({ from, to, center_id, status } = {}) {
-  let query = supabase.from('v_trial_appointments').select('*');
-  if (from) query = query.gte('trial_appointment_at', from);
-  if (to) query = query.lte('trial_appointment_at', to);
-  if (center_id) query = query.eq('assigned_center', center_id);
-  if (status) query = query.eq('appt_status', status);
-  query = query.order('trial_appointment_at', { ascending: true });
+  return withCache('fetchAppointments', { from, to, center_id, status }, async () => {
+    let query = supabase.from('v_trial_appointments').select('*');
+    if (from) query = query.gte('trial_appointment_at', from);
+    if (to) query = query.lte('trial_appointment_at', to);
+    if (center_id) query = query.eq('assigned_center', center_id);
+    if (status) query = query.eq('appt_status', status);
+    query = query.order('trial_appointment_at', { ascending: true });
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }, 30000);
 }
 
 // ============================================================
@@ -310,6 +368,7 @@ export async function upsertAppointmentReminder(leadId, role, status, note) {
     .select()
     .single();
   if (error) throw error;
+  clearCache();
   return data;
 }
 
@@ -340,6 +399,7 @@ export async function addAppointmentComment(leadId, content) {
     content,
   });
   if (error) throw error;
+  clearCache();
 }
 
 // ============================================================
@@ -347,55 +407,71 @@ export async function addAppointmentComment(leadId, content) {
 // ============================================================
 
 export async function fetchDashboardHQ() {
-  const { data, error } = await supabase.rpc('rpc_dashboard_hq');
-  if (error) throw error;
-  return data;
+  return withCache('fetchDashboardHQ', {}, async () => {
+    const { data, error } = await supabase.rpc('rpc_dashboard_hq');
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchDashboardCenter(centerId) {
-  const { data, error } = await supabase.rpc('rpc_dashboard_center', { p_center_id: centerId });
-  if (error) throw error;
-  return data;
+  return withCache('fetchDashboardCenter', { centerId }, async () => {
+    const { data, error } = await supabase.rpc('rpc_dashboard_center', { p_center_id: centerId });
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchReportFunnel({ from, to, center_id } = {}) {
-  const { data, error } = await supabase.rpc('rpc_report_funnel', {
-    p_from: from || null, p_to: to || null, p_center_id: center_id || null,
-  });
-  if (error) throw error;
-  return data;
+  return withCache('fetchReportFunnel', { from, to, center_id }, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_funnel', {
+      p_from: from || null, p_to: to || null, p_center_id: center_id || null,
+    });
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchReportCenterConversion() {
-  const { data, error } = await supabase.rpc('rpc_report_center_conversion');
-  if (error) throw error;
-  return data;
+  return withCache('fetchReportCenterConversion', {}, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_center_conversion');
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchReportSalePerformance() {
-  const { data, error } = await supabase.rpc('rpc_report_sale_performance');
-  if (error) throw error;
-  return data;
+  return withCache('fetchReportSalePerformance', {}, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_sale_performance');
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchReportCenterComparison() {
-  const { data, error } = await supabase.rpc('rpc_report_center_comparison');
-  if (error) throw error;
-  return data;
+  return withCache('fetchReportCenterComparison', {}, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_center_comparison');
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchReportSourceCampaign() {
-  const { data, error } = await supabase.rpc('rpc_report_source_campaign');
-  if (error) throw error;
-  return data;
+  return withCache('fetchReportSourceCampaign', {}, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_source_campaign');
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 export async function fetchReportTimeInStage(centerId) {
-  const { data, error } = await supabase.rpc('rpc_report_time_in_stage', {
-    p_center_id: centerId || null,
-  });
-  if (error) throw error;
-  return data;
+  return withCache('fetchReportTimeInStage', { centerId }, async () => {
+    const { data, error } = await supabase.rpc('rpc_report_time_in_stage', {
+      p_center_id: centerId || null,
+    });
+    if (error) throw error;
+    return data;
+  }, 60000);
 }
 
 // ============================================================
