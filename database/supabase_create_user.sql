@@ -108,4 +108,4 @@ EXCEPTION WHEN unique_violation THEN
 WHEN OTHERS THEN
   RETURN jsonb_build_object('status', 'error', 'message', SQLERRM);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions;
