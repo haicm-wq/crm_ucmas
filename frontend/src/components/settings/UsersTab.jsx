@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSharedData } from '../../contexts/SharedDataProvider';
-import { fetchProfiles, updateProfile, createUser } from '../../services/api';
+import { fetchProfiles, updateProfile, createUser, resetUserPassword } from '../../services/api';
 import toast from 'react-hot-toast';
-import { HiOutlineRefresh, HiOutlinePencil } from 'react-icons/hi';
+import { HiOutlineRefresh, HiOutlinePencil, HiOutlineKey } from 'react-icons/hi';
 
 export default function UsersTab() {
   const { centers } = useSharedData();
@@ -77,6 +77,19 @@ export default function UsersTab() {
       load();
     } catch (err) { toast.error(err.message || 'Lỗi tạo tài khoản'); }
     finally { setCreating(false); }
+  };
+
+  const handleResetPassword = async (u) => {
+    const username = u.email?.replace('@ucmas.local', '') || u.email;
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn reset mật khẩu của nhân viên "${u.full_name}" (Tên đăng nhập: ${username}) về mặc định "123456" không?`);
+    if (!confirmed) return;
+    
+    try {
+      await resetUserPassword(u.id);
+      toast.success(`Đã reset mật khẩu của nhân viên "${u.full_name}" về mặc định "123456" thành công.`);
+    } catch (err) {
+      toast.error(err.message || 'Lỗi reset mật khẩu');
+    }
   };
 
   return (
@@ -233,9 +246,14 @@ export default function UsersTab() {
                           <button onClick={() => setEditingId(null)} className="btn-ghost text-[10px] px-2 py-1">Hủy</button>
                         </div>
                       ) : (
-                        <button onClick={() => startEdit(u)} className="btn-ghost text-xs" aria-label="Chỉnh sửa">
-                          <HiOutlinePencil className="w-3 h-3" />
-                        </button>
+                        <div className="flex gap-1 items-center justify-end">
+                          <button onClick={() => startEdit(u)} className="btn-ghost text-xs" title="Chỉnh sửa">
+                            <HiOutlinePencil className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => handleResetPassword(u)} className="btn-ghost text-xs text-red-500 hover:text-red-700" title="Reset mật khẩu">
+                            <HiOutlineKey className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

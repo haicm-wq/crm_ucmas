@@ -12,7 +12,7 @@ const navItems = [
   { path: '/leads', label: 'Danh sách Lead', icon: HiOutlineUsers, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
   { path: '/lich-hen', label: 'Lịch hẹn học thử', icon: HiOutlineCalendar, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
   { path: '/bao-cao', label: 'Báo cáo', icon: HiOutlineChartBar, roles: ['admin', 'marketing', 'lead_telesale'] },
-  { path: '/cai-dat', label: 'Cài đặt', icon: HiOutlineCog, roles: ['admin'] },
+  { path: '/cai-dat', label: 'Cài đặt', icon: HiOutlineCog, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
 ];
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {

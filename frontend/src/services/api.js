@@ -663,3 +663,26 @@ export async function fetchProductLevels() {
   return data || [];
 }
 
+// ============================================================
+// PASSWORD MANAGEMENT
+// ============================================================
+
+export async function changePassword(newPassword) {
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+  return data;
+}
+
+export async function resetUserPassword(userId) {
+  const { data, error } = await supabase.rpc('rpc_reset_user_password', {
+    p_user_id: userId,
+    p_new_password: '123456'
+  });
+  if (error) throw error;
+  if (data?.status === 'error') {
+    throw new Error(data?.message || 'Có lỗi xảy ra khi reset mật khẩu');
+  }
+  return data;
+}
+
+
