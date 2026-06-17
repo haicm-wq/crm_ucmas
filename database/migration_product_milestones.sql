@@ -136,10 +136,6 @@ CREATE OR REPLACE FUNCTION rpc_get_leads_for_outbound_sync(
   sheet_out_row INTEGER,
   custom_fields JSONB,
   l4_type VARCHAR,
-  entered_l1_at TIMESTAMPTZ,
-  entered_l2_at TIMESTAMPTZ,
-  entered_l3_at TIMESTAMPTZ,
-  entered_l4_at TIMESTAMPTZ,
   entered_l4_uckid_at TIMESTAMPTZ,
   entered_l4_ucmas_at TIMESTAMPTZ,
   entered_l1_ucmas_at TIMESTAMPTZ,
@@ -170,12 +166,14 @@ BEGIN
     l.sheet_out_row,
     l.custom_fields,
     l.l4_type,
-    l.entered_l1_at,
-    l.entered_l2_at,
-    l.entered_l3_at,
-    l.entered_l4_at,
-    l.entered_l4_uckid_at,
-    l.entered_l4_ucmas_at,
+    COALESCE(
+      (SELECT (entered_at->>'L4.1')::timestamptz FROM lead_product_levels WHERE lead_id = l.id AND product_code = 'UCKID'),
+      l.entered_l4_uckid_at
+    ) AS entered_l4_uckid_at,
+    COALESCE(
+      (SELECT (entered_at->>'L4.1')::timestamptz FROM lead_product_levels WHERE lead_id = l.id AND product_code = 'UCMAS'),
+      l.entered_l4_ucmas_at
+    ) AS entered_l4_ucmas_at,
     COALESCE(
       (SELECT (entered_at->>'L1')::timestamptz FROM lead_product_levels WHERE lead_id = l.id AND product_code = 'UCMAS'),
       l.entered_l1_ucmas_at,
