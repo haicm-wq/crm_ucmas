@@ -498,12 +498,16 @@ export default function LeadPoolPage() {
 
                       {/* Trung tâm */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[130px]">
+                        <div className="relative flex items-center min-w-[120px]">
                           <select
                             value={lead.assigned_center || ''}
                             onChange={(e) => handleCenterChange(lead.id, e.target.value)}
                             disabled={savingLeads[lead.id]?.assigned_center}
-                            className="select-field py-1 px-2 text-xs w-full"
+                            className={`select-field py-1 px-2 text-xs w-full ${
+                              !lead.assigned_center
+                                ? 'bg-amber-50/60 border-amber-200/80 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 font-medium'
+                                : 'bg-white dark:bg-surface-800'
+                            }`}
                           >
                             <option value="">— Chưa gán —</option>
                             {centers.map(c => (
@@ -518,12 +522,16 @@ export default function LeadPoolPage() {
 
                       {/* Sale đặt lịch */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[130px]">
+                        <div className="relative flex items-center min-w-[120px]">
                           <select
                             value={lead.assigned_staff || ''}
                             onChange={(e) => handleStaffChange(lead.id, e.target.value)}
                             disabled={savingLeads[lead.id]?.assigned_staff}
-                            className="select-field py-1 px-2 text-xs w-full"
+                            className={`select-field py-1 px-2 text-xs w-full ${
+                              !lead.assigned_staff
+                                ? 'bg-amber-50/60 border-amber-200/80 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 font-medium'
+                                : 'bg-white dark:bg-surface-800'
+                            }`}
                           >
                             <option value="">— Chưa gán —</option>
                             {allStaff.map(s => (
