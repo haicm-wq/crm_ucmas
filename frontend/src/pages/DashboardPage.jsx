@@ -266,6 +266,19 @@ export default function DashboardPage() {
     });
   };
 
+  const rawFunnel = data?.funnel || [];
+  const funnel = useMemo(() => {
+    if (isTelesale && !isLeadTelesale) {
+      return rawFunnel.map(f => {
+        if (f.level_group === 'L0') {
+          return { ...f, count: countL0 };
+        }
+        return f;
+      });
+    }
+    return rawFunnel;
+  }, [rawFunnel, isTelesale, isLeadTelesale, countL0]);
+
   if (!data) { // Skeletons only on initial load
     return (
       <div className="space-y-6">
@@ -279,19 +292,8 @@ export default function DashboardPage() {
 
   // View state is single center if user is center OR selected exactly one center
   const isHQ = !isCenter && !isTelesale && (selectedCenters.length !== 1);
-  const rawFunnel = data.funnel || [];
-  const funnel = useMemo(() => {
-    if (isTelesale && !isLeadTelesale) {
-      return rawFunnel.map(f => {
-        if (f.level_group === 'L0') {
-          return { ...f, count: countL0 };
-        }
-        return f;
-      });
-    }
-    return rawFunnel;
-  }, [rawFunnel, isTelesale, isLeadTelesale, countL0]);
   const maxFunnel = Math.max(...funnel.map((f) => parseInt(f.count) || 0), 1);
+
 
   // Prepare chart data
   const sourceData = (data.bySource || []).map((s) => ({
