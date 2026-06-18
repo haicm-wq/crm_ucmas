@@ -14,12 +14,13 @@ export default function Header({ onMenuClick }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [activeTab, setActiveTab] = useState('system'); // system | transfer
   const notifRef = useRef(null);
 
   // Bug11 fix: only fetch when user is loaded
   useEffect(() => {
     if (!user?.id) return;
-    fetchNotifications({ limit: 10, unreadOnly: true })
+    fetchNotifications({ limit: 40, unreadOnly: false })
       .then((res) => {
         setNotifications(res.data);
         setUnreadCount(res.unread);
@@ -39,7 +40,7 @@ export default function Header({ onMenuClick }) {
         table: 'notifications',
         filter: `user_id=eq.${user.id}`,
       }, (payload) => {
-        setNotifications((prev) => [payload.new, ...prev].slice(0, 20));
+        setNotifications((prev) => [payload.new, ...prev].slice(0, 40));
         setUnreadCount((c) => c + 1);
       })
       .subscribe();
@@ -81,6 +82,10 @@ export default function Header({ onMenuClick }) {
   };
 
   const formatTime = formatRelativeTime;
+
+  const systemNotifs = notifications.filter((n) => n.type !== 'center_transfer');
+  const transferNotifs = notifications.filter((n) => n.type === 'center_transfer');
+  const activeNotifs = activeTab === 'system' ? systemNotifs : transferNotifs;
 
   return (
     <header className="h-16 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
@@ -128,19 +133,44 @@ export default function Header({ onMenuClick }) {
           {/* Notification dropdown */}
           {showNotifs && (
             <div className="absolute right-0 top-12 w-[calc(100vw-2rem)] sm:w-96 glass-card shadow-2xl border border-surface-200 dark:border-surface-700 animate-slide-up overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
+              <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700 bg-surface-50/50 dark:bg-surface-800/30">
                 <h3 className="font-semibold text-surface-800 dark:text-surface-100">Thông báo</h3>
                 {unreadCount > 0 && (
                   <button onClick={markAllRead} className="text-xs text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300">
-                    Đánh dấu tất cả đã đọc
+                    Đọc tất cả
                   </button>
                 )}
               </div>
+
+              {/* Tabs */}
+              <div className="flex border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800/50">
+                <button
+                  onClick={() => setActiveTab('system')}
+                  className={`flex-1 py-2 text-xs font-semibold text-center border-b-2 transition-all duration-150 ${
+                    activeTab === 'system'
+                      ? 'border-primary-500 text-primary-500'
+                      : 'border-transparent text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                  }`}
+                >
+                  Hệ thống ({systemNotifs.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('transfer')}
+                  className={`flex-1 py-2 text-xs font-semibold text-center border-b-2 transition-all duration-150 ${
+                    activeTab === 'transfer'
+                      ? 'border-primary-500 text-primary-500'
+                      : 'border-transparent text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                  }`}
+                >
+                  Chuyển trung tâm ({transferNotifs.length})
+                </button>
+              </div>
+
               <div className="max-h-96 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <p className="p-6 text-center text-surface-500 text-sm">Không có thông báo mới</p>
+                {activeNotifs.length === 0 ? (
+                  <p className="p-6 text-center text-surface-500 text-sm">Không có thông báo nào</p>
                 ) : (
-                  notifications.map((notif, i) => (
+                  activeNotifs.map((notif, i) => (
                     <div
                       key={notif.id || i}
                       className={`p-4 border-b border-surface-100 dark:border-surface-800/50 hover:bg-surface-100/50 dark:hover:bg-surface-800/30 transition-colors ${

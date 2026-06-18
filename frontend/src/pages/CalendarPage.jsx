@@ -304,7 +304,7 @@ export default function CalendarPage() {
 
                       {isExpanded && (
                         <div className="px-4 pb-4 pt-2 bg-surface-50/50 dark:bg-surface-800/10 border-t border-surface-200/50 dark:border-surface-700/30">
-                          <AppointmentDetail appt={appt} />
+                          <AppointmentDetail appt={appt} onUpdate={loadAppointments} />
                         </div>
                       )}
                     </div>

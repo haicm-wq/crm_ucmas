@@ -1,12 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
-import { fetchAppointmentReminders } from '../../services/api';
-import { HiOutlinePhone, HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { fetchAppointmentReminders, updateLead } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSharedData } from '../../contexts/SharedDataProvider';
+import { HiOutlinePhone, HiOutlineOfficeBuilding, HiOutlineUser } from 'react-icons/hi';
 import ReminderSection from './ReminderSection';
 import CommentSection from './CommentSection';
+import toast from 'react-hot-toast';
 
-export default function AppointmentDetail({ appt }) {
+export default function AppointmentDetail({ appt, onUpdate }) {
+  const { isAdmin, isMarketing, isLeadTelesale } = useAuth();
+  const { centers, allStaff } = useSharedData();
   const [reminders, setReminders] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [updating, setUpdating] = useState(false);
+
+  const canAssign = isAdmin || isMarketing || isLeadTelesale;
 
   const loadReminders = useCallback(async () => {
     try {
@@ -21,6 +29,36 @@ export default function AppointmentDetail({ appt }) {
 
   useEffect(() => { loadReminders(); }, [loadReminders]);
 
+  const handleStaffChange = async (e) => {
+    const newStaffId = e.target.value || null;
+    if (updating) return;
+    setUpdating(true);
+    try {
+      await updateLead(appt.id, { assigned_staff: newStaffId }, 'Chuyển telesale phụ trách');
+      toast.success('Đã chuyển nhân viên Sale đặt lịch');
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error('Lỗi chuyển nhân viên: ' + (err.message || ''));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCenterChange = async (e) => {
+    const newCenterId = e.target.value || null;
+    if (updating) return;
+    setUpdating(true);
+    try {
+      await updateLead(appt.id, { assigned_center: newCenterId }, 'Chuyển trung tâm phụ trách');
+      toast.success('Đã chuyển trung tâm');
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error('Lỗi chuyển trung tâm: ' + (err.message || ''));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const saleReminder = reminders.find((r) => r.role === 'sale') || null;
   const centerReminder = reminders.find((r) => r.role === 'center') || null;
 
@@ -34,6 +72,68 @@ export default function AppointmentDetail({ appt }) {
 
   return (
     <div className="space-y-4">
+      {/* Phụ trách & Trung tâm */}
+      <div className="bg-surface-50 dark:bg-surface-800/40 p-4 rounded-xl border border-surface-200/50 dark:border-surface-700/30 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+        <div className="flex-1 flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 flex flex-col gap-1">
+            <label className="text-xs font-semibold text-surface-500 flex items-center gap-1.5">
+              <HiOutlineUser className="w-4 h-4 text-primary-400" /> Sale đặt lịch phụ trách
+            </label>
+            {canAssign ? (
+              <select
+                value={appt.assigned_staff || ''}
+                onChange={handleStaffChange}
+                disabled={updating}
+                className="select-field text-sm py-1.5 px-3"
+              >
+                <option value="">Chưa gán</option>
+                {allStaff.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm font-medium text-surface-700 dark:text-surface-300 pl-5.5">
+                {appt.sale_name || 'Chưa gán'}
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1 flex flex-col gap-1">
+            <label className="text-xs font-semibold text-surface-500 flex items-center gap-1.5">
+              <HiOutlineOfficeBuilding className="w-4 h-4 text-primary-400" /> Trung tâm học thử
+            </label>
+            {canAssign ? (
+              <select
+                value={appt.assigned_center || ''}
+                onChange={handleCenterChange}
+                disabled={updating}
+                className="select-field text-sm py-1.5 px-3"
+              >
+                <option value="">Chưa gán</option>
+                {centers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm font-medium text-surface-700 dark:text-surface-300 pl-5.5">
+                {appt.center_name || 'Chưa gán'}
+              </p>
+            )}
+          </div>
+        </div>
+        {updating && (
+          <div className="flex items-center justify-center px-4">
+            <div className="w-5 h-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-surface-200 dark:border-surface-700" />
+
       <div className="flex flex-col sm:flex-row gap-4">
         <ReminderSection
           leadId={appt.id}
