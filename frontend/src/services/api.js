@@ -166,8 +166,24 @@ export async function fetchL0Pool({ page = 1, limit = 100 } = {}) {
       .rpc('rpc_fetch_l0_pool', {}, { count: 'exact' })
       .range(offset, offset + limit - 1);
     if (error) throw error;
+
+    const leads = data || [];
+    if (leads.length > 0) {
+      const leadIds = leads.map(l => l.id);
+      const { data: lpLevels, error: lplError } = await supabase
+        .from('lead_product_levels')
+        .select('*')
+        .in('lead_id', leadIds);
+      
+      if (!lplError && lpLevels) {
+        leads.forEach(l => {
+          l.lead_product_levels = lpLevels.filter(lvl => lvl.lead_id === l.id);
+        });
+      }
+    }
+
     return {
-      data: data || [],
+      data: leads,
       pagination: {
         page, limit,
         total: count || 0,

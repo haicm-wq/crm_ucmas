@@ -10,6 +10,7 @@ export default function MultiSelect({
   labelPrefix = '',
   className = '',
   searchable = true,
+  disabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -81,8 +82,11 @@ export default function MultiSelect({
     <div className={`relative inline-block text-left ${className}`} ref={containerRef} id={id}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`flex items-center justify-between w-full bg-white dark:bg-surface-800/80 border border-surface-200 dark:border-surface-700/50 rounded-xl px-4 py-2 text-sm text-surface-800 dark:text-surface-100 hover:border-surface-300 dark:hover:border-surface-600 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 transition-all duration-150 ${
+          disabled ? 'opacity-50 cursor-not-allowed' : ''
+        } ${
           selected.length > 0 ? 'border-primary-500 dark:border-primary-500/80 bg-primary-50/10 dark:bg-primary-500/5 text-primary-700 dark:text-primary-400 font-semibold' : ''
         }`}
       >
@@ -90,7 +94,7 @@ export default function MultiSelect({
           {getButtonText()}
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {selected.length > 0 && (
+          {selected.length > 0 && !disabled && (
             <span
               onClick={(e) => {
                 e.stopPropagation();

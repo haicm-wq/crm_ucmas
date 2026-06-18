@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseRealtime } from '../hooks/useShared';
+import { supabase } from '../lib/supabase';
 import { fetchL0Pool, bulkAssign, fetchL0UnprocessedStats, updateLead, updateLeadLevelAndProducts } from '../services/api';
 import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/SkeletonLoader';
@@ -22,8 +23,8 @@ const L0_BASE_LEVELS = ['L0', 'L1.KK', 'L0.R', 'L0.K'];
 const GRADUATION_LEVELS = ALL_LEVEL_CODES.filter(c => !L0_BASE_LEVELS.includes(c));
 
 export default function LeadPoolPage() {
-  const { centers, allStaff } = useSharedData();
-  const { canViewL0, user } = useAuth();
+  const { centers, allStaff, productLevels } = useSharedData();
+  const { canViewL0, user, isCenter } = useAuth();
   const isTelesale = user?.permission_group === 'telesale';
   const [searchParams, setSearchParams] = useSearchParams();
   const [levelFilter, setLevelFilter] = useState('');
@@ -220,6 +221,61 @@ export default function LeadPoolPage() {
       loadPool(pagination.page);
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật level');
+    } finally {
+      markSaving(leadId, 'level_code', false);
+    }
+  };
+
+  const handleProductLevelChange = async (leadId, productCode, levelCode) => {
+    const lead = pool.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const isGraduationLevel = !L0_BASE_LEVELS.includes(levelCode);
+
+    // Validation: level ≥ L1 yêu cầu trung tâm
+    if (isGraduationLevel) {
+      if (!lead.assigned_center) {
+        toast.error('Cần chọn Trung tâm trước khi chuyển level này');
+        return;
+      }
+
+      // ConfirmDialog: cảnh báo lead sẽ chuyển sang Danh sách Lead
+      const lvlDef = productLevels.find(l => l.product_code === productCode && l.level_code === levelCode) || getLevelInfo(levelCode);
+      
+      setConfirmDialog({
+        open: true,
+        message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Level "${lvlDef.label}" (${levelCode}) của sản phẩm ${productCode}.\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L0 và xuất hiện ở Danh sách Lead.\n\nBạn có chắc chắn muốn thực hiện?`,
+        onConfirm: () => {
+          setConfirmDialog({ open: false, message: '', onConfirm: null });
+          executeProductLevelChange(leadId, productCode, levelCode);
+        },
+      });
+      return;
+    }
+
+    // Level cơ bản L0 — chuyển trực tiếp
+    executeProductLevelChange(leadId, productCode, levelCode);
+  };
+
+  const executeProductLevelChange = async (leadId, productCode, levelCode) => {
+    markSaving(leadId, 'level_code', true);
+    try {
+      const { error } = await supabase.rpc('rpc_update_lead_product_level', {
+        p_lead_id: leadId,
+        p_product_code: productCode,
+        p_level_code: levelCode,
+        p_note: `Cập nhật Level ${productCode} trực tiếp từ kho L0`,
+      });
+      if (error) throw error;
+      
+      const isGraduation = !L0_BASE_LEVELS.includes(levelCode);
+      toast.success(isGraduation
+        ? `✅ Lead đã chuyển sang Danh sách Lead cho sản phẩm ${productCode}`
+        : 'Đã cập nhật level sản phẩm'
+      );
+      loadPool(pagination.page);
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật level sản phẩm');
     } finally {
       markSaving(leadId, 'level_code', false);
     }
@@ -439,7 +495,7 @@ export default function LeadPoolPage() {
                             onChange={(e) => handleInputChange(lead.id, 'child_name', e.target.value)}
                             onBlur={(e) => handleInputBlur(lead.id, 'child_name', focusedValueRef.current[`${lead.id}-child_name`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-                            disabled={savingLeads[lead.id]?.child_name}
+                            disabled={isCenter || savingLeads[lead.id]?.child_name}
                             className="input-field py-1 px-2 text-xs w-full"
                           />
                           {savingLeads[lead.id]?.child_name && (
@@ -461,7 +517,7 @@ export default function LeadPoolPage() {
                           <select
                             value={lead.child_birth_year || ''}
                             onChange={(e) => handleInputBlur(lead.id, 'child_birth_year', lead.child_birth_year, e.target.value)}
-                            disabled={savingLeads[lead.id]?.child_birth_year}
+                            disabled={isCenter || savingLeads[lead.id]?.child_birth_year}
                             className="select-field py-1 px-2 text-xs w-full"
                           >
                             <option value="">Năm sinh</option>
@@ -487,7 +543,7 @@ export default function LeadPoolPage() {
                             onChange={(e) => handleInputChange(lead.id, 'address', e.target.value)}
                             onBlur={(e) => handleInputBlur(lead.id, 'address', focusedValueRef.current[`${lead.id}-address`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-                            disabled={savingLeads[lead.id]?.address}
+                            disabled={isCenter || savingLeads[lead.id]?.address}
                             className="input-field py-1 px-2 text-xs w-full"
                           />
                           {savingLeads[lead.id]?.address && (
@@ -502,7 +558,7 @@ export default function LeadPoolPage() {
                           <select
                             value={lead.assigned_center || ''}
                             onChange={(e) => handleCenterChange(lead.id, e.target.value)}
-                            disabled={savingLeads[lead.id]?.assigned_center}
+                            disabled={isCenter || savingLeads[lead.id]?.assigned_center}
                             className={`select-field py-1 px-2 text-xs w-full ${
                               !lead.assigned_center
                                 ? 'bg-amber-50/60 border-amber-200/80 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 font-medium'
@@ -526,7 +582,7 @@ export default function LeadPoolPage() {
                           <select
                             value={lead.assigned_staff || ''}
                             onChange={(e) => handleStaffChange(lead.id, e.target.value)}
-                            disabled={savingLeads[lead.id]?.assigned_staff}
+                            disabled={isCenter || savingLeads[lead.id]?.assigned_staff}
                             className={`select-field py-1 px-2 text-xs w-full ${
                               !lead.assigned_staff
                                 ? 'bg-amber-50/60 border-amber-200/80 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 font-medium'
@@ -554,6 +610,7 @@ export default function LeadPoolPage() {
                             placeholder="Chọn..."
                             className="w-full text-xs text-left"
                             searchable={false}
+                            disabled={isCenter}
                           />
                           {savingLeads[lead.id]?.interested_products && (
                             <span className="absolute right-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
@@ -563,29 +620,64 @@ export default function LeadPoolPage() {
 
                       {/* Level — dynamic dropdown */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[125px]">
-                          <select
-                            value={lead.level_code || 'L0'}
-                            onChange={(e) => handleLevelChange(lead.id, e.target.value)}
-                            disabled={savingLeads[lead.id]?.level_code}
-                            className="select-field py-1 px-2 text-xs w-full font-semibold"
-                          >
-                            {/* Nhóm 1: Xử lý trong Kho L0 */}
-                            <optgroup label="── Xử lý trong Kho L0 ──">
-                              {L0_POOL_LEVELS.map(lvl => (
-                                <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
-                              ))}
-                            </optgroup>
-                            {/* Nhóm 2: Chuyển sang Danh sách Lead (chỉ hiện khi đủ điều kiện) */}
-                            {canGraduate(lead) && (
-                              <optgroup label="── Chuyển sang Danh sách Lead ──">
-                                {GRADUATION_LEVELS.map(code => {
-                                  const info = getLevelInfo(code);
-                                  return <option key={code} value={code}>{code} — {info.label}</option>;
-                                })}
+                        <div className="relative flex flex-col gap-1.5 justify-center min-w-[125px]">
+                          {lead.interested_products && lead.interested_products.length > 0 ? (
+                            lead.interested_products.map((p_code) => {
+                              const currentLvl = lead.lead_product_levels?.find(l => l.product_code === p_code)?.level_code || 'L0';
+                              const prodLvls = productLevels.filter(lvl => lvl.product_code === p_code);
+                              return (
+                                <div key={p_code} className="flex items-center gap-1">
+                                  <span className="text-[10px] font-mono font-bold text-surface-500 w-12 truncate" title={p_code}>
+                                    {p_code}:
+                                  </span>
+                                  <select
+                                    value={currentLvl}
+                                    onChange={(e) => handleProductLevelChange(lead.id, p_code, e.target.value)}
+                                    disabled={isCenter || savingLeads[lead.id]?.level_code}
+                                    className="select-field py-0.5 px-1 text-[11px] w-28 font-semibold bg-white dark:bg-surface-800"
+                                  >
+                                    <optgroup label="── Xử lý trong Kho L0 ──">
+                                      {L0_POOL_LEVELS.map(lvl => (
+                                        <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
+                                      ))}
+                                    </optgroup>
+                                    {canGraduate(lead) && (
+                                      <optgroup label="── Chuyển đi ──">
+                                        {prodLvls
+                                          .filter(lvl => !['L0', 'L0.R', 'L0.K', 'L1.KK'].includes(lvl.level_code))
+                                          .map(lvl => (
+                                            <option key={lvl.level_code} value={lvl.level_code}>
+                                              {lvl.level_code} — {lvl.label}
+                                            </option>
+                                          ))}
+                                      </optgroup>
+                                    )}
+                                  </select>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <select
+                              value={lead.level_code || 'L0'}
+                              onChange={(e) => handleLevelChange(lead.id, e.target.value)}
+                              disabled={isCenter || savingLeads[lead.id]?.level_code}
+                              className="select-field py-1 px-2 text-xs w-full font-semibold"
+                            >
+                              <optgroup label="── Xử lý trong Kho L0 ──">
+                                {L0_POOL_LEVELS.map(lvl => (
+                                  <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
+                                ))}
                               </optgroup>
-                            )}
-                          </select>
+                              {canGraduate(lead) && (
+                                <optgroup label="── Chuyển sang Danh sách Lead ──">
+                                  {GRADUATION_LEVELS.map(code => {
+                                    const info = getLevelInfo(code);
+                                    return <option key={code} value={code}>{code} — {info.label}</option>;
+                                  })}
+                                </optgroup>
+                              )}
+                            </select>
+                          )}
                           {savingLeads[lead.id]?.level_code && (
                             <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
                           )}
