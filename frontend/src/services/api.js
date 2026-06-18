@@ -479,10 +479,11 @@ export async function fetchReportProductAnalytics({ from, to, center_id, product
   }, 30000);
 }
 
-export async function fetchReportFunnel({ from, to, center_id } = {}) {
-  return withCache('fetchReportFunnel', { from, to, center_id }, async () => {
+export async function fetchReportFunnel({ from, to, center_id, source_type } = {}) {
+  return withCache('fetchReportFunnel', { from, to, center_id, source_type }, async () => {
     const { data, error } = await supabase.rpc('rpc_report_funnel', {
       p_from: from || null, p_to: to || null, p_center_id: center_id || null,
+      p_source_type: source_type || null,
     });
     if (error) throw error;
     return data;

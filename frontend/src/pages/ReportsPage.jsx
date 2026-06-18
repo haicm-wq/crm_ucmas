@@ -49,7 +49,8 @@ export default function ReportsPage() {
   const [filters, setFilters] = useState({ 
     from: getFirstDayOfMonth(), 
     to: getToday(), 
-    center_id: isCenter ? (user?.center_id || '') : '' 
+    center_id: isCenter ? (user?.center_id || '') : '',
+    source_type: isCenter ? 'PULL' : '',  // Trung tâm mặc định xem PULL
   });
 
   // Sync center_id if user center_id loads later
@@ -88,7 +89,7 @@ export default function ReportsPage() {
 
       switch (tab) {
         case 'funnel': 
-          result = await fetchReportFunnel(apiFilters); 
+          result = await fetchReportFunnel({ ...apiFilters, source_type: filters.source_type || null }); 
           break;
         case 'center_conv': 
           result = await fetchReportCenterConversion(); 
@@ -225,6 +226,23 @@ export default function ReportsPage() {
               {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
+
+          {/* Bộ lọc nguồn — chỉ hiện cho Trung tâm khi xem Phiếu */}
+          {isCenter && tab === 'funnel' && (
+            <div>
+              <label className="block text-xs text-surface-500 mb-1">Nguồn lead</label>
+              <select
+                value={filters.source_type}
+                onChange={(e) => setFilters({ ...filters, source_type: e.target.value })}
+                className="select-field py-2 text-sm"
+              >
+                <option value="PULL">Chỉ nguồn PULL (Quảng cáo)</option>
+                <option value="PUSH">Chỉ nguồn PUSH (Giới thiệu)</option>
+                <option value="">Tất cả (PULL + PUSH)</option>
+              </select>
+            </div>
+          )}
+
           <button onClick={() => loadReport(true)} className="btn-primary text-sm px-4 py-2">Xem</button>
         </div>
       )}
