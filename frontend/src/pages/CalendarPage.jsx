@@ -157,33 +157,29 @@ export default function CalendarPage() {
   }, [currentMonth, viewMode]);
 
   const stats = useMemo(() => {
-    let scheduled = 0;
+    let scheduledSale = 0;
+    let scheduledCenter = 0;
     let attended = 0;
     let missed = 0;
     let cancelled = 0;
 
     appointments.forEach((a) => {
-      switch (a.appt_status) {
-        case 'scheduled':
-          scheduled++;
-          break;
-        case 'attended':
-          attended++;
-          break;
-        case 'missed':
-          missed++;
-          break;
-        case 'cancelled':
-          cancelled++;
-          break;
-        default:
-          break;
+      if (a.appt_status === 'scheduled') {
+        if (a.sale_remind_status !== 'reminded') scheduledSale++;
+        if (a.center_remind_status !== 'reminded') scheduledCenter++;
+      } else if (a.appt_status === 'attended') {
+        attended++;
+      } else if (a.appt_status === 'missed') {
+        missed++;
+      } else if (a.appt_status === 'cancelled') {
+        cancelled++;
       }
     });
 
     return {
       total: appointments.length,
-      scheduled,
+      scheduledSale,
+      scheduledCenter,
       attended,
       missed,
       cancelled,
@@ -215,7 +211,9 @@ export default function CalendarPage() {
           <div className="text-xs sm:text-sm text-surface-500 mt-1.5 flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5">
             <span>Tổng lịch: <strong className="text-surface-800 dark:text-surface-200 font-semibold">{stats.total}</strong></span>
             <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
-            <span>Cần nhắc lịch: <strong className="text-blue-500 dark:text-blue-400 font-semibold">{stats.scheduled}</strong></span>
+            <span>Cần nhắc (Sale): <strong className="text-blue-500 dark:text-blue-400 font-semibold">{stats.scheduledSale}</strong></span>
+            <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
+            <span>Cần nhắc (TT): <strong className="text-indigo-500 dark:text-indigo-400 font-semibold">{stats.scheduledCenter}</strong></span>
             <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
             <span>Đã học thử: <strong className="text-green-500 dark:text-green-400 font-semibold">{stats.attended}</strong></span>
             <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>

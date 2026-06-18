@@ -8,13 +8,29 @@ import CommentSection from './CommentSection';
 import toast from 'react-hot-toast';
 
 export default function AppointmentDetail({ appt, onUpdate }) {
-  const { isAdmin, isMarketing, isLeadTelesale } = useAuth();
+  const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
   const { centers, allStaff } = useSharedData();
   const [reminders, setReminders] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   const canAssign = isAdmin || isMarketing || isLeadTelesale;
+  const canEditAppointment = isAdmin || isLeadTelesale || isMarketing ||
+    (isCenter && appt.assigned_center === user?.center_id) ||
+    (isTelesale && appt.assigned_staff === user?.id);
+
+  const formatDateForInput = (isoString) => {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const [newApptTime, setNewApptTime] = useState(formatDateForInput(appt.trial_appointment_at));
+
+  useEffect(() => {
+    setNewApptTime(formatDateForInput(appt.trial_appointment_at));
+  }, [appt.trial_appointment_at]);
 
   const loadReminders = useCallback(async () => {
     try {
@@ -59,6 +75,22 @@ export default function AppointmentDetail({ appt, onUpdate }) {
     }
   };
 
+  const handleReschedule = async () => {
+    if (!newApptTime) return;
+    if (updating) return;
+    setUpdating(true);
+    try {
+      const formattedIso = new Date(newApptTime).toISOString();
+      await updateLead(appt.id, { trial_appointment_at: formattedIso }, 'Đổi lịch hẹn học thử');
+      toast.success('Đã đổi lịch hẹn học thử');
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      toast.error('Lỗi đổi lịch hẹn: ' + (err.message || ''));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const saleReminder = reminders.find((r) => r.role === 'sale') || null;
   const centerReminder = reminders.find((r) => r.role === 'center') || null;
 
@@ -72,9 +104,9 @@ export default function AppointmentDetail({ appt, onUpdate }) {
 
   return (
     <div className="space-y-4">
-      {/* Phụ trách & Trung tâm */}
+      {/* Phụ trách & Trung tâm & Đổi lịch */}
       <div className="bg-surface-50 dark:bg-surface-800/40 p-4 rounded-xl border border-surface-200/50 dark:border-surface-700/30 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
-        <div className="flex-1 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 flex flex-col lg:flex-row gap-4">
           <div className="flex-1 flex flex-col gap-1">
             <label className="text-xs font-semibold text-surface-500 flex items-center gap-1.5">
               <HiOutlineUser className="w-4 h-4 text-primary-400" /> Sale đặt lịch phụ trách
@@ -84,7 +116,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                 value={appt.assigned_staff || ''}
                 onChange={handleStaffChange}
                 disabled={updating}
-                className="select-field text-sm py-1.5 px-3"
+                className="select-field text-xs py-1.5 px-3"
               >
                 <option value="">Chưa gán</option>
                 {allStaff.map((s) => (
@@ -94,7 +126,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                 ))}
               </select>
             ) : (
-              <p className="text-sm font-medium text-surface-700 dark:text-surface-300 pl-5.5">
+              <p className="text-xs font-medium text-surface-700 dark:text-surface-300 pl-5.5 py-1">
                 {appt.sale_name || 'Chưa gán'}
               </p>
             )}
@@ -109,7 +141,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                 value={appt.assigned_center || ''}
                 onChange={handleCenterChange}
                 disabled={updating}
-                className="select-field text-sm py-1.5 px-3"
+                className="select-field text-xs py-1.5 px-3"
               >
                 <option value="">Chưa gán</option>
                 {centers.map((c) => (
@@ -119,8 +151,36 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                 ))}
               </select>
             ) : (
-              <p className="text-sm font-medium text-surface-700 dark:text-surface-300 pl-5.5">
+              <p className="text-xs font-medium text-surface-700 dark:text-surface-300 pl-5.5 py-1">
                 {appt.center_name || 'Chưa gán'}
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1 flex flex-col gap-1">
+            <label className="text-xs font-semibold text-surface-500 flex items-center gap-1.5">
+              📅 Đổi lịch hẹn học thử
+            </label>
+            {canEditAppointment ? (
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={newApptTime}
+                  onChange={(e) => setNewApptTime(e.target.value)}
+                  disabled={updating}
+                  className="input-field text-xs py-1 px-2 font-mono flex-1 min-w-[140px]"
+                />
+                <button
+                  onClick={handleReschedule}
+                  disabled={updating || !newApptTime || newApptTime === formatDateForInput(appt.trial_appointment_at)}
+                  className="btn-primary text-xs py-1 px-3 whitespace-nowrap"
+                >
+                  Đổi lịch
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs font-medium text-surface-700 dark:text-surface-300 pl-5.5 py-1">
+                {appt.trial_appointment_at ? new Date(appt.trial_appointment_at).toLocaleString('vi-VN') : 'Chưa đặt'}
               </p>
             )}
           </div>
