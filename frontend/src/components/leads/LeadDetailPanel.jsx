@@ -247,11 +247,13 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
           <button onClick={onClose} className="btn-ghost"><HiOutlineX className="w-5 h-5" /></button>
         </div>
 
-        <div className="flex border-b border-surface-200 dark:border-surface-700">
+        <div className="flex flex-wrap gap-1 p-1 bg-surface-50 dark:bg-surface-800/30 border-b border-surface-200 dark:border-surface-700">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-500' : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-300'
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+                activeTab === tab.id
+                  ? 'bg-primary-500/20 text-primary-600 dark:text-primary-400 font-semibold'
+                  : 'text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200'
               }`}>
               <tab.icon className="w-4 h-4" /> {tab.label}
             </button>

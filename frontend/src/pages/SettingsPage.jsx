@@ -30,13 +30,13 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">Cài đặt hệ thống</h1>
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 border-b border-surface-200 dark:border-surface-700 overflow-x-auto">
+      <div className="glass-card p-1 flex flex-wrap gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-150 ${
               activeTab === tab.id
-                ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
-                : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-300'
+                ? 'bg-primary-500/20 text-primary-600 dark:text-primary-400 font-semibold'
+                : 'text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200'
             }`}>
             <tab.icon className="w-4 h-4" /> {tab.label}
           </button>
