@@ -462,7 +462,20 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Trung tâm</label>
                   {editing ? (
-                    <select value={form.assigned_center} onChange={(e) => setForm({ ...form, assigned_center: e.target.value, assigned_staff: '' })}
+                    <select value={form.assigned_center} onChange={(e) => {
+                      const newCenterId = e.target.value;
+                      // Nếu trung tâm khác với ban đầu, hiển thị xác nhận
+                      if (newCenterId !== (lead.assigned_center || '')) {
+                        const currentCenterName = centers.find(c => c.id === form.assigned_center)?.name || 'Chưa gán';
+                        const newCenterName = centers.find(c => c.id === newCenterId)?.name || 'Chưa gán';
+                        const confirmed = window.confirm(
+                          `Bạn đang thay đổi Trung tâm:\n"${currentCenterName}" → "${newCenterName}"\n\nBạn xác nhận đổi trung tâm?`
+                        );
+                        if (!confirmed) return; // Không đổi nếu người dùng hủy
+                      }
+                      // Giữ nguyên Sale đặt lịch, không reset
+                      setForm({ ...form, assigned_center: newCenterId });
+                    }}
                       className="select-field py-2 text-sm">
                       <option value="">— Chưa gán —</option>
                       {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
