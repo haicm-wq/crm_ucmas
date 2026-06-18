@@ -366,33 +366,28 @@ export default function LeadPoolPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table" style={{ minWidth: '1420px' }}>
+          <table className="data-table data-table-compact" style={{ minWidth: '1240px' }}>
             <thead>
               <tr>
-                <th className="w-10">
-                  <input type="checkbox" checked={filteredPool.length > 0 && selected.size === filteredPool.length}
-                    onChange={toggleAll}
-                    className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500" />
-                </th>
-                <th className="w-[85px]">Mã Lead</th>
-                <th className="w-[160px]">Họ tên phụ huynh</th>
-                <th className="w-[110px]">Tên con</th>
-                <th className="w-[105px]">SĐT</th>
-                <th className="w-[85px]">Năm sinh con</th>
+                <th className="w-[80px]">Mã Lead</th>
+                <th className="w-[150px]">Họ tên phụ huynh</th>
+                <th className="w-[100px]">Tên con</th>
+                <th className="w-[90px]">SĐT</th>
+                <th className="w-[80px]">Năm sinh con</th>
                 <th className="w-full">Địa chỉ</th>
-                <th className="w-[130px]">Trung tâm</th>
-                <th className="w-[130px]">Sale đặt lịch</th>
-                <th className="w-[130px]">Sản phẩm</th>
-                <th className="w-[130px]">Level</th>
-                <th className="w-[75px]">Nguồn</th>
-                <th className="w-[110px]">Ngày tạo</th>
+                <th className="w-[120px]">Trung tâm</th>
+                <th className="w-[120px]">Sale đặt lịch</th>
+                <th className="w-[120px]">Sản phẩm</th>
+                <th className="w-[120px]">Level</th>
+                <th className="w-[65px]">Nguồn</th>
+                <th className="w-[100px]">Ngày tạo</th>
               </tr>
             </thead>
             <tbody>
               {loading && pool.length === 0 ? (
-                <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
+                <tr><td colSpan={12} className="p-0"><TableSkeleton rows={8} cols={12} /></td></tr>
               ) : filteredPool.length === 0 ? (
-                <tr><td colSpan={13}>
+                <tr><td colSpan={12}>
                   <EmptyState icon={HiOutlineInbox} title="Kho L0 trống"
                     description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L0"} />
                 </td></tr>
@@ -412,19 +407,13 @@ export default function LeadPoolPage() {
 
                   return (
                     <tr key={lead.id} onClick={() => setSelectedLead(lead)} className={rowClass}>
-                      <td 
-                        onClick={(e) => e.stopPropagation()} 
-                        className={delayed ? 'border-l-2 border-l-red-500 dark:border-l-red-400' : unprocessed ? 'border-l-2 border-l-amber-500 dark:border-l-amber-400' : ''}
-                      >
-                        <input type="checkbox" checked={selected.has(lead.id)}
-                          onChange={() => toggleSelect(lead.id)}
-                          className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500" />
+                      <td className={`font-mono text-xs text-primary-600 dark:text-primary-400 ${delayed ? 'border-l-2 border-l-red-500 dark:border-l-red-400' : unprocessed ? 'border-l-2 border-l-amber-500 dark:border-l-amber-400' : ''}`}>
+                        {lead.lead_code}
                       </td>
-                      <td className="font-mono text-xs text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
                       
                       {/* Họ tên phụ huynh */}
                       <td>
-                        <div className="flex items-center gap-1.5 min-w-[160px] font-medium text-xs">
+                        <div className="flex items-center gap-1.5 min-w-[140px] font-medium text-xs">
                           <span>{lead.full_name || '—'}</span>
                           {delayed && (
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
@@ -441,7 +430,7 @@ export default function LeadPoolPage() {
 
                       {/* Tên con */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[110px]">
+                        <div className="relative flex items-center min-w-[95px]">
                           <input
                             type="text"
                             value={lead.child_name || ''}
@@ -461,21 +450,22 @@ export default function LeadPoolPage() {
 
                       {/* SĐT */}
                       <td>
-                        <div className="min-w-[100px] font-mono text-xs text-surface-700 dark:text-surface-300">
+                        <div className="min-w-[80px] font-mono text-xs text-surface-700 dark:text-surface-300">
                           {lead.phone || '—'}
                         </div>
                       </td>
 
                       {/* Năm sinh con */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[80px]">
+                        <div className="relative flex items-center min-w-[75px]">
                           <select
                             value={lead.child_birth_year || ''}
                             onChange={(e) => handleInputBlur(lead.id, 'child_birth_year', lead.child_birth_year, e.target.value)}
                             disabled={savingLeads[lead.id]?.child_birth_year}
                             className="select-field py-1 px-2 text-xs w-full"
                           >
-                            <option value="">— Năm sinh —</option>
+                            <option value="">Năm sinh</option>
+
                             {BIRTH_YEAR_RANGE.map(year => (
                               <option key={year} value={year}>{year}</option>
                             ))}

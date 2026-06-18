@@ -124,6 +124,14 @@
     @apply hover:bg-surface-800/30;
   }
 
+  /* ===== COMPACT TABLE ===== */
+  .data-table-compact thead th {
+    @apply px-2 py-2;
+  }
+  .data-table-compact tbody td {
+    @apply px-2 py-1.5;
+  }
+
   /* ===== MILESTONE ROW ===== */
   .milestone-row {
     @apply bg-accent-50/50 hover:bg-accent-100/50;
