@@ -31,19 +31,20 @@ const STAT_COLORS = {
   yellow:  { bg: 'bg-yellow-100 dark:bg-yellow-500/10',  text: 'text-yellow-600 dark:text-yellow-400' },
 };
 
-function StatCard({ icon: Icon, label, value, color = 'primary' }) {
+function StatCard({ icon: Icon, label, value, color = 'primary', children }) {
   const c = STAT_COLORS[color] || STAT_COLORS.primary;
   return (
-    <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
+    <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200 flex flex-col justify-between">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs text-surface-500 font-medium uppercase tracking-wider">{label}</p>
           <p className="text-2xl font-bold text-surface-900 dark:text-surface-100 mt-1">{value}</p>
         </div>
-        <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center`}>
+        <div className={`w-12 h-12 rounded-xl ${c.bg} flex items-center justify-center flex-shrink-0`}>
           <Icon className={`w-6 h-6 ${c.text}`} />
         </div>
       </div>
+      {children}
     </div>
   );
 }
@@ -271,13 +272,13 @@ export default function DashboardPage() {
     if (isTelesale && !isLeadTelesale) {
       return rawFunnel.map(f => {
         if (f.level_group === 'L0') {
-          return { ...f, count: countL0 };
+          return { ...f, count: countL0 + contacted };
         }
         return f;
       });
     }
     return rawFunnel;
-  }, [rawFunnel, isTelesale, isLeadTelesale, countL0]);
+  }, [rawFunnel, isTelesale, isLeadTelesale, countL0, contacted]);
 
   if (!data) { // Skeletons only on initial load
     return (
@@ -318,12 +319,34 @@ export default function DashboardPage() {
   const rateL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
   const rateL4L1 = contacted > 0 ? ((paid / contacted) * 100).toFixed(1) : '0.0';
   const rateL2L1 = contacted > 0 ? ((booked / contacted) * 100).toFixed(1) : '0.0';
-  const rateL1L0 = countL0 > 0 ? ((contacted / countL0) * 100).toFixed(1) : '0.0';
+  const totalL0 = countL0 + contacted;
+  const rateL1L0 = totalL0 > 0 ? ((contacted / totalL0) * 100).toFixed(1) : '0.0';
   const rateTelesaleL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
 
   // Unified cards configuration for all roles
   const statsCards = isTelesale && !isLeadTelesale ? [
-    { icon: HiOutlineInbox, label: "L0 được gắn tên", value: countL0, color: "yellow" },
+    {
+      isCustom: true,
+      render: () => (
+        <StatCard
+          icon={HiOutlineInbox}
+          label="L0 được gắn tên"
+          value={totalL0}
+          color="yellow"
+        >
+          <div className="mt-2 pt-2 border-t border-surface-100 dark:border-surface-800 text-[10px] text-surface-500 space-y-0.5">
+            <div className="flex justify-between">
+              <span>Chưa lên L1:</span>
+              <span className="font-semibold text-surface-700 dark:text-surface-300">{countL0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Đã lên L1:</span>
+              <span className="font-semibold text-surface-700 dark:text-surface-300">{contacted}</span>
+            </div>
+          </div>
+        </StatCard>
+      )
+    },
     { icon: HiOutlineUserGroup, label: "Tổng L1", value: contacted, color: "primary" },
     { icon: HiOutlineCalendar, label: "Lịch hẹn", value: booked, color: "blue" },
     { icon: HiOutlineCalendar, label: "Hẹn cần xử lý", value: countPending, color: "yellow" },
