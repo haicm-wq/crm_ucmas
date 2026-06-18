@@ -39,6 +39,9 @@ export default function LeadPoolPage() {
   const [pageSize, setPageSize] = useState(100);
   const [savingLeads, setSavingLeads] = useState({}); // { [leadId]: { [field]: boolean } }
   const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null });
+  // Lưu tạm graduation level đang chọn cho từng sản phẩm của từng lead
+  // { [leadId]: { [productCode]: levelCode } }
+  const [pendingProductLevels, setPendingProductLevels] = useState({});
   // Bug1 fix: dùng ref map thay vì single shared state để tránh race condition
   const focusedValueRef = useRef({});
   const loadRef = useRef(null);
@@ -226,35 +229,111 @@ export default function LeadPoolPage() {
     }
   };
 
-  const handleProductLevelChange = async (leadId, productCode, levelCode) => {
+  const handleProductLevelChange = (leadId, productCode, levelCode) => {
     const lead = pool.find(l => l.id === leadId);
     if (!lead) return;
 
     const isGraduationLevel = !L0_BASE_LEVELS.includes(levelCode);
 
-    // Validation: level ≥ L1 yêu cầu trung tâm
-    if (isGraduationLevel) {
-      if (!lead.assigned_center) {
-        toast.error('Cần chọn Trung tâm trước khi chuyển level này');
-        return;
-      }
-
-      // ConfirmDialog: cảnh báo lead sẽ chuyển sang Danh sách Lead
-      const lvlDef = productLevels.find(l => l.product_code === productCode && l.level_code === levelCode) || getLevelInfo(levelCode);
-      
-      setConfirmDialog({
-        open: true,
-        message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Level "${lvlDef.label}" (${levelCode}) của sản phẩm ${productCode}.\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L0 và xuất hiện ở Danh sách Lead.\n\nBạn có chắc chắn muốn thực hiện?`,
-        onConfirm: () => {
-          setConfirmDialog({ open: false, message: '', onConfirm: null });
-          executeProductLevelChange(leadId, productCode, levelCode);
-        },
-      });
+    // Validation: graduation level yêu cầu trung tâm
+    if (isGraduationLevel && !lead.assigned_center) {
+      toast.error('Cần chọn Trung tâm trước khi chuyển level này');
       return;
     }
 
-    // Level cơ bản L0 — chuyển trực tiếp
-    executeProductLevelChange(leadId, productCode, levelCode);
+    if (!isGraduationLevel) {
+      // Level cơ bản L0 — nếu đang có pending graduation thì xóa sản phẩm này
+      setPendingProductLevels(prev => {
+        const next = { ...prev };
+        if (next[leadId]) {
+          const leadPending = { ...next[leadId] };
+          delete leadPending[productCode];
+          if (Object.keys(leadPending).length === 0) delete next[leadId];
+          else next[leadId] = leadPending;
+        }
+        return next;
+      });
+      // Cập nhật trực tiếp level cơ bản
+      executeProductLevelChange(leadId, productCode, levelCode);
+      return;
+    }
+
+    // --- Graduation level: lưu tạm, chờ đủ tất cả sản phẩm ---
+    const allProducts = lead.interested_products || [];
+
+    // Lấy pending hiện tại của lead này
+    const currentPending = pendingProductLevels[leadId] || {};
+    const newPending = { ...currentPending, [productCode]: levelCode };
+
+    // Cập nhật UI ngay (để user thấy dropdown đổi)
+    setPendingProductLevels(prev => ({
+      ...prev,
+      [leadId]: newPending,
+    }));
+
+    // Kiểm tra xem tất cả sản phẩm đã có graduation level chưa
+    const allSelected = allProducts.every(p => {
+      const chosen = newPending[p];
+      return chosen && !L0_BASE_LEVELS.includes(chosen);
+    });
+
+    if (!allSelected) {
+      // Chưa đủ — thông báo còn thiếu
+      const missing = allProducts.filter(p => {
+        const chosen = newPending[p];
+        return !chosen || L0_BASE_LEVELS.includes(chosen);
+      });
+      toast(`Đã chọn level cho ${productCode}. Còn cần chọn level cho: ${missing.join(', ')}`, { icon: 'ℹ️', duration: 3000 });
+      return;
+    }
+
+    // Đủ tất cả — hiện ConfirmDialog
+    const summaryLines = allProducts
+      .map(p => {
+        const lvl = newPending[p];
+        const lvlDef = productLevels.find(l => l.product_code === p && l.level_code === lvl);
+        return `  • ${p}: ${lvl}${lvlDef ? ' — ' + lvlDef.label : ''}`;
+      })
+      .join('\n');
+
+    setConfirmDialog({
+      open: true,
+      message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Danh sách Lead với các level:\n\n${summaryLines}\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L0.\n\nBạn có chắc chắn muốn thực hiện?`,
+      onConfirm: () => {
+        setConfirmDialog({ open: false, message: '', onConfirm: null });
+        // Thực hiện cập nhật lần lượt cho từng sản phẩm
+        executeAllProductLevelChanges(leadId, newPending, allProducts);
+        // Xóa pending sau khi confirm
+        setPendingProductLevels(prev => {
+          const next = { ...prev };
+          delete next[leadId];
+          return next;
+        });
+      },
+    });
+  };
+
+  const executeAllProductLevelChanges = async (leadId, levelMap, allProducts) => {
+    markSaving(leadId, 'level_code', true);
+    try {
+      for (const productCode of allProducts) {
+        const levelCode = levelMap[productCode];
+        if (!levelCode) continue;
+        const { error } = await supabase.rpc('rpc_update_lead_product_level', {
+          p_lead_id: leadId,
+          p_product_code: productCode,
+          p_level_code: levelCode,
+          p_note: `Cập nhật Level ${productCode} trực tiếp từ kho L0`,
+        });
+        if (error) throw error;
+      }
+      toast.success('✅ Lead đã chuyển sang Danh sách Lead');
+      loadPool(pagination.page);
+    } catch (err) {
+      toast.error(err.message || 'Lỗi cập nhật level sản phẩm');
+    } finally {
+      markSaving(leadId, 'level_code', false);
+    }
   };
 
   const executeProductLevelChange = async (leadId, productCode, levelCode) => {
@@ -267,12 +346,7 @@ export default function LeadPoolPage() {
         p_note: `Cập nhật Level ${productCode} trực tiếp từ kho L0`,
       });
       if (error) throw error;
-      
-      const isGraduation = !L0_BASE_LEVELS.includes(levelCode);
-      toast.success(isGraduation
-        ? `✅ Lead đã chuyển sang Danh sách Lead cho sản phẩm ${productCode}`
-        : 'Đã cập nhật level sản phẩm'
-      );
+      toast.success('Đã cập nhật level sản phẩm');
       loadPool(pagination.page);
     } catch (err) {
       toast.error(err.message || 'Lỗi cập nhật level sản phẩm');
@@ -623,7 +697,11 @@ export default function LeadPoolPage() {
                         <div className="relative flex flex-col gap-1.5 justify-center min-w-[125px]">
                           {lead.interested_products && lead.interested_products.length > 0 ? (
                             lead.interested_products.map((p_code) => {
-                              const currentLvl = lead.lead_product_levels?.find(l => l.product_code === p_code)?.level_code || 'L0';
+                              // Ưu tiên hiển thị pending (đang chọn) nếu có, nếu không dùng level từ DB
+                              const pendingLvl = pendingProductLevels[lead.id]?.[p_code];
+                              const savedLvl = lead.lead_product_levels?.find(l => l.product_code === p_code)?.level_code || 'L0';
+                              const currentLvl = pendingLvl || savedLvl;
+                              const isGradPending = pendingLvl && !L0_BASE_LEVELS.includes(pendingLvl);
                               const prodLvls = productLevels.filter(lvl => lvl.product_code === p_code);
                               return (
                                 <div key={p_code} className="flex items-center gap-1">
@@ -634,7 +712,11 @@ export default function LeadPoolPage() {
                                     value={currentLvl}
                                     onChange={(e) => handleProductLevelChange(lead.id, p_code, e.target.value)}
                                     disabled={isCenter || savingLeads[lead.id]?.level_code}
-                                    className="select-field py-0.5 px-1 text-[11px] w-28 font-semibold bg-white dark:bg-surface-800"
+                                    className={`select-field py-0.5 px-1 text-[11px] w-28 font-semibold ${
+                                      isGradPending
+                                        ? 'bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700'
+                                        : 'bg-white dark:bg-surface-800'
+                                    }`}
                                   >
                                     <optgroup label="── Xử lý trong Kho L0 ──">
                                       {L0_POOL_LEVELS.map(lvl => (

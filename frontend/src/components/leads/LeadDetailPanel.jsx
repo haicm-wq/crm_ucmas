@@ -16,7 +16,9 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 // cleanFormChanges is now in utils/validation.js
 
 export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, isCenter } = useAuth();
+  // Chỉ admin hoặc sale (không phải trung tâm) mới được đổi Sale đặt lịch
+  const canEditStaff = isAdmin || !isCenter;
   // Performance: dùng cached data từ SharedDataProvider thay vì fetch mỗi lần mở panel
   const { products: allProducts, productLevels: allProductLevels, customFieldsDef } = useSharedData();
   const [activeTab, setActiveTab] = useState('info');
@@ -487,15 +489,24 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
                 {editing && (
                   <div>
-                    <label className="block text-xs font-medium text-surface-500 mb-1">Sale đặt lịch</label>
+                    <label className="block text-xs font-medium text-surface-500 mb-1">
+                      Sale đặt lịch
+                      {!canEditStaff && (
+                        <span className="ml-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-normal">(Chỉ Sale/Admin được đổi)</span>
+                      )}
+                    </label>
                     {staffLoading ? (
                       <p className="text-xs text-surface-500 py-2">Đang tải...</p>
-                    ) : (
+                    ) : canEditStaff ? (
                       <select value={form.assigned_staff} onChange={(e) => setForm({ ...form, assigned_staff: e.target.value })}
                         className="select-field py-2 text-sm">
                         <option value="">— Chưa gán —</option>
                         {staff.map((s) => (<option key={s.id} value={s.id}>{s.full_name}</option>))}
                       </select>
+                    ) : (
+                      <p className="text-sm text-surface-800 dark:text-surface-200 font-medium py-1">
+                        {staff.find(s => s.id === form.assigned_staff)?.full_name || lead.staff_name || '—'}
+                      </p>
                     )}
                   </div>
                 )}
