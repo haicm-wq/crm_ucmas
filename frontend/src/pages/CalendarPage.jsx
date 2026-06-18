@@ -77,10 +77,10 @@ function CalendarGridView({ appointments, currentMonth, onMonthChange }) {
                 {dayAppts.slice(0, 3).map((a) => {
                   const st = STATUS_MAP[a.appt_status] || STATUS_MAP.scheduled;
                   return (
-                    <div key={a.id} className="flex items-center gap-1 px-1 py-0.5 rounded text-[9px] bg-surface-100 dark:bg-surface-800/50 truncate" title={`${a.full_name} — ${st.label}`}>
+                    <div key={a.id} className="flex items-center gap-1 px-1 py-0.5 rounded text-[9px] bg-surface-100 dark:bg-surface-800/50 truncate" title={`${a.full_name} — Nguồn: ${a.source_type || 'PULL'} — ${st.label}`}>
                       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${st.dot}`} />
                       <span className="truncate text-surface-700 dark:text-surface-300">
-                        {new Date(a.trial_appointment_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} {a.full_name}
+                        {new Date(a.trial_appointment_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} {a.full_name} ({a.source_type || 'PULL'})
                       </span>
                     </div>
                   );
@@ -354,6 +354,13 @@ export default function CalendarPage() {
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
                               <span className="text-xs text-surface-500 font-mono">{appt.phone}</span>
                               <span className={`badge text-[10px] ${levelInfo.bgClass}`}>{appt.level_code}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                appt.source_type === 'PUSH'
+                                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
+                                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                              }`}>
+                                {appt.source_type || 'PULL'}
+                              </span>
                               <span className="text-xs text-surface-500">{appt.center_name}</span>
                               {appt.sale_name && <span className="text-xs text-surface-600 dark:text-surface-400">· {appt.sale_name}</span>}
                             </div>
