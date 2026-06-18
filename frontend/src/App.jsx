@@ -1,16 +1,34 @@
-import { lazy, Suspense, Component } from 'react';
+import { lazy, Suspense, Component, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import LoginPage from './pages/LoginPage';
 
+// Helper to handle chunk loading failures due to new deployments (Vite hashing issues)
+function lazyWithRetry(componentImport) {
+  return lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      console.error('Lazy loading failed, reloading page:', error);
+      const hasReloaded = window.sessionStorage.getItem('lazy-retry-reloaded');
+      if (!hasReloaded) {
+        window.sessionStorage.setItem('lazy-retry-reloaded', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // Keep pending while page reloads
+      }
+      throw error;
+    }
+  });
+}
+
 // P1: Lazy-load route pages for smaller initial bundle
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const LeadPoolPage = lazy(() => import('./pages/LeadPoolPage'));
-const LeadsPage = lazy(() => import('./pages/LeadsPage'));
-const CalendarPage = lazy(() => import('./pages/CalendarPage'));
-const ReportsPage = lazy(() => import('./pages/ReportsPage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage'));
+const LeadPoolPage = lazyWithRetry(() => import('./pages/LeadPoolPage'));
+const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'));
+const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage'));
+const ReportsPage = lazyWithRetry(() => import('./pages/ReportsPage'));
+const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'));
 
 // DX2: Route-level loading fallback
 function PageLoader() {
@@ -75,6 +93,11 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   const { user } = useAuth();
+
+  useEffect(() => {
+    // Clear reload flag on successful mount
+    window.sessionStorage.removeItem('lazy-retry-reloaded');
+  }, []);
 
   return (
     <ErrorBoundary>
