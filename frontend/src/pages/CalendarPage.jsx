@@ -156,6 +156,40 @@ export default function CalendarPage() {
     }
   }, [currentMonth, viewMode]);
 
+  const stats = useMemo(() => {
+    let scheduled = 0;
+    let attended = 0;
+    let missed = 0;
+    let cancelled = 0;
+
+    appointments.forEach((a) => {
+      switch (a.appt_status) {
+        case 'scheduled':
+          scheduled++;
+          break;
+        case 'attended':
+          attended++;
+          break;
+        case 'missed':
+          missed++;
+          break;
+        case 'cancelled':
+          cancelled++;
+          break;
+        default:
+          break;
+      }
+    });
+
+    return {
+      total: appointments.length,
+      scheduled,
+      attended,
+      missed,
+      cancelled,
+    };
+  }, [appointments]);
+
   const filteredAppointments = filters.status
     ? appointments.filter((a) => a.appt_status === filters.status)
     : appointments;
@@ -178,7 +212,17 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100 flex items-center gap-2">
             <HiOutlineCalendar className="w-7 h-7 text-primary-400" /> Lịch hẹn học thử
           </h1>
-          <p className="text-sm text-surface-500">{filteredAppointments.length} lịch hẹn</p>
+          <div className="text-xs sm:text-sm text-surface-500 mt-1.5 flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5">
+            <span>Tổng lịch: <strong className="text-surface-800 dark:text-surface-200 font-semibold">{stats.total}</strong></span>
+            <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
+            <span>Cần nhắc lịch: <strong className="text-blue-500 dark:text-blue-400 font-semibold">{stats.scheduled}</strong></span>
+            <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
+            <span>Đã học thử: <strong className="text-green-500 dark:text-green-400 font-semibold">{stats.attended}</strong></span>
+            <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
+            <span>Bỏ lỡ: <strong className="text-red-500 dark:text-red-400 font-semibold">{stats.missed}</strong></span>
+            <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
+            <span>Đã hủy: <strong className="text-surface-400 dark:text-surface-500 font-semibold">{stats.cancelled}</strong></span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
