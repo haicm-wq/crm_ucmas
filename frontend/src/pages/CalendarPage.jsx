@@ -195,9 +195,13 @@ export default function CalendarPage() {
 
   // Group by date for list view
   const groupedByDate = useMemo(() => {
+    const DAYS_OF_WEEK = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const groups = {};
     filteredAppointments.forEach((appt) => {
-      const dateKey = new Date(appt.trial_appointment_at).toLocaleDateString('vi-VN');
+      const dateObj = new Date(appt.trial_appointment_at);
+      const dayOfWeek = DAYS_OF_WEEK[dateObj.getDay()];
+      const formattedDate = dateObj.toLocaleDateString('vi-VN');
+      const dateKey = `${dayOfWeek}, ${formattedDate}`;
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(appt);
     });
