@@ -330,13 +330,13 @@ export default function DashboardPage() {
       render: () => (
         <StatCard
           icon={HiOutlineInbox}
-          label="L0 được gắn tên"
+          label="L0"
           value={totalL0}
           color="yellow"
         >
           <div className="mt-2 pt-2 border-t border-surface-100 dark:border-surface-800 text-[10px] text-surface-500 space-y-0.5">
             <div className="flex justify-between">
-              <span>Chưa lên L1:</span>
+              <span>Kho L0:</span>
               <span className="font-semibold text-surface-700 dark:text-surface-300">{countL0}</span>
             </div>
             <div className="flex justify-between">
