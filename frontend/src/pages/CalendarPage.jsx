@@ -281,13 +281,25 @@ export default function CalendarPage() {
                         }`}
                       >
                         <div className="flex items-start sm:items-center gap-4 min-w-0">
-                          <div className="text-center min-w-[60px] pt-1 sm:pt-0">
-                            <p className="text-base sm:text-lg font-bold text-primary-600 dark:text-primary-400">
+                          <div className="text-center min-w-[70px] pt-1 sm:pt-0 flex flex-col items-center justify-center">
+                            {appt.lead_code && (
+                              <span className="text-[10px] font-mono font-semibold text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800/80 px-1 rounded mb-1">
+                                {appt.lead_code}
+                              </span>
+                            )}
+                            <p className="text-base sm:text-lg font-bold text-primary-600 dark:text-primary-400 leading-none">
                               {new Date(appt.trial_appointment_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-surface-800 dark:text-surface-100">{appt.full_name}</p>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <p className="text-sm font-semibold text-surface-800 dark:text-surface-100">{appt.full_name}</p>
+                              {(appt.child_name || appt.child_birth_year || appt.address) && (
+                                <span className="text-[11px] text-surface-500 dark:text-surface-400 bg-surface-100/50 dark:bg-surface-800/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  👶 {appt.child_name || 'Chưa có tên con'}{appt.child_birth_year ? ` (${appt.child_birth_year})` : ''}{appt.address ? ` - 📍 ${appt.address}` : ''}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
                               <span className="text-xs text-surface-500 font-mono">{appt.phone}</span>
                               <span className={`badge text-[10px] ${levelInfo.bgClass}`}>{appt.level_code}</span>
