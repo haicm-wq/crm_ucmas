@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { fetchDashboardAnalytics } from '../services/api';
+import { supabase } from '../lib/supabase';
+
 import { CardSkeleton, ChartSkeleton } from '../components/ui/SkeletonLoader';
 import toast from 'react-hot-toast';
 import {
@@ -177,6 +179,8 @@ export default function DashboardPage() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [countL0, setCountL0] = useState(0);
+  const [countPending, setCountPending] = useState(0);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -191,13 +195,43 @@ export default function DashboardPage() {
         product_codes: activeFilters.selectedProducts.length > 0 ? activeFilters.selectedProducts : null,
       });
       setData(result);
+
+      // Custom queries for telesale role
+      if (isTelesale && !isLeadTelesale) {
+        // Query L0 leads assigned to this telesale
+        let queryL0 = supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('level_group', 'L0')
+          .eq('assigned_staff', user.id);
+
+        if (activeFilters.from) queryL0 = queryL0.gte('created_at', `${activeFilters.from}T00:00:00Z`);
+        if (activeFilters.to) queryL0 = queryL0.lte('created_at', `${activeFilters.to}T23:59:59Z`);
+
+        const { count: l0Count, error: l0Err } = await queryL0;
+        if (!l0Err) setCountL0(l0Count || 0);
+
+        // Query pending appointment reminders
+        let queryPending = supabase
+          .from('v_trial_appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('assigned_staff', user.id)
+          .eq('appt_status', 'scheduled')
+          .or('sale_remind_status.is.null,sale_remind_status.neq.reminded');
+
+        if (activeFilters.from) queryPending = queryPending.gte('trial_appointment_at', `${activeFilters.from}T00:00:00Z`);
+        if (activeFilters.to) queryPending = queryPending.lte('trial_appointment_at', `${activeFilters.to}T23:59:59Z`);
+
+        const { count: pendingCount, error: pendingErr } = await queryPending;
+        if (!pendingErr) setCountPending(pendingCount || 0);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Lỗi tải dữ liệu dashboard');
     } finally {
       setLoading(false);
     }
-  }, [activeFilters, isCenter, user?.center_id]);
+  }, [activeFilters, isCenter, user?.center_id, isTelesale, isLeadTelesale, user?.id]);
 
   useEffect(() => {
     loadDashboard();
@@ -243,8 +277,19 @@ export default function DashboardPage() {
   }
 
   // View state is single center if user is center OR selected exactly one center
-  const isHQ = !isCenter && (selectedCenters.length !== 1);
-  const funnel = data.funnel || [];
+  const isHQ = !isCenter && !isTelesale && (selectedCenters.length !== 1);
+  const rawFunnel = data.funnel || [];
+  const funnel = useMemo(() => {
+    if (isTelesale && !isLeadTelesale) {
+      return rawFunnel.map(f => {
+        if (f.level_group === 'L0') {
+          return { ...f, count: countL0 };
+        }
+        return f;
+      });
+    }
+    return rawFunnel;
+  }, [rawFunnel, isTelesale, isLeadTelesale, countL0]);
   const maxFunnel = Math.max(...funnel.map((f) => parseInt(f.count) || 0), 1);
 
   // Prepare chart data
@@ -270,9 +315,43 @@ export default function DashboardPage() {
   const rateL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
   const rateL4L1 = contacted > 0 ? ((paid / contacted) * 100).toFixed(1) : '0.0';
   const rateL2L1 = contacted > 0 ? ((booked / contacted) * 100).toFixed(1) : '0.0';
+  const rateL1L0 = countL0 > 0 ? ((contacted / countL0) * 100).toFixed(1) : '0.0';
+  const rateTelesaleL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
 
   // Unified cards configuration for all roles
-  const statsCards = [
+  const statsCards = isTelesale && !isLeadTelesale ? [
+    { icon: HiOutlineInbox, label: "L0 được gắn tên", value: countL0, color: "yellow" },
+    { icon: HiOutlineUserGroup, label: "Tổng L1", value: contacted, color: "primary" },
+    { icon: HiOutlineCalendar, label: "Lịch hẹn", value: booked, color: "blue" },
+    { icon: HiOutlineCalendar, label: "Hẹn cần xử lý", value: countPending, color: "yellow" },
+    { icon: HiOutlineTrendingUp, label: "Tổng L3", value: trialed, color: "green" },
+    { icon: HiOutlineStar, label: "Tổng L4", value: paid, color: "yellow" },
+    {
+      isCustom: true,
+      render: () => (
+        <div className="glass-card p-5 group hover:border-primary-500/30 transition-colors duration-200">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1 w-full font-sans">
+              <p className="text-xs text-surface-500 font-semibold uppercase tracking-wider">Hiệu suất</p>
+              <div className="flex flex-col gap-1.5 mt-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-surface-500 font-medium">Tỷ lệ L1/L0:</span>
+                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateL1L0}%</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-surface-500 font-medium">Tỷ lệ L3/L1:</span>
+                  <span className="font-bold text-surface-900 dark:text-surface-100">{rateTelesaleL3L1}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-green-150 dark:bg-green-500/10 flex items-center justify-center flex-shrink-0 ml-2">
+              <HiOutlineTrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ] : [
     { icon: HiOutlineUserGroup, label: "Tổng L1", value: contacted, color: "primary" },
     { icon: HiOutlineCalendar, label: "Tổng L2", value: booked, color: "blue" },
     { icon: HiOutlineTrendingUp, label: "Tổng L3", value: trialed, color: "green" },
@@ -516,7 +595,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className={`grid grid-cols-2 md:grid-cols-3 ${isTelesale && !isLeadTelesale ? 'lg:grid-cols-4 xl:grid-cols-7' : 'lg:grid-cols-5'} gap-4`}>
         {statsCards.map((card, i) => {
           if (card.isCustom) return <div key={i}>{card.render()}</div>;
           return (
@@ -531,7 +610,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 ${!isTelesale ? 'lg:grid-cols-2' : ''} gap-6`}>
         {/* Funnel */}
         <div className="glass-card p-5">
           <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200 mb-4 flex items-center gap-2">
@@ -551,40 +630,42 @@ export default function DashboardPage() {
         </div>
 
         {/* Source Distribution Chart — HQ only */}
-        {isHQ && sourceData.length > 0 ? (
-          <div className="glass-card p-5">
-            <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200 mb-4">📊 Phân bố nguồn Lead</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={sourceData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                  innerRadius={50} outerRadius={80} paddingAngle={5} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {sourceData.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          /* Staff Performance — Center / Telesale view */
-          <div className="glass-card p-5">
-            <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4">👥 Hiệu suất nhân viên</h3>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {(data.staffPerformance || []).map((s, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/30">
-                  <span className="text-sm text-surface-700 dark:text-surface-300">{s.staff_name || 'Chưa gán'}</span>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="text-surface-500">Lũy kế L1: {s.total_leads}</span>
-                    <span className="text-green-600 dark:text-green-400 font-medium">Chốt L4: {s.paid_leads}</span>
-                  </div>
-                </div>
-              ))}
-              {(data.staffPerformance || []).length === 0 && (
-                <p className="text-center text-sm text-surface-500 py-8">Không có dữ liệu nhân viên</p>
-              )}
+        {!isTelesale && (
+          isHQ && sourceData.length > 0 ? (
+            <div className="glass-card p-5">
+              <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200 mb-4">📊 Phân bố nguồn Lead</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={sourceData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                    innerRadius={50} outerRadius={80} paddingAngle={5} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {sourceData.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          </div>
+          ) : (
+            /* Staff Performance — Center / Telesale view */
+            <div className="glass-card p-5">
+              <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4">👥 Hiệu suất nhân viên</h3>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {(data.staffPerformance || []).map((s, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800/30">
+                    <span className="text-sm text-surface-700 dark:text-surface-300">{s.staff_name || 'Chưa gán'}</span>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-surface-500">Lũy kế L1: {s.total_leads}</span>
+                      <span className="text-green-600 dark:text-green-400 font-medium">Chốt L4: {s.paid_leads}</span>
+                    </div>
+                  </div>
+                ))}
+                {(data.staffPerformance || []).length === 0 && (
+                  <p className="text-center text-sm text-surface-500 py-8">Không có dữ liệu nhân viên</p>
+                )}
+              </div>
+            </div>
+          )
         )}
       </div>
 
@@ -628,7 +709,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Detailed Center Summary Table — HQ only */}
-      {isHQ && byCenterDetailed.length > 0 && (
+      {isHQ && !isTelesale && byCenterDetailed.length > 0 && (
         <div className="glass-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-surface-800 dark:text-surface-200">
@@ -795,7 +876,7 @@ export default function DashboardPage() {
       )}
 
       {/* HQ extras: milestones */}
-      {isHQ && data.recentMilestones?.length > 0 && (
+      {isHQ && !isTelesale && data.recentMilestones?.length > 0 && (
         <div className="glass-card p-5">
           <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-200 mb-4">🎯 Milestone gần đây</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
