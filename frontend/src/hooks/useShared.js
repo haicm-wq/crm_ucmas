@@ -33,8 +33,9 @@ export function useSupabaseRealtime(table, onChangeCallback, options = {}) {
     const channelConfig = { event: '*', schema: 'public', table };
     if (filter) channelConfig.filter = filter;
 
+    const channelId = Math.random().toString(36).substring(2, 9);
     const channel = supabase
-      .channel(`${table}-realtime`)
+      .channel(`${table}-realtime-${channelId}`)
       .on('postgres_changes', channelConfig, () => {
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
