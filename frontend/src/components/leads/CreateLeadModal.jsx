@@ -196,35 +196,91 @@ export default function CreateLeadModal({ onClose, onCreated }) {
             )}
           </div>
 
-          {dupCheck?.exists && (
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl animate-fade-in">
-              <div className="flex items-start gap-3">
-                <HiOutlineExclamation className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                    ⚠️ SĐT này đã có {dupCheck.count} lead trên hệ thống!
-                  </p>
-                  <div className="mt-2 space-y-1">
-                    {dupCheck.leads.map((l) => (
-                      <p key={l.id} className="text-xs text-surface-700 dark:text-surface-300">
-                        • <span className="text-primary-600 dark:text-primary-400 font-mono">{l.lead_code}</span> — {l.full_name}
-                        {l.child_birth_year ? ` (sinh ${l.child_birth_year})` : ''} — {l.level_code}
-                      </p>
-                    ))}
+          {dupCheck?.exists && (() => {
+            // Phân loại lead trùng: center khác / kho L0 / center hiện tại
+            const isBlockedByCenter = isCenter && dupCheck.leads.some(
+              (l) => l.center_name || l.level_group === 'L0'
+            );
+
+            return (
+              <div className={`p-4 rounded-xl animate-fade-in border ${
+                isBlockedByCenter
+                  ? 'bg-red-500/10 border-red-500/30'
+                  : 'bg-yellow-500/10 border-yellow-500/30'
+              }`}>
+                <div className="flex items-start gap-3">
+                  <HiOutlineExclamation className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                    isBlockedByCenter ? 'text-red-400' : 'text-yellow-400'
+                  }`} />
+                  <div className="flex-1">
+                    <p className={`text-sm font-semibold ${
+                      isBlockedByCenter
+                        ? 'text-red-700 dark:text-red-300'
+                        : 'text-yellow-700 dark:text-yellow-300'
+                    }`}>
+                      {isBlockedByCenter
+                        ? '⛔ SĐT này đã tồn tại trên hệ thống — Không thể tạo trùng!'
+                        : `⚠️ SĐT này đã có ${dupCheck.count} lead trên hệ thống!`
+                      }
+                    </p>
+
+                    <div className="mt-2 space-y-2">
+                      {dupCheck.leads.map((l) => {
+                        const isL0 = l.level_group === 'L0' || l.level_code === 'L1.KK';
+                        return (
+                          <div key={l.id} className="text-xs p-2 rounded-lg bg-white/50 dark:bg-surface-800/50">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-primary-600 dark:text-primary-400 font-mono font-bold">{l.lead_code}</span>
+                              <span className="text-surface-700 dark:text-surface-300">{l.full_name}</span>
+                              {l.child_birth_year && <span className="text-surface-500">(sinh {l.child_birth_year})</span>}
+                              <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${
+                                isL0 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                                     : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                              }`}>{l.level_code}</span>
+                            </div>
+                            {isL0 ? (
+                              <p className="mt-1 text-orange-700 dark:text-orange-300 font-medium">
+                                📥 Đang nằm trong <strong>Kho L0</strong> (chưa giao về trung tâm)
+                                {l.staff_name && <> — Sale đặt lịch: <strong>{l.staff_name}</strong></>}
+                                {!l.staff_name && <span className="italic"> — Chưa có Sale đặt lịch phụ trách. Hãy liên hệ quản lý để được chia lead về trung tâm.</span>}
+                                . <span className="underline">Hãy liên hệ Sale đặt lịch để xếp lead này về trung tâm của bạn.</span>
+                              </p>
+                            ) : l.center_name ? (
+                              <p className="mt-1 text-red-700 dark:text-red-300 font-medium">
+                                🏛️ Đang thuộc <strong>{l.center_name}</strong>
+                                {l.staff_name && <> — Sale: <strong>{l.staff_name}</strong></>}
+                              </p>
+                            ) : (
+                              <p className="mt-1 text-surface-500">Chưa gán trung tâm</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Chỉ cho xác nhận tiếp tục nếu không bị chặn (Admin/Marketing) */}
+                    {!isBlockedByCenter && (
+                      <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                        <input type="checkbox" checked={dupConfirmed}
+                          onChange={(e) => setDupConfirmed(e.target.checked)}
+                          className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-yellow-500" />
+                        <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">Tôi xác nhận muốn tạo lead mới với SĐT này</span>
+                      </label>
+                    )}
                   </div>
-                  <label className="flex items-center gap-2 mt-3 cursor-pointer">
-                    <input type="checkbox" checked={dupConfirmed}
-                      onChange={(e) => setDupConfirmed(e.target.checked)}
-                      className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-yellow-500" />
-                    <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">Tôi xác nhận muốn tạo lead mới với SĐT này</span>
-                  </label>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+
 
           <div className="flex gap-2 pt-2">
-            <button onClick={handleSubmit} disabled={saving || (dupCheck?.exists && !dupConfirmed)}
+            <button onClick={handleSubmit} disabled={saving || (dupCheck?.exists && (
+              // Center: chặn khi lead đã có center hoặc đang ở L0
+              (isCenter && dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0'))
+              // Admin/Marketing: cần xác nhận
+              || (!isCenter && !dupConfirmed)
+            ))}
               className="btn-primary text-sm disabled:opacity-50">
               {saving ? 'Đang tạo...' : 'Tạo Lead'}
             </button>

@@ -249,10 +249,15 @@ export async function updateLeadLevelAndProducts(leadId, levelCode, note) {
 export async function checkPhone(phone) {
   const { data, error } = await supabase
     .from('leads')
-    .select('id, lead_code, full_name, child_birth_year, level_code')
+    .select('id, lead_code, full_name, child_birth_year, level_code, level_group, centers!assigned_center(name), profiles!assigned_staff(full_name)')
     .eq('phone', phone);
   if (error) throw error;
-  return { exists: data.length > 0, count: data.length, leads: data };
+  const leads = (data || []).map((l) => ({
+    ...l,
+    center_name: l.centers?.name || null,
+    staff_name: l.profiles?.full_name || null,
+  }));
+  return { exists: leads.length > 0, count: leads.length, leads };
 }
 
 export async function fetchSiblings(leadId) {
