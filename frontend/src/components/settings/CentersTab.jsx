@@ -22,7 +22,7 @@ export default function CentersTab() {
       </div>
       <div className="overflow-x-auto">
         <table className="data-table text-sm">
-          <thead><tr><th>Mã</th><th>Tên</th><th>Địa chỉ</th><th>SĐT</th><th>Quản lý</th><th>Active</th></tr></thead>
+          <thead><tr><th>Mã</th><th>Tên</th><th>Địa chỉ</th><th>SĐT</th><th>Quản lý</th><th className="text-center">Active</th></tr></thead>
           <tbody>
             {loading ? (
               <tr><td colSpan={6} className="text-center py-8">

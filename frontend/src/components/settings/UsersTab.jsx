@@ -172,7 +172,7 @@ export default function UsersTab() {
             <thead>
               <tr>
                 <th>Họ tên</th><th>Tên đăng nhập</th><th>Quyền</th><th>Trung tâm</th>
-                <th>Active</th><th></th>
+                <th className="text-center">Active</th><th></th>
               </tr>
             </thead>
             <tbody>
