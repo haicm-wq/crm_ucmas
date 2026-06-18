@@ -132,14 +132,34 @@ export default function ReportsPage() {
   const renderTable = (cols, rows) => {
     const rowList = Array.isArray(rows) ? rows : [];
     return (
-      <div className="overflow-x-auto">
-        <table className="data-table text-sm">
+      <div className="overflow-x-auto max-w-6xl w-full">
+        <table className="data-table text-sm max-w-6xl">
           <thead>
-            <tr>{cols.map((c) => (<th key={c.key}>{c.label}</th>))}</tr>
+            <tr>
+              {cols.map((c) => (
+                <th 
+                  key={c.key} 
+                  className={c.headerClassName || ''} 
+                  style={c.width ? { width: c.width } : undefined}
+                >
+                  {c.label}
+                </th>
+              ))}
+            </tr>
           </thead>
           <tbody>
             {rowList.map((row, i) => (
-              <tr key={i}>{cols.map((c) => (<td key={c.key} className={c.className || ''}>{c.render ? c.render(row) : (row[c.key] ?? '—')}</td>))}</tr>
+              <tr key={i}>
+                {cols.map((c) => (
+                  <td 
+                    key={c.key} 
+                    className={c.className || ''} 
+                    style={c.width ? { width: c.width } : undefined}
+                  >
+                    {c.render ? c.render(row) : (row[c.key] ?? '—')}
+                  </td>
+                ))}
+              </tr>
             ))}
             {rowList.length === 0 && (
               <tr><td colSpan={cols.length} className="text-center py-8 text-surface-500">Không có dữ liệu</td></tr>
@@ -222,10 +242,10 @@ export default function ReportsPage() {
                 <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200">Phễu chuyển đổi</h3>
                 {renderTable([
                   { key: 'level_group', label: 'Level' },
-                  { key: 'count', label: 'Số lead', className: 'text-right font-semibold text-primary-600 dark:text-primary-400' },
+                  { key: 'count', label: 'Số lead', className: 'text-right font-semibold text-primary-600 dark:text-primary-400', headerClassName: 'text-right' },
                 ], data.funnel)}
                 {data.conversion && (
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-6xl">
                     {[
                       { label: 'L0 tổng', value: data.conversion.total_l0 },
                       { label: 'Đạt L1', value: data.conversion.reached_l1 },
@@ -244,32 +264,32 @@ export default function ReportsPage() {
 
             {tab === 'center_conv' && renderTable([
               { key: 'trung_tam', label: 'Trung tâm' },
-              { key: 'nhan_ban_giao', label: 'Nhận BG', className: 'text-right' },
-              { key: 'da_hoc_thu', label: 'Đã học thử', className: 'text-right' },
-              { key: 'da_dong_phi', label: 'Đã đóng phí', className: 'text-right text-green-600 dark:text-green-400 font-semibold' },
-              { key: 'ty_le_chot_pct', label: 'Tỷ lệ %', className: 'text-right font-bold text-primary-600 dark:text-primary-400',
+              { key: 'nhan_ban_giao', label: 'Nhận BG', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'da_hoc_thu', label: 'Đã học thử', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'da_dong_phi', label: 'Đã đóng phí', className: 'text-right text-green-600 dark:text-green-400 font-semibold', headerClassName: 'text-right' },
+              { key: 'ty_le_chot_pct', label: 'Tỷ lệ %', className: 'text-right font-bold text-primary-600 dark:text-primary-400', headerClassName: 'text-right',
                 render: (r) => r.ty_le_chot_pct != null ? `${r.ty_le_chot_pct}%` : '—' },
             ], data)}
 
             {tab === 'sale_perf' && renderTable([
               { key: 'sale_name', label: 'Nhân viên' },
-              { key: 'total_leads', label: 'Tổng lead', className: 'text-right' },
-              { key: 'booked', label: 'Đã hẹn', className: 'text-right' },
-              { key: 'converted', label: 'Đã chốt', className: 'text-right text-green-600 dark:text-green-400 font-semibold' },
+              { key: 'total_leads', label: 'Tổng lead', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'booked', label: 'Đã hẹn', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'converted', label: 'Đã chốt', className: 'text-right text-green-600 dark:text-green-400 font-semibold', headerClassName: 'text-right' },
             ], data)}
 
             {tab === 'booking_sale_perf' && renderTable([
-              { key: 'sale_name', label: 'Nhân viên Sale' },
-              { key: 'l0_count', label: 'Nhận L0', className: 'text-right font-mono' },
-              { key: 'l1_count', label: 'Đạt L1', className: 'text-right font-mono' },
-              { key: 'l2_booked_count', label: 'Lịch hẹn (L2.2B)', className: 'text-right text-blue-600 dark:text-blue-400 font-semibold font-mono' },
-              { key: 'l3_attended_count', label: 'Đến test (L3.1)', className: 'text-right font-mono' },
-              { key: 'l3_total_count', label: 'Mốc L3 tổng', className: 'text-right font-mono' },
-              { key: 'l1_l0_rate', label: 'Tỷ lệ L1/L0', className: 'text-right font-bold text-amber-600 dark:text-amber-400',
+              { key: 'sale_name', label: 'Nhân viên Sale', width: '20%' },
+              { key: 'l0_count', label: 'Nhận L0', className: 'text-right font-mono', headerClassName: 'text-right', width: '8%' },
+              { key: 'l1_count', label: 'Đạt L1', className: 'text-right font-mono', headerClassName: 'text-right', width: '8%' },
+              { key: 'l2_booked_count', label: 'Lịch hẹn (L2.2B)', className: 'text-right text-blue-600 dark:text-blue-400 font-semibold font-mono', headerClassName: 'text-right', width: '12%' },
+              { key: 'l3_attended_count', label: 'Đến test (L3.1)', className: 'text-right font-mono', headerClassName: 'text-right', width: '12%' },
+              { key: 'l3_total_count', label: 'Mốc L3 tổng', className: 'text-right font-mono', headerClassName: 'text-right', width: '12%' },
+              { key: 'l1_l0_rate', label: 'Tỷ lệ L1/L0', className: 'text-right font-bold text-amber-600 dark:text-amber-400', headerClassName: 'text-right', width: '9%',
                 render: (r) => r.l1_l0_rate != null ? `${r.l1_l0_rate}%` : '—' },
-              { key: 'l2_l1_rate', label: 'Tỷ lệ L2.2B/L1', className: 'text-right font-bold text-primary-600 dark:text-primary-400',
+              { key: 'l2_l1_rate', label: 'Tỷ lệ L2.2B/L1', className: 'text-right font-bold text-primary-600 dark:text-primary-400', headerClassName: 'text-right', width: '10%',
                 render: (r) => r.l2_l1_rate != null ? `${r.l2_l1_rate}%` : '—' },
-              { key: 'l3_l1_rate', label: 'Tỷ lệ L3/L1', className: 'text-right font-bold text-green-600 dark:text-green-400',
+              { key: 'l3_l1_rate', label: 'Tỷ lệ L3/L1', className: 'text-right font-bold text-green-600 dark:text-green-400', headerClassName: 'text-right', width: '9%',
                 render: (r) => r.l3_l1_rate != null ? `${r.l3_l1_rate}%` : '—' },
             ], data)}
 
@@ -279,7 +299,7 @@ export default function ReportsPage() {
                   <h3 className="text-sm font-semibold text-surface-850 dark:text-surface-200 mb-3">
                     Phễu chuyển đổi rút gọn (L1 → L4)
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 max-w-6xl">
                     {(data.funnel || []).map((item) => (
                       <div key={item.level} className="p-3 bg-surface-100 dark:bg-surface-800/30 rounded-xl text-center border border-surface-200/50 dark:border-surface-700/50">
                         <p className="text-[10px] text-surface-500 uppercase font-semibold tracking-wider">Mốc {item.level}</p>
@@ -296,7 +316,7 @@ export default function ReportsPage() {
                   {renderTable([
                     { key: 'level_code', label: 'Mã Level', className: 'font-mono' },
                     { key: 'label', label: 'Tên trạng thái' },
-                    { key: 'count', label: 'Số lượng chuyển dịch', className: 'text-right font-semibold text-primary-600 dark:text-primary-400',
+                    { key: 'count', label: 'Số lượng chuyển dịch', className: 'text-right font-semibold text-primary-600 dark:text-primary-400', headerClassName: 'text-right',
                       render: (r) => (
                         <span style={{ color: r.color }} className="font-semibold">{r.count}</span>
                       )
@@ -308,10 +328,10 @@ export default function ReportsPage() {
 
             {tab === 'center_cmp' && renderTable([
               { key: 'center_name', label: 'Trung tâm' },
-              { key: 'total', label: 'Tổng', className: 'text-right' },
-              { key: 'trialed', label: 'Học thử', className: 'text-right' },
-              { key: 'paid', label: 'Đóng phí', className: 'text-right text-green-600 dark:text-green-400 font-semibold' },
-              { key: 'conversion_pct', label: '%', className: 'text-right font-bold text-primary-600 dark:text-primary-400',
+              { key: 'total', label: 'Tổng', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'trialed', label: 'Học thử', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'paid', label: 'Đóng phí', className: 'text-right text-green-600 dark:text-green-400 font-semibold', headerClassName: 'text-right' },
+              { key: 'conversion_pct', label: '%', className: 'text-right font-bold text-primary-600 dark:text-primary-400', headerClassName: 'text-right',
                 render: (r) => r.conversion_pct != null ? `${r.conversion_pct}%` : '—' },
             ], data)}
 
@@ -320,12 +340,12 @@ export default function ReportsPage() {
                 <span className={`font-medium ${r.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{r.source_type}</span>
               )},
               { key: 'ad_campaign', label: 'Chiến dịch' },
-              { key: 'count', label: 'Số lead', className: 'text-right' },
-              { key: 'converted', label: 'Chốt', className: 'text-right text-green-600 dark:text-green-400 font-semibold' },
+              { key: 'count', label: 'Số lead', className: 'text-right', headerClassName: 'text-right' },
+              { key: 'converted', label: 'Chốt', className: 'text-right text-green-600 dark:text-green-400 font-semibold', headerClassName: 'text-right' },
             ], data)}
 
             {tab === 'time' && data && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-6xl">
                 {[
                   { label: 'L0 → L1', value: data.gio_l0_l1 },
                   { label: 'L1 → L2', value: data.gio_l1_l2 },

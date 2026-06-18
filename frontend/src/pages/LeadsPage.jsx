@@ -367,14 +367,30 @@ export default function LeadsPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table" style={{ minWidth: '2200px' }} id="lead-table">
+          <table className="data-table" style={{ minWidth: '1850px' }} id="lead-table">
             <thead>
               <tr>
-                <th>Mã Lead</th><th>Họ tên</th><th>Tên con</th><th>SĐT</th><th>Năm sinh con</th>
-                <th>Trung tâm</th><th>Sale đặt lịch</th><th>Nguồn</th><th>Sản phẩm</th><th>Level UCMAS</th><th>Level UCKID</th>
-                <th>L1 UCMAS</th><th>L2 UCMAS</th><th>L3 UCMAS</th><th>L4 UCMAS</th>
-                <th>L1 UCKID</th><th>L2 UCKID</th><th>L3 UCKID</th><th>L4 UCKID</th>
-                <th>Liên hệ cuối</th><th>Follow-up</th>
+                <th className="w-[85px]">Mã Lead</th>
+                <th className="w-full min-w-[150px]">Họ tên</th>
+                <th className="w-[100px]">Tên con</th>
+                <th className="w-[100px]">SĐT</th>
+                <th className="w-[80px]">Năm sinh con</th>
+                <th className="w-[130px]">Trung tâm</th>
+                <th className="w-[130px]">Sale đặt lịch</th>
+                <th className="w-[70px]">Nguồn</th>
+                <th className="w-[110px]">Sản phẩm</th>
+                <th className="w-[95px]">Level UCMAS</th>
+                <th className="w-[95px]">Level UCKID</th>
+                <th className="w-[85px]">L1 UCMAS</th>
+                <th className="w-[85px]">L2 UCMAS</th>
+                <th className="w-[85px]">L3 UCMAS</th>
+                <th className="w-[85px]">L4 UCMAS</th>
+                <th className="w-[85px]">L1 UCKID</th>
+                <th className="w-[85px]">L2 UCKID</th>
+                <th className="w-[85px]">L3 UCKID</th>
+                <th className="w-[85px]">L4 UCKID</th>
+                <th className="w-[85px]">Liên hệ cuối</th>
+                <th className="w-[85px]">Follow-up</th>
               </tr>
             </thead>
             <tbody className={loading && leads.length > 0 ? "opacity-60 transition-opacity duration-200 pointer-events-none" : "transition-opacity duration-200"}>

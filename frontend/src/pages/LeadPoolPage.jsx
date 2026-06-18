@@ -366,7 +366,7 @@ export default function LeadPoolPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table" style={{ minWidth: '1700px' }}>
+          <table className="data-table" style={{ minWidth: '1420px' }}>
             <thead>
               <tr>
                 <th className="w-10">
@@ -374,18 +374,18 @@ export default function LeadPoolPage() {
                     onChange={toggleAll}
                     className="rounded bg-white dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-primary-500" />
                 </th>
-                <th>Mã Lead</th>
-                <th>Họ tên phụ huynh</th>
-                <th>Tên con</th>
-                <th>SĐT</th>
-                <th>Năm sinh con</th>
-                <th>Địa chỉ</th>
-                <th>Trung tâm</th>
-                <th>Sale đặt lịch</th>
-                <th>Sản phẩm</th>
-                <th>Level</th>
-                <th>Nguồn</th>
-                <th>Ngày tạo</th>
+                <th className="w-[85px]">Mã Lead</th>
+                <th className="w-[160px]">Họ tên phụ huynh</th>
+                <th className="w-[110px]">Tên con</th>
+                <th className="w-[105px]">SĐT</th>
+                <th className="w-[85px]">Năm sinh con</th>
+                <th className="w-full">Địa chỉ</th>
+                <th className="w-[130px]">Trung tâm</th>
+                <th className="w-[130px]">Sale đặt lịch</th>
+                <th className="w-[130px]">Sản phẩm</th>
+                <th className="w-[130px]">Level</th>
+                <th className="w-[75px]">Nguồn</th>
+                <th className="w-[110px]">Ngày tạo</th>
               </tr>
             </thead>
             <tbody>
@@ -424,7 +424,7 @@ export default function LeadPoolPage() {
                       
                       {/* Họ tên phụ huynh */}
                       <td>
-                        <div className="flex items-center gap-1.5 min-w-[180px] font-medium text-xs">
+                        <div className="flex items-center gap-1.5 min-w-[160px] font-medium text-xs">
                           <span>{lead.full_name || '—'}</span>
                           {delayed && (
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
@@ -441,7 +441,7 @@ export default function LeadPoolPage() {
 
                       {/* Tên con */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[130px]">
+                        <div className="relative flex items-center min-w-[110px]">
                           <input
                             type="text"
                             value={lead.child_name || ''}
@@ -461,14 +461,14 @@ export default function LeadPoolPage() {
 
                       {/* SĐT */}
                       <td>
-                        <div className="min-w-[120px] font-mono text-xs text-surface-700 dark:text-surface-300">
+                        <div className="min-w-[100px] font-mono text-xs text-surface-700 dark:text-surface-300">
                           {lead.phone || '—'}
                         </div>
                       </td>
 
                       {/* Năm sinh con */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[95px]">
+                        <div className="relative flex items-center min-w-[80px]">
                           <select
                             value={lead.child_birth_year || ''}
                             onChange={(e) => handleInputBlur(lead.id, 'child_birth_year', lead.child_birth_year, e.target.value)}
@@ -488,7 +488,7 @@ export default function LeadPoolPage() {
 
                       {/* Địa chỉ */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[170px]">
+                        <div className="relative flex items-center min-w-[160px]">
                           <input
                             type="text"
                             value={lead.address || ''}
@@ -508,7 +508,7 @@ export default function LeadPoolPage() {
 
                       {/* Trung tâm */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[140px]">
+                        <div className="relative flex items-center min-w-[130px]">
                           <select
                             value={lead.assigned_center || ''}
                             onChange={(e) => handleCenterChange(lead.id, e.target.value)}
@@ -528,7 +528,7 @@ export default function LeadPoolPage() {
 
                       {/* Sale đặt lịch */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[140px]">
+                        <div className="relative flex items-center min-w-[130px]">
                           <select
                             value={lead.assigned_staff || ''}
                             onChange={(e) => handleStaffChange(lead.id, e.target.value)}
@@ -548,7 +548,7 @@ export default function LeadPoolPage() {
 
                       {/* Sản phẩm quan tâm */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[140px]">
+                        <div className="relative flex items-center min-w-[125px]">
                           <MultiSelect
                             options={PRODUCT_OPTIONS}
                             selected={lead.interested_products || []}
@@ -565,7 +565,7 @@ export default function LeadPoolPage() {
 
                       {/* Level — dynamic dropdown */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[180px]">
+                        <div className="relative flex items-center min-w-[125px]">
                           <select
                             value={lead.level_code || 'L0'}
                             onChange={(e) => handleLevelChange(lead.id, e.target.value)}
