@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineExclamation } from 'react-icons/hi';
 
 export default function CreateLeadModal({ onClose, onCreated }) {
-  const { user, isCenter } = useAuth();
+  const { user, isCenter, isTelesale, isLeadTelesale } = useAuth();
   const [form, setForm] = useState({
     full_name: '', phone: '', child_birth_year: '',
     child_name: '',
@@ -48,6 +48,13 @@ export default function CreateLeadModal({ onClose, onCreated }) {
       const phoneCheck = validatePhone(form.phone);
       if (!phoneCheck.valid) { toast.error(phoneCheck.message); return; }
     }
+
+    // Center bị chặn cứng nếu lead trùng đã có center hoặc đang ở L0
+    const isCenterBlocked = isCenter && dupCheck?.exists &&
+      dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0');
+    if (isCenterBlocked) { toast.error('Không thể tạo lead trùng SĐT này!'); return; }
+
+    // Admin/Marketing/Telesale/LeadTelesale: cần xác nhận trước khi tạo trùng
     if (dupCheck?.exists && !dupConfirmed) { toast.error('Vui lòng xác nhận tiếp tục'); return; }
 
     setSaving(true);
@@ -258,7 +265,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
                       })}
                     </div>
 
-                    {/* Chỉ cho xác nhận tiếp tục nếu không bị chặn (Admin/Marketing) */}
+                    {/* Admin/Marketing/Sale đặt lịch/Lead Sale: cho xác nhận tiếp tục */}
                     {!isBlockedByCenter && (
                       <label className="flex items-center gap-2 mt-3 cursor-pointer">
                         <input type="checkbox" checked={dupConfirmed}
@@ -276,9 +283,9 @@ export default function CreateLeadModal({ onClose, onCreated }) {
 
           <div className="flex gap-2 pt-2">
             <button onClick={handleSubmit} disabled={saving || (dupCheck?.exists && (
-              // Center: chặn khi lead đã có center hoặc đang ở L0
+              // Center: chặn cứng khi lead đã có center hoặc đang ở L0
               (isCenter && dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0'))
-              // Admin/Marketing: cần xác nhận
+              // Admin/Marketing/Sale đặt lịch/Lead Sale: cần xác nhận checkbox
               || (!isCenter && !dupConfirmed)
             ))}
               className="btn-primary text-sm disabled:opacity-50">
