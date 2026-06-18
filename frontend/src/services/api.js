@@ -438,16 +438,17 @@ export async function fetchDashboardCenter(centerId) {
   }, 60000);
 }
 
-export async function fetchDashboardAnalytics({ from, to, center_ids, product_codes } = {}) {
+export async function fetchDashboardAnalytics({ from, to, center_ids, product_codes, source_type } = {}) {
   const sortedCenters = Array.isArray(center_ids) ? [...center_ids].sort() : center_ids;
   const sortedProducts = Array.isArray(product_codes) ? [...product_codes].sort() : product_codes;
   
-  return withCache('fetchDashboardAnalytics', { from, to, center_ids: sortedCenters, product_codes: sortedProducts }, async () => {
+  return withCache('fetchDashboardAnalytics', { from, to, center_ids: sortedCenters, product_codes: sortedProducts, source_type }, async () => {
     const { data, error } = await supabase.rpc('rpc_dashboard_analytics', {
       p_from: from || null,
       p_to: to || null,
       p_center_ids: sortedCenters || null,
       p_product_codes: sortedProducts || null,
+      p_source_type: source_type || null,
     });
     if (error) throw error;
     return data;

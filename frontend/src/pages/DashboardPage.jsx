@@ -171,12 +171,14 @@ export default function DashboardPage() {
   const [to, setTo] = useState(getToday());
   const [selectedCenters, setSelectedCenters] = useState(isCenter ? [user.center_id] : []);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedSourceType, setSelectedSourceType] = useState(isCenter ? 'PULL' : ''); // Center mặc định xem PULL
 
   const [activeFilters, setActiveFilters] = useState({
     from: getFirstDayOfMonth(),
     to: getToday(),
     selectedCenters: isCenter ? [user.center_id] : [],
-    selectedProducts: []
+    selectedProducts: [],
+    sourceType: isCenter ? 'PULL' : '',
   });
 
   const [data, setData] = useState(null);
@@ -195,6 +197,7 @@ export default function DashboardPage() {
         to: activeFilters.to ? `${activeFilters.to}T23:59:59Z` : null,
         center_ids: centerFilter.length > 0 ? centerFilter : null,
         product_codes: activeFilters.selectedProducts.length > 0 ? activeFilters.selectedProducts : null,
+        source_type: activeFilters.sourceType || null,
       });
       setData(result);
 
@@ -244,7 +247,8 @@ export default function DashboardPage() {
       from,
       to,
       selectedCenters,
-      selectedProducts
+      selectedProducts,
+      sourceType: selectedSourceType,
     });
   };
 
@@ -253,17 +257,20 @@ export default function DashboardPage() {
     const defaultTo = getToday();
     const defaultCenters = isCenter ? [user.center_id] : [];
     const defaultProducts = [];
+    const defaultSource = isCenter ? 'PULL' : '';
 
     setFrom(defaultFrom);
     setTo(defaultTo);
     setSelectedCenters(defaultCenters);
     setSelectedProducts(defaultProducts);
+    setSelectedSourceType(defaultSource);
 
     setActiveFilters({
       from: defaultFrom,
       to: defaultTo,
       selectedCenters: defaultCenters,
-      selectedProducts: defaultProducts
+      selectedProducts: defaultProducts,
+      sourceType: defaultSource,
     });
   };
 
@@ -593,6 +600,22 @@ export default function DashboardPage() {
           onChange={setSelectedProducts}
           placeholder="Tất cả sản phẩm"
         />
+
+        {/* Nguồn lead — chỉ hiện cho Trung tâm */}
+        {isCenter && (
+          <div>
+            <label className="block text-xs text-surface-500 mb-1">Nguồn lead</label>
+            <select
+              value={selectedSourceType}
+              onChange={(e) => setSelectedSourceType(e.target.value)}
+              className="select-field py-2 text-sm"
+            >
+              <option value="PULL">Chỉ PULL (Quảng cáo)</option>
+              <option value="PUSH">Chỉ PUSH (Giới thiệu)</option>
+              <option value="">Tất cả (PULL + PUSH)</option>
+            </select>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button 
