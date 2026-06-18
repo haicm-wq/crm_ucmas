@@ -267,6 +267,11 @@ export default function DashboardPage() {
     });
   };
 
+  const contacted = data?.conversion?.contacted || 0;
+  const booked = data?.conversion?.booked || 0;
+  const trialed = data?.conversion?.trialed || 0;
+  const paid = data?.conversion?.paid || 0;
+
   const rawFunnel = data?.funnel || [];
   const funnel = useMemo(() => {
     if (isTelesale && !isLeadTelesale) {
@@ -310,11 +315,6 @@ export default function DashboardPage() {
   // Map dropdown choices
   const centerOptions = (centers || []).map((c) => ({ label: c.name, value: c.id }));
   const productOptions = (products || []).map((p) => ({ label: p.name, value: p.code }));
-
-  const contacted = data.conversion?.contacted || 0;
-  const booked = data.conversion?.booked || 0;
-  const trialed = data.conversion?.trialed || 0;
-  const paid = data.conversion?.paid || 0;
 
   const rateL3L1 = contacted > 0 ? ((trialed / contacted) * 100).toFixed(1) : '0.0';
   const rateL4L1 = contacted > 0 ? ((paid / contacted) * 100).toFixed(1) : '0.0';
