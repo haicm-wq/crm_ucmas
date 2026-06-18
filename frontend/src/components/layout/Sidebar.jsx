@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useSupabaseRealtime } from '../../hooks/useShared';
 import {
   HiOutlineHome, HiOutlineInbox, HiOutlineUsers,
   HiOutlineCalendar, HiOutlineChartBar, HiOutlineCog,
@@ -21,7 +22,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const { user, isAdmin } = useAuth();
   const [trashCount, setTrashCount] = useState(0);
 
-  useEffect(() => {
+  const fetchCount = useCallback(() => {
     if (!isAdmin) return;
     supabase
       .from('leads')
@@ -30,6 +31,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       .then(({ count }) => setTrashCount(count || 0))
       .catch(() => {});
   }, [isAdmin]);
+
+  useEffect(() => {
+    fetchCount();
+  }, [fetchCount]);
+
+  useSupabaseRealtime('leads', fetchCount, { debounceMs: 1000 });
+
 
   const filteredItems = navItems.filter((item) =>
     item.roles.includes(user?.permission_group)
