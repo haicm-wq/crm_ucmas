@@ -672,8 +672,8 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          ) : (
-            /* Staff Performance — Center / Telesale view */
+          ) : !isCenter ? (
+            /* Staff Performance — chỉ hiện với Telesale/Admin, không hiện với Trung tâm */
             <div className="glass-card p-5">
               <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4">👥 Hiệu suất nhân viên</h3>
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -691,7 +691,7 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          )
+          ) : null
         )}
       </div>
 

@@ -34,7 +34,7 @@ export default function ReportsPage() {
 
   const filteredTabs = TABS.filter((t) => {
     if (isCenter) {
-      return ['funnel', 'sale_perf', 'ucmas_report', 'uckid_report'].includes(t.id);
+      return ['funnel', 'ucmas_report', 'uckid_report'].includes(t.id);
     }
     if (isTelesale || isLeadTelesale) {
       return ['booking_sale_perf', 'funnel', 'ucmas_report', 'uckid_report'].includes(t.id);
