@@ -157,6 +157,7 @@ export default function CalendarPage() {
   }, [currentMonth, viewMode]);
 
   const stats = useMemo(() => {
+    let scheduled = 0;
     let scheduledSale = 0;
     let scheduledCenter = 0;
     let attended = 0;
@@ -165,6 +166,7 @@ export default function CalendarPage() {
 
     appointments.forEach((a) => {
       if (a.appt_status === 'scheduled') {
+        scheduled++;
         if (a.sale_remind_status !== 'reminded') scheduledSale++;
         if (a.center_remind_status !== 'reminded') scheduledCenter++;
       } else if (a.appt_status === 'attended') {
@@ -178,6 +180,7 @@ export default function CalendarPage() {
 
     return {
       total: appointments.length,
+      scheduled,
       scheduledSale,
       scheduledCenter,
       attended,
@@ -210,6 +213,8 @@ export default function CalendarPage() {
           </h1>
           <div className="text-xs sm:text-sm text-surface-500 mt-1.5 flex flex-wrap items-center gap-x-2 sm:gap-x-3 gap-y-1.5">
             <span>Tổng lịch: <strong className="text-surface-800 dark:text-surface-200 font-semibold">{stats.total}</strong></span>
+            <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
+            <span>Đã hẹn: <strong className="text-sky-500 dark:text-sky-400 font-semibold">{stats.scheduled}</strong></span>
             <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
             <span>Cần nhắc (Sale): <strong className="text-blue-500 dark:text-blue-400 font-semibold">{stats.scheduledSale}</strong></span>
             <span className="text-surface-300 dark:text-surface-700 hidden sm:inline">•</span>
