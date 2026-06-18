@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { createLead, checkPhone } from '../../services/api';
 import { useSharedData } from '../../contexts/SharedDataProvider';
+import { useAuth } from '../../contexts/AuthContext';
 import { PRODUCTS } from '../../config/constants';
 import { validatePhone } from '../../utils/validation';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlineExclamation } from 'react-icons/hi';
 
 export default function CreateLeadModal({ onClose, onCreated }) {
+  const { user, isCenter } = useAuth();
   const [form, setForm] = useState({
     full_name: '', phone: '', child_birth_year: '',
     child_name: '',
@@ -54,6 +56,12 @@ export default function CreateLeadModal({ onClose, onCreated }) {
       if (data.child_birth_year) data.child_birth_year = parseInt(data.child_birth_year);
       else delete data.child_birth_year;
       if (!data.phone) delete data.phone;
+
+      // Khi trung tâm tạo lead: tự gán trung tâm và level L1 để hiển thị ngay trong danh sách
+      if (isCenter && user?.center_id) {
+        data.assigned_center = user.center_id;
+        data.level_code = 'L1';  // Trung tâm tạo lead thẳng vào danh sách L1
+      }
 
       await createLead(data);
       toast.success('Tạo lead thành công!');
