@@ -3,6 +3,9 @@
 -- Cho phép Dashboard lọc theo nguồn PULL, PUSH hoặc tổng hợp (NULL = tất cả)
 -- ============================================================
 
+-- Xóa phiên bản cũ (4 tham số) để tránh lỗi "function name is not unique"
+DROP FUNCTION IF EXISTS rpc_dashboard_analytics(TIMESTAMPTZ, TIMESTAMPTZ, UUID[], TEXT[]);
+
 CREATE OR REPLACE FUNCTION rpc_dashboard_analytics(
   p_from TIMESTAMPTZ DEFAULT NULL,
   p_to TIMESTAMPTZ DEFAULT NULL,
