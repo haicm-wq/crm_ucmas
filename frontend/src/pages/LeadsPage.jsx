@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useSharedData } from '../contexts/SharedDataProvider';
+import { useAuth } from '../contexts/AuthContext';
 import { useDebounce, useSupabaseRealtime } from '../hooks/useShared';
-import { fetchLeads, fetchProductLevels } from '../services/api';
+import { fetchLeads, fetchProductLevels, softDeleteLeads } from '../services/api';
 import { getLevelInfo, isMilestone, ALL_LEVEL_CODES } from '../config/levels';
 import { PRODUCTS, PAGE_SIZE_OPTIONS } from '../config/constants';
 import { formatDate } from '../utils/format';
@@ -40,6 +41,7 @@ const OPERATORS = {
 
 export default function LeadsPage() {
   const { centers, allStaff } = useSharedData();
+  const { isAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [leads, setLeads] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
@@ -74,12 +76,49 @@ export default function LeadsPage() {
   const [allProductLevels, setAllProductLevels] = useState([]);
   const [pageSize, setPageSize] = useState(50);
   const loadLeadsRef = useRef(null);
+  // Admin: multi-select delete
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchProductLevels()
       .then(setAllProductLevels)
       .catch(console.error);
   }, []);
+
+  const toggleSelectLead = (e, id) => {
+    e.stopPropagation();
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === leads.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(leads.map((l) => l.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setDeleting(true);
+    try {
+      const result = await softDeleteLeads([...selectedIds]);
+      toast.success(`Đã chuyển ${result?.deleted || selectedIds.size} lead vào thùng rác!`);
+      setShowDeleteConfirm(false);
+      setSelectedIds(new Set());
+      loadLeads(pagination.page);
+    } catch (err) {
+      toast.error('Lỗi xóa lead: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const getProductLevelTime = (lead, productCode, levelPrefix) => {
     const lpl = lead.lead_product_levels?.find((l) => l.product_code === productCode);
@@ -189,6 +228,16 @@ export default function LeadsPage() {
             className="btn-secondary text-sm flex items-center gap-1 py-2 px-3" title="Tải / Dán dữ liệu hàng loạt">
             <HiOutlineUpload className="w-4 h-4" /> <span className="hidden sm:inline">Tải dữ liệu</span>
           </button>
+          {/* Xóa đã chọn — chỉ admin */}
+          {isAdmin && selectedIds.size > 0 && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium flex items-center gap-1.5 py-2 px-3 rounded-xl transition-colors"
+            >
+              <HiOutlineTrash className="w-4 h-4" />
+              Xóa ({selectedIds.size})
+            </button>
+          )}
           <button onClick={() => setShowCreateModal(true)}
             className="btn-primary text-sm flex items-center gap-1 py-2 px-3">
             <HiOutlinePlus className="w-4 h-4" /> <span>Thêm Lead</span>
@@ -370,6 +419,15 @@ export default function LeadsPage() {
           <table className="data-table" style={{ minWidth: '1850px' }} id="lead-table">
             <thead>
               <tr>
+                {isAdmin && (
+                  <th className="w-10 px-3">
+                    <input type="checkbox"
+                      checked={leads.length > 0 && selectedIds.size === leads.length}
+                      onChange={toggleSelectAll}
+                      className="rounded border-surface-300 dark:border-surface-600 text-primary-500"
+                    />
+                  </th>
+                )}
                 <th className="w-[85px]">Mã Lead</th>
                 <th className="w-full min-w-[150px]">Họ tên</th>
                 <th className="w-[100px]">Tên con</th>
@@ -395,9 +453,9 @@ export default function LeadsPage() {
             </thead>
             <tbody className={loading && leads.length > 0 ? "opacity-60 transition-opacity duration-200 pointer-events-none" : "transition-opacity duration-200"}>
               {loading && leads.length === 0 ? (
-                <tr><td colSpan={21} className="p-0"><TableSkeleton rows={8} cols={21} /></td></tr>
+                <tr><td colSpan={isAdmin ? 22 : 21} className="p-0"><TableSkeleton rows={8} cols={isAdmin ? 22 : 21} /></td></tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan={21}>
+                <tr><td colSpan={isAdmin ? 22 : 21}>
                   <EmptyState icon={HiOutlineUsers} title="Không tìm thấy lead nào"
                     description="Thử thay đổi bộ lọc hoặc thêm lead mới" />
                 </td></tr>
@@ -406,8 +464,18 @@ export default function LeadsPage() {
                   const levelInfo = getLevelInfo(lead.level_code);
                   const milestone = isMilestone(lead.level_code);
                   return (
-                    <tr key={lead.id} id={`lead-row-${lead.id}`} onClick={() => setSelectedLead(lead)}
-                      className={milestone ? 'milestone-row' : ''}>
+                    <tr key={lead.id} id={`lead-row-${lead.id}`}
+                      onClick={() => { if (!isAdmin || selectedIds.size === 0) setSelectedLead(lead); }}
+                      className={`${milestone ? 'milestone-row' : ''} ${selectedIds.has(lead.id) ? 'bg-primary-50 dark:bg-primary-900/10' : ''} cursor-pointer`}>
+                      {isAdmin && (
+                        <td className="px-3" onClick={(e) => toggleSelectLead(e, lead.id)}>
+                          <input type="checkbox"
+                            checked={selectedIds.has(lead.id)}
+                            onChange={() => {}}
+                            className="rounded border-surface-300 dark:border-surface-600 text-primary-500 cursor-pointer"
+                          />
+                        </td>
+                      )}
                       <td className="font-mono text-xs text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
                       <td>
                         <div className="font-medium text-surface-800 dark:text-surface-100">{lead.full_name}</div>
@@ -485,6 +553,39 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white dark:bg-surface-900 border border-red-200 dark:border-red-800/50 rounded-2xl shadow-xl w-full max-w-md mx-4 animate-slide-in"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <HiOutlineTrash className="w-7 h-7 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-surface-800 dark:text-surface-100">Xóa lead đã chọn</h3>
+                  <p className="text-sm text-surface-500">Lead sẽ được chuyển vào thùng rác</p>
+                </div>
+              </div>
+              <p className="text-sm text-surface-700 dark:text-surface-300 mb-5">
+                Bạn đã chọn <strong className="text-red-600">{selectedIds.size} lead</strong> để xóa.
+                Lead sẽ được chuyển vào <strong>Thùng rác</strong> và có thể khôi phục sau.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={handleBulkDelete} disabled={deleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-60">
+                  {deleting ? 'Đang xóa...' : `🗑️ Chuyển vào thùng rác`}
+                </button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary text-sm px-4">
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedLead && (
         <LeadDetailPanel lead={selectedLead} centers={centers}

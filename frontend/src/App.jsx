@@ -29,6 +29,7 @@ const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'));
 const CalendarPage = lazyWithRetry(() => import('./pages/CalendarPage'));
 const ReportsPage = lazyWithRetry(() => import('./pages/ReportsPage'));
 const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage'));
+const TrashPage = lazyWithRetry(() => import('./pages/TrashPage'));
 
 // DX2: Route-level loading fallback
 function PageLoader() {
@@ -116,6 +117,7 @@ export default function App() {
                     <Route path="/lich-hen" element={<CalendarPage />} />
                     <Route path="/bao-cao" element={<ReportsPage />} />
                     <Route path="/cai-dat/*" element={<SettingsPage />} />
+                    <Route path="/thung-rac" element={<TrashPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

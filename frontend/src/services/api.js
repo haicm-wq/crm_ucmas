@@ -337,6 +337,49 @@ export async function bulkCreateLeads(leadsData) {
   clearCache();
   return data;
 }
+// ============================================================
+// TRASH / SOFT DELETE (Admin only)
+// ============================================================
+
+export async function softDeleteLeads(leadIds) {
+  const { data, error } = await supabase.rpc('rpc_soft_delete_leads', {
+    p_lead_ids: leadIds,
+  });
+  if (error) throw error;
+  clearCache();
+  return data;
+}
+
+export async function fetchTrashLeads({ page = 1, limit = 50, search = '' } = {}) {
+  const offset = (page - 1) * limit;
+  const { data, error } = await supabase.rpc('rpc_fetch_trash', {
+    p_limit: limit,
+    p_offset: offset,
+    p_search: search || null,
+  });
+  if (error) throw error;
+  return {
+    data: data?.data || [],
+    total: data?.total || 0,
+    totalPages: Math.ceil((data?.total || 0) / limit),
+  };
+}
+
+export async function restoreLeads(leadIds) {
+  const { data, error } = await supabase.rpc('rpc_restore_leads', {
+    p_lead_ids: leadIds,
+  });
+  if (error) throw error;
+  clearCache();
+  return data;
+}
+
+export async function purgeTrash() {
+  const { data, error } = await supabase.rpc('rpc_purge_trash');
+  if (error) throw error;
+  clearCache();
+  return data;
+}
 
 // ============================================================
 // APPOINTMENTS

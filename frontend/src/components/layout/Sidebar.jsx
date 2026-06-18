@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import {
   HiOutlineHome, HiOutlineInbox, HiOutlineUsers,
   HiOutlineCalendar, HiOutlineChartBar, HiOutlineCog,
-  HiOutlineChevronLeft, HiOutlineChevronRight,
+  HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTrash,
 } from 'react-icons/hi';
 
 const navItems = [
@@ -16,7 +18,18 @@ const navItems = [
 ];
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const [trashCount, setTrashCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .not('deleted_at', 'is', null)
+      .then(({ count }) => setTrashCount(count || 0))
+      .catch(() => {});
+  }, [isAdmin]);
 
   const filteredItems = navItems.filter((item) =>
     item.roles.includes(user?.permission_group)
@@ -66,6 +79,37 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
           </NavLink>
         ))}
+
+        {/* Thùng rác — chỉ admin */}
+        {user?.permission_group === 'admin' && (
+          <NavLink
+            to="/thung-rac"
+            onClick={onMobileClose}
+            className={({ isActive }) =>
+              `sidebar-link ${isActive ? 'active' : ''} ${collapsed ? 'justify-center px-3' : ''}`
+            }
+            title={collapsed ? 'Thùng rác' : undefined}
+          >
+            <div className="relative flex-shrink-0">
+              <HiOutlineTrash className="w-5 h-5" />
+              {trashCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center text-[9px] text-white font-bold">
+                  {trashCount > 9 ? '9+' : trashCount}
+                </span>
+              )}
+            </div>
+            {!collapsed && (
+              <span className="text-sm font-medium flex-1 flex items-center justify-between">
+                Thùng rác
+                {trashCount > 0 && (
+                  <span className="ml-auto text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                    {trashCount}
+                  </span>
+                )}
+              </span>
+            )}
+          </NavLink>
+        )}
       </nav>
 
       {/* Collapse button - hidden on mobile */}
