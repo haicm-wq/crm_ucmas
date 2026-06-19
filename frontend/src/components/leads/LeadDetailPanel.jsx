@@ -266,7 +266,21 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
               <span className="text-xs text-surface-500">{levelInfo.label}</span>
             </div>
           </div>
-          <button onClick={onClose} className="btn-ghost"><HiOutlineX className="w-5 h-5" /></button>
+          <div className="flex items-center gap-2">
+            {activeTab === 'info' && (
+              !editing ? (
+                <button onClick={() => setEditing(true)} className="btn-secondary text-sm px-3 py-1.5">Chỉnh sửa</button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-3 py-1.5">
+                    {saving ? 'Đang lưu...' : 'Lưu'}
+                  </button>
+                  <button onClick={() => { setEditing(false); setLevelNote(''); }} className="btn-ghost text-sm px-3 py-1.5">Hủy</button>
+                </div>
+              )
+            )}
+            <button onClick={onClose} className="btn-ghost p-1.5" aria-label="Đóng"><HiOutlineX className="w-5 h-5" /></button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-1 p-1 bg-surface-50 dark:bg-surface-800/30 border-b border-surface-200 dark:border-surface-700">
@@ -285,18 +299,6 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
         <div className="p-5 overflow-y-auto max-h-[60vh]">
           {activeTab === 'info' && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                {!editing ? (
-                  <button onClick={() => setEditing(true)} className="btn-secondary text-sm">Chỉnh sửa</button>
-                ) : (
-                  <div className="flex gap-2">
-                    <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
-                      {saving ? 'Đang lưu...' : 'Lưu'}
-                    </button>
-                    <button onClick={() => { setEditing(false); setLevelNote(''); }} className="btn-ghost text-sm">Hủy</button>
-                  </div>
-                )}
-              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 {[
@@ -413,11 +415,11 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
                 {/* Doanh thu & Thông tin học sinh */}
                 <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
-                  <h4 className="col-span-3 text-xs font-semibold uppercase tracking-wider text-surface-500 flex items-center justify-between">
+                  <h4 className="col-span-3 text-xs font-semibold uppercase tracking-wider text-surface-500 flex items-center gap-3 flex-wrap">
                     <span>Thông tin Học sinh & Doanh thu</span>
                     {((form.level_code || lead.level_code || '').startsWith('L4') && editing) && (
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded animate-pulse">
-                        ⚠️ Khuyến nghị nhập Mã học sinh và Nguyên học liệu khi lên L4
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded animate-pulse normal-case">
+                        ⚠️ Nhập Mã học sinh và Nguyên học liệu khi lên L4
                       </span>
                     )}
                   </h4>
