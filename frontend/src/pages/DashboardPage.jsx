@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 
 const LEVEL_COLORS = {
-  L0: '#6366f1', L1: '#3b82f6', L2: '#0ea5e9', L3: '#10b981',
+  L0: '#6366f1', 'L1.KK': '#6366f1', L1: '#3b82f6', L2: '#0ea5e9', L3: '#10b981',
   L4: '#f59e0b', L5: '#ef4444', L6: '#8b5cf6',
 };
 
@@ -283,7 +283,7 @@ export default function DashboardPage() {
   const funnel = useMemo(() => {
     if (isTelesale && !isLeadTelesale) {
       return rawFunnel.map(f => {
-        if (f.level_group === 'L0') {
+        if (f.level_group === 'L0' || f.level_group === 'L1.KK') {
           return { ...f, count: countL0 + contacted };
         }
         return f;
@@ -368,7 +368,7 @@ export default function DashboardPage() {
               <p className="text-xs text-surface-500 font-semibold uppercase tracking-wider">Hiệu suất</p>
               <div className="flex flex-col gap-1.5 mt-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-surface-500 font-medium">Tỷ lệ L1/L0:</span>
+                  <span className="text-surface-500 font-medium">Tỷ lệ L1/L1.KK:</span>
                   <span className="font-bold text-surface-900 dark:text-surface-100">{rateL1L0}%</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">

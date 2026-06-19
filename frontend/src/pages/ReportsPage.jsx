@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { HiOutlineDocumentReport, HiOutlineRefresh } from 'react-icons/hi';
 
 const TABS = [
-  { id: 'funnel', label: 'Phễu L0→L6' },
+  { id: 'funnel', label: 'Phễu L1.KK→L6' },
   { id: 'center_conv', label: 'Tỷ lệ chốt' },
   { id: 'sale_perf', label: 'Hiệu suất Sale' },
   { id: 'booking_sale_perf', label: 'Sale đặt lịch' },
@@ -265,7 +265,7 @@ export default function ReportsPage() {
                 {data.conversion && (
                   <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-6xl">
                     {[
-                      { label: 'L0 tổng', value: data.conversion.total_l0 },
+                      { label: 'L1.KK tổng', value: data.conversion.total_l0 },
                       { label: 'Đạt L1', value: data.conversion.reached_l1 },
                       { label: 'Đã hẹn', value: data.conversion.booked },
                       { label: 'Đã chốt L4', value: data.conversion.reached_l4 },
@@ -298,12 +298,12 @@ export default function ReportsPage() {
 
             {tab === 'booking_sale_perf' && renderTable([
               { key: 'sale_name', label: 'Nhân viên Sale', width: '20%' },
-              { key: 'l0_count', label: 'Nhận L0', className: 'text-center font-mono', headerClassName: 'text-center', width: '8%' },
+              { key: 'l0_count', label: 'Nhận L1.KK', className: 'text-center font-mono', headerClassName: 'text-center', width: '8%' },
               { key: 'l1_count', label: 'Đạt L1', className: 'text-center font-mono', headerClassName: 'text-center', width: '8%' },
               { key: 'l2_booked_count', label: 'Lịch hẹn (L2.2B)', className: 'text-center text-blue-600 dark:text-blue-400 font-semibold font-mono', headerClassName: 'text-center', width: '12%' },
               { key: 'l3_attended_count', label: 'Đến test (L3.1)', className: 'text-center font-mono', headerClassName: 'text-center', width: '12%' },
               { key: 'l3_total_count', label: 'Mốc L3 tổng', className: 'text-center font-mono', headerClassName: 'text-center', width: '12%' },
-              { key: 'l1_l0_rate', label: 'Tỷ lệ L1/L0', className: 'text-center font-bold text-amber-600 dark:text-amber-400', headerClassName: 'text-center', width: '9%',
+              { key: 'l1_l0_rate', label: 'Tỷ lệ L1/L1.KK', className: 'text-center font-bold text-amber-600 dark:text-amber-400', headerClassName: 'text-center', width: '9%',
                 render: (r) => r.l1_l0_rate != null ? `${r.l1_l0_rate}%` : '—' },
               { key: 'l2_l1_rate', label: 'Tỷ lệ L2.2B/L1', className: 'text-center font-bold text-primary-600 dark:text-primary-400', headerClassName: 'text-center', width: '10%',
                 render: (r) => r.l2_l1_rate != null ? `${r.l2_l1_rate}%` : '—' },
