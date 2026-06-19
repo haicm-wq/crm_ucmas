@@ -2,6 +2,12 @@
 -- MIGRATION: Cập nhật tính toán Báo cáo & Trigger cho L1 Kho kiểm (L1.KK)
 -- Chạy file này trên Supabase SQL Editor
 -- ============================================================
+-- 0. Xóa các phiên bản cũ của hàm để tránh lỗi "not unique" do trùng signature nạp chồng
+DROP FUNCTION IF EXISTS rpc_dashboard_analytics(TIMESTAMPTZ, TIMESTAMPTZ, UUID[], TEXT[]);
+DROP FUNCTION IF EXISTS rpc_dashboard_analytics(TIMESTAMPTZ, TIMESTAMPTZ, UUID[], TEXT[], TEXT);
+DROP FUNCTION IF EXISTS rpc_report_funnel(TIMESTAMPTZ, TIMESTAMPTZ, UUID);
+DROP FUNCTION IF EXISTS rpc_report_funnel(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT);
+DROP FUNCTION IF EXISTS rpc_report_product_analytics(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT);
 
 -- 1. Cập nhật hàm trigger fn_normalize_lead()
 CREATE OR REPLACE FUNCTION fn_normalize_lead() RETURNS TRIGGER AS $$
