@@ -37,7 +37,7 @@ export default function ReportsPage() {
       return ['funnel', 'ucmas_report', 'uckid_report'].includes(t.id);
     }
     if (isTelesale || isLeadTelesale) {
-      return ['booking_sale_perf', 'funnel', 'ucmas_report', 'uckid_report'].includes(t.id);
+      return ['booking_sale_perf', 'funnel', 'ucmas_report', 'uckid_report', 'time'].includes(t.id);
     }
     return true; // Admin/Marketing sees all
   });
@@ -362,23 +362,30 @@ export default function ReportsPage() {
               { key: 'converted', label: 'Chốt', className: 'text-right text-green-600 dark:text-green-400 font-semibold', headerClassName: 'text-right' },
             ], data)}
 
-            {tab === 'time' && data && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-6xl">
-                {[
-                  { label: 'L0 → L1', value: data.gio_l0_l1 },
-                  { label: 'L1 → L2', value: data.gio_l1_l2 },
-                  { label: 'L2 → Hẹn', value: data.gio_l2_hen },
-                  { label: 'Hẹn → Học thử', value: data.gio_hen_hocthu },
-                  { label: 'Học thử → Đóng phí', value: data.gio_hocthu_dongphi },
-                ].map((s) => (
-                  <div key={s.label} className="p-4 bg-surface-100 dark:bg-surface-800/30 rounded-xl text-center">
-                    <p className="text-xs text-surface-500">{s.label}</p>
-                    <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-2">{s.value ?? '—'}</p>
-                    <p className="text-[10px] text-surface-500 mt-1">giờ (TB)</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {tab === 'time' && data && (() => {
+              const showKKMetrics = isAdmin || isTelesale || isLeadTelesale;
+              const items = [
+                ...(showKKMetrics ? [
+                  { label: 'Chăm sóc lần đầu L1 Kho kiểm', value: data.l1_kk_first_process },
+                  { label: 'L1 Kho kiểm → L1', value: data.l1_kk_to_l1 },
+                ] : []),
+                { label: 'L1 → L2.2B', value: data.l1_to_l2_2b },
+                { label: 'L1 → L3', value: data.l1_to_l3 },
+                { label: 'L1 → L4', value: data.l1_to_l4 },
+              ];
+
+              return (
+                <div className={`grid grid-cols-2 md:grid-cols-${items.length} gap-4 max-w-6xl`}>
+                  {items.map((s) => (
+                    <div key={s.label} className="p-4 bg-surface-100 dark:bg-surface-800/30 rounded-xl text-center border border-surface-200/50 dark:border-surface-700/50">
+                      <p className="text-xs text-surface-500 font-medium">{s.label}</p>
+                      <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-2">{s.value ?? '—'}</p>
+                      <p className="text-[10px] text-surface-500 mt-1">giờ (TB)</p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
