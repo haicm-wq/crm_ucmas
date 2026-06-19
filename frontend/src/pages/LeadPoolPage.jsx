@@ -524,7 +524,7 @@ export default function LeadPoolPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table data-table-compact" style={{ minWidth: '1400px' }}>
+          <table className="data-table data-table-compact" style={{ minWidth: '1500px' }}>
             <thead>
               <tr>
                 <th className="w-10 px-3">
@@ -546,14 +546,15 @@ export default function LeadPoolPage() {
                 <th className="w-[120px]">Sản phẩm</th>
                 <th className="w-[120px]">Level</th>
                 <th className="w-[65px]">Nguồn</th>
+                <th className="w-[100px]">Fanpage</th>
                 <th className="w-[100px]">Ngày tạo</th>
               </tr>
             </thead>
             <tbody>
               {loading && pool.length === 0 ? (
-                <tr><td colSpan={14} className="p-0"><TableSkeleton rows={8} cols={14} /></td></tr>
+                <tr><td colSpan={15} className="p-0"><TableSkeleton rows={8} cols={15} /></td></tr>
               ) : filteredPool.length === 0 ? (
-                <tr><td colSpan={14}>
+                <tr><td colSpan={15}>
                   <EmptyState icon={HiOutlineInbox} title="Kho L1 kho kiểm trống"
                     description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L1 kho kiểm"} />
                 </td></tr>
@@ -835,6 +836,13 @@ export default function LeadPoolPage() {
                         <span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
                           {lead.source_type}
                         </span>
+                      </td>
+
+                      {/* Fanpage */}
+                      <td>
+                        <div className="text-xs text-surface-700 dark:text-surface-300 truncate max-w-[120px]" title={lead.fanpage || ''}>
+                          {lead.fanpage || '—'}
+                        </div>
                       </td>
 
                       {/* Ngày tạo */}
