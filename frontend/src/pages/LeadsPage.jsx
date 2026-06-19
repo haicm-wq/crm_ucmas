@@ -144,7 +144,7 @@ export default function LeadsPage() {
 
     return (
       <span
-        className="px-2 py-1 text-[11px] font-bold rounded-md border flex items-center gap-1 w-max"
+        className="px-2 py-1 text-xs font-bold rounded-md border flex items-center gap-1 w-max"
         style={{
           color: color,
           borderColor: `${color}40`,
@@ -430,11 +430,11 @@ export default function LeadsPage() {
                   </th>
                 )}
                 <th className="w-[85px]">Mã Lead</th>
-                <th className="w-full min-w-[150px]">Họ tên</th>
+                <th className="w-[110px]"><div className="leading-tight">Họ tên<br/>phụ huynh</div></th>
                 <th className="w-[100px]">Tên con</th>
                 <th className="w-[100px]">SĐT</th>
                 <th className="w-[80px]">Năm sinh con</th>
-                <th className="w-[130px]">Trung tâm</th>
+                <th className="w-full min-w-[130px]">Trung tâm</th>
                 <th className="w-[130px]">Sale đặt lịch</th>
                 <th className="w-[110px]">Mã học sinh</th>
                 <th className="w-[130px]">Doanh thu</th>
@@ -479,25 +479,25 @@ export default function LeadsPage() {
                           />
                         </td>
                       )}
-                      <td className="font-mono text-xs text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
+                      <td className="font-mono text-sm text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
                       <td>
-                        <div className="font-medium text-surface-800 dark:text-surface-100">{lead.full_name}</div>
+                        <div className="font-semibold text-sm text-surface-800 dark:text-surface-100 min-w-[100px] leading-snug">{lead.full_name}</div>
                       </td>
                       <td className="text-sm font-medium text-surface-800 dark:text-surface-200">{lead.child_name || '—'}</td>
-                      <td className="text-surface-800 dark:text-surface-200 font-mono text-xs font-medium">{lead.phone || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 font-mono text-sm font-medium">{lead.phone || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.child_birth_year || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
-                      <td className="text-surface-800 dark:text-surface-200 font-mono text-xs font-medium">{lead.student_code || '—'}</td>
-                      <td className="text-surface-800 dark:text-surface-200 text-xs font-bold font-mono">
+                      <td className="text-surface-800 dark:text-surface-200 font-mono text-sm font-medium">{lead.student_code || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 text-sm font-bold font-mono">
                         {((lead.tuition_fee || 0) + (lead.material_fee || 0)).toLocaleString('vi-VN')} đ
                       </td>
-                      <td><span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{lead.source_type}</span></td>
+                      <td><span className={`text-sm font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{lead.source_type}</span></td>
                       <td>
                         <div className="flex flex-wrap gap-1">
                           {lead.interested_products && lead.interested_products.length > 0 ? (
                             lead.interested_products.map((p) => (
-                              <span key={p} className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-primary-100 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 border border-primary-200 dark:border-primary-500/20">
+                              <span key={p} className="px-1.5 py-0.5 text-xs font-semibold rounded bg-primary-100 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 border border-primary-200 dark:border-primary-500/20">
                                 {p}
                               </span>
                             ))
@@ -513,17 +513,17 @@ export default function LeadsPage() {
                         {renderProductLevelBadge(lead, 'UCKID')}
                       </td>
                       {/* L1 -> L4 UCMAS */}
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L1'))}</td>
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L2'))}</td>
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L3'))}</td>
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L4'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L1'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L2'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L3'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L4'))}</td>
                       {/* L1 -> L4 UCKID */}
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L1'))}</td>
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L2'))}</td>
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L3'))}</td>
-                      <td className="text-xs font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L4'))}</td>
-                      <td className="text-surface-600 dark:text-surface-400 text-xs font-mono">{formatDate(lead.last_contact_at)}</td>
-                      <td className="text-surface-600 dark:text-surface-400 text-xs font-mono">{formatDate(lead.next_followup_at)}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L1'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L2'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L3'))}</td>
+                      <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCKID', 'L4'))}</td>
+                      <td className="text-surface-600 dark:text-surface-400 text-sm font-mono">{formatDate(lead.last_contact_at)}</td>
+                      <td className="text-surface-600 dark:text-surface-400 text-sm font-mono">{formatDate(lead.next_followup_at)}</td>
                     </tr>
                   );
                 })

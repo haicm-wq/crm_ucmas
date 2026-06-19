@@ -536,19 +536,19 @@ export default function LeadPoolPage() {
                   />
                 </th>
                 <th className="w-[80px]">Mã Lead</th>
-                <th className="w-[150px]">Họ tên phụ huynh</th>
-                <th className="w-[100px]">Tên con</th>
-                <th className="w-[90px]">SĐT</th>
+                <th className="w-[110px]"><div className="leading-tight">Họ tên<br/>phụ huynh</div></th>
+                <th className="w-[90px]">Tên con</th>
+                <th className="w-[85px]">SĐT</th>
                 <th className="w-[80px]">Năm sinh con</th>
                 <th className="w-full">Địa chỉ</th>
-                <th className="w-[120px]">Trung tâm</th>
-                <th className="w-[120px]">Sale đặt lịch</th>
-                <th className="w-[150px]">Ghi chú kho kiểm</th>
-                <th className="w-[120px]">Sản phẩm</th>
-                <th className="w-[120px]">Level</th>
-                <th className="w-[65px]">Nguồn</th>
-                <th className="w-[100px]">Fanpage</th>
-                <th className="w-[100px]">Ngày tạo</th>
+                <th className="w-[110px]">Trung tâm</th>
+                <th className="w-[110px]">Sale đặt lịch</th>
+                <th className="w-[130px]">Ghi chú kho kiểm</th>
+                <th className="w-[110px]">Sản phẩm</th>
+                <th className="w-[110px]">Level</th>
+                <th className="w-[60px]">Nguồn</th>
+                <th className="w-[95px]">Fanpage</th>
+                <th className="w-[95px]">Ngày tạo</th>
               </tr>
             </thead>
             <tbody>
@@ -583,21 +583,21 @@ export default function LeadPoolPage() {
                           className="rounded border-surface-300 dark:border-surface-600 text-primary-500 cursor-pointer"
                         />
                       </td>
-                      <td className={`font-mono text-xs text-primary-600 dark:text-primary-400 ${delayed ? 'border-l-2 border-l-red-500 dark:border-l-red-400' : unprocessed ? 'border-l-2 border-l-amber-500 dark:border-l-amber-400' : ''}`}>
+                      <td className={`font-mono text-sm text-primary-600 dark:text-primary-400 ${delayed ? 'border-l-2 border-l-red-500 dark:border-l-red-400' : unprocessed ? 'border-l-2 border-l-amber-500 dark:border-l-amber-400' : ''}`}>
                         {lead.lead_code}
                       </td>
                       
                       {/* Họ tên phụ huynh */}
                       <td>
-                        <div className="flex items-center gap-1.5 min-w-[140px] font-medium text-xs">
+                        <div className="flex items-center gap-1.5 min-w-[100px] font-medium text-sm">
                           <span>{lead.full_name || '—'}</span>
                           {delayed && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-850 dark:text-red-400 animate-pulse">
                               Trễ
                             </span>
                           )}
                           {unprocessed && !delayed && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-850 dark:text-amber-400">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-850 dark:text-amber-400">
                               Mới
                             </span>
                           )}
@@ -606,7 +606,7 @@ export default function LeadPoolPage() {
 
                       {/* Tên con */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[95px]">
+                        <div className="relative flex items-center min-w-[85px]">
                           <input
                             type="text"
                             value={lead.child_name || ''}
@@ -616,7 +616,7 @@ export default function LeadPoolPage() {
                             onBlur={(e) => handleInputBlur(lead.id, 'child_name', focusedValueRef.current[`${lead.id}-child_name`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={isCenter || savingLeads[lead.id]?.child_name}
-                            className="input-field py-1 px-2 text-xs w-full"
+                            className="input-field py-1 px-2 text-sm w-full"
                           />
                           {savingLeads[lead.id]?.child_name && (
                             <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
@@ -626,19 +626,19 @@ export default function LeadPoolPage() {
 
                       {/* SĐT */}
                       <td>
-                        <div className="min-w-[80px] font-mono text-xs text-surface-700 dark:text-surface-300">
+                        <div className="min-w-[80px] font-mono text-sm text-surface-700 dark:text-surface-300">
                           {lead.phone || '—'}
                         </div>
                       </td>
 
                       {/* Năm sinh con */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[75px]">
+                        <div className="relative flex items-center min-w-[70px]">
                           <select
                             value={lead.child_birth_year || ''}
                             onChange={(e) => handleInputBlur(lead.id, 'child_birth_year', lead.child_birth_year, e.target.value)}
                             disabled={isCenter || savingLeads[lead.id]?.child_birth_year}
-                            className="select-field py-1 px-2 text-xs w-full"
+                            className="select-field py-1 px-2 text-sm w-full"
                           >
                             <option value="">Năm sinh</option>
 
@@ -654,7 +654,7 @@ export default function LeadPoolPage() {
 
                       {/* Địa chỉ */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[160px]">
+                        <div className="relative flex items-center min-w-[150px]">
                           <input
                             type="text"
                             value={lead.address || ''}
@@ -664,7 +664,7 @@ export default function LeadPoolPage() {
                             onBlur={(e) => handleInputBlur(lead.id, 'address', focusedValueRef.current[`${lead.id}-address`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={isCenter || savingLeads[lead.id]?.address}
-                            className="input-field py-1 px-2 text-xs w-full"
+                            className="input-field py-1 px-2 text-sm w-full"
                           />
                           {savingLeads[lead.id]?.address && (
                             <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
@@ -674,12 +674,12 @@ export default function LeadPoolPage() {
 
                       {/* Trung tâm */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[120px]">
+                        <div className="relative flex items-center min-w-[110px]">
                           <select
                             value={lead.assigned_center || ''}
                             onChange={(e) => handleCenterChange(lead.id, e.target.value)}
                             disabled={isCenter || savingLeads[lead.id]?.assigned_center}
-                            className={`select-field py-1 px-2 text-xs w-full ${
+                            className={`select-field py-1 px-2 text-sm w-full ${
                               !lead.assigned_center
                                 ? 'bg-amber-50/60 border-amber-200/80 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 font-medium'
                                 : 'bg-white dark:bg-surface-800'
@@ -698,12 +698,12 @@ export default function LeadPoolPage() {
 
                       {/* Sale đặt lịch */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[120px]">
+                        <div className="relative flex items-center min-w-[110px]">
                           <select
                             value={lead.assigned_staff || ''}
                             onChange={(e) => handleStaffChange(lead.id, e.target.value)}
                             disabled={isCenter || savingLeads[lead.id]?.assigned_staff}
-                            className={`select-field py-1 px-2 text-xs w-full ${
+                            className={`select-field py-1 px-2 text-sm w-full ${
                               !lead.assigned_staff
                                 ? 'bg-amber-50/60 border-amber-200/80 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-400 font-medium'
                                 : 'bg-white dark:bg-surface-800'
@@ -722,7 +722,7 @@ export default function LeadPoolPage() {
 
                       {/* Ghi chú kho kiểm */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[140px]">
+                        <div className="relative flex items-center min-w-[125px]">
                           <input
                             type="text"
                             value={lead.l1_kk_note || ''}
@@ -732,7 +732,7 @@ export default function LeadPoolPage() {
                             onBlur={(e) => handleInputBlur(lead.id, 'l1_kk_note', focusedValueRef.current[`${lead.id}-l1_kk_note`], e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
                             disabled={isCenter || savingLeads[lead.id]?.l1_kk_note}
-                            className="input-field py-1 px-2 text-xs w-full font-sans"
+                            className="input-field py-1 px-2 text-sm w-full font-sans"
                           />
                           {savingLeads[lead.id]?.l1_kk_note && (
                             <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
@@ -742,13 +742,13 @@ export default function LeadPoolPage() {
 
                       {/* Sản phẩm quan tâm */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex items-center min-w-[125px]">
+                        <div className="relative flex items-center min-w-[115px]">
                           <MultiSelect
                             options={PRODUCT_OPTIONS}
                             selected={lead.interested_products || []}
                             onChange={(vals) => handleProductsChange(lead.id, vals)}
                             placeholder="Chọn..."
-                            className="w-full text-xs text-left"
+                            className="w-full text-sm text-left"
                             searchable={false}
                             disabled={isCenter}
                           />
@@ -760,7 +760,7 @@ export default function LeadPoolPage() {
 
                       {/* Level — dynamic dropdown */}
                       <td onClick={(e) => e.stopPropagation()}>
-                        <div className="relative flex flex-col gap-1.5 justify-center min-w-[125px]">
+                        <div className="relative flex flex-col gap-1.5 justify-center min-w-[115px]">
                           {lead.interested_products && lead.interested_products.length > 0 ? (
                             lead.interested_products.map((p_code) => {
                               // Ưu tiên hiển thị pending (đang chọn) nếu có, nếu không dùng level từ DB
@@ -771,14 +771,14 @@ export default function LeadPoolPage() {
                               const prodLvls = productLevels.filter(lvl => lvl.product_code === p_code);
                               return (
                                 <div key={p_code} className="flex items-center gap-1">
-                                  <span className="text-[10px] font-mono font-bold text-surface-500 w-12 truncate" title={p_code}>
+                                  <span className="text-xs font-mono font-bold text-surface-500 w-12 truncate" title={p_code}>
                                     {p_code}:
                                   </span>
                                   <select
                                     value={currentLvl}
                                     onChange={(e) => handleProductLevelChange(lead.id, p_code, e.target.value)}
                                     disabled={isCenter || savingLeads[lead.id]?.level_code}
-                                    className={`select-field py-0.5 px-1 text-[11px] w-28 font-semibold ${
+                                    className={`select-field py-0.5 px-1 text-xs w-28 font-semibold ${
                                       isGradPending
                                         ? 'bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700'
                                         : 'bg-white dark:bg-surface-800'
@@ -809,7 +809,7 @@ export default function LeadPoolPage() {
                               value={lead.level_code || 'L0'}
                               onChange={(e) => handleLevelChange(lead.id, e.target.value)}
                               disabled={isCenter || savingLeads[lead.id]?.level_code}
-                              className="select-field py-1 px-2 text-xs w-full font-semibold"
+                              className="select-field py-1 px-2 text-sm w-full font-semibold"
                             >
                               <optgroup label="── Xử lý trong Kho L0 ──">
                                 {L0_POOL_LEVELS.map(lvl => (
@@ -834,20 +834,20 @@ export default function LeadPoolPage() {
 
                       {/* Nguồn */}
                       <td>
-                        <span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
+                        <span className={`text-sm font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>
                           {lead.source_type}
                         </span>
                       </td>
 
                       {/* Fanpage */}
                       <td>
-                        <div className="text-xs text-surface-700 dark:text-surface-300 truncate max-w-[120px]" title={lead.fanpage || ''}>
+                        <div className="text-sm text-surface-700 dark:text-surface-300 truncate max-w-[110px]" title={lead.fanpage || ''}>
                           {lead.fanpage || '—'}
                         </div>
                       </td>
 
                       {/* Ngày tạo */}
-                      <td className="text-xs text-surface-500 font-mono">
+                      <td className="text-sm text-surface-500 font-mono">
                         {formatDate(lead.created_at)}
                       </td>
                     </tr>
