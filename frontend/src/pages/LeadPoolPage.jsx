@@ -92,9 +92,8 @@ export default function LeadPoolPage() {
     }
   }, [pageSize]);
 
-  useEffect(() => {
-    loadPool(1);
-  }, [pageSize]);
+  // NOTE: không cần useEffect riêng cho pageSize vì loadPool đã phụ thuộc pageSize
+  // và useEffect ở dưới (line 379) đã gọi loadPool() khi loadPool thay đổi.
 
   const handleInputChange = (leadId, field, value) => {
     setPool(prevPool => prevPool.map(lead => {
@@ -420,13 +419,15 @@ export default function LeadPoolPage() {
 
   const handleBulkDelete = async () => {
     if (selected.size === 0) return;
+    const countToDelete = selected.size;
     setDeleting(true);
     try {
       const result = await softDeleteLeads(Array.from(selected));
-      toast.success(`Đã chuyển ${result?.deleted || selected.size} lead vào thùng rác!`);
+      toast.success(`Đã chuyển ${result?.deleted || countToDelete} lead vào thùng rác!`);
       setShowDeleteConfirm(false);
       setSelected(new Set());
-      loadPool(pagination.page);
+      // Dùng loadRef để tránh stale closure với pagination.page
+      loadRef.current?.(pagination.page);
     } catch (err) {
       toast.error('Lỗi xóa lead: ' + err.message);
     } finally {

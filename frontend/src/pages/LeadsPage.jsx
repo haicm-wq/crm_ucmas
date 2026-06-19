@@ -106,13 +106,14 @@ export default function LeadsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
+    const countToDelete = selectedIds.size; // capture trước khi clear state
     setDeleting(true);
     try {
       const result = await softDeleteLeads([...selectedIds]);
-      toast.success(`Đã chuyển ${result?.deleted || selectedIds.size} lead vào thùng rác!`);
+      toast.success(`Đã chuyển ${result?.deleted || countToDelete} lead vào thùng rác!`);
       setShowDeleteConfirm(false);
       setSelectedIds(new Set());
-      loadLeads(pagination.page);
+      loadLeads(1); // về trang 1 vì dữ liệu đã thay đổi
     } catch (err) {
       toast.error('Lỗi xóa lead: ' + err.message);
     } finally {
