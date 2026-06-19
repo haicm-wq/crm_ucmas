@@ -18,7 +18,7 @@ import { validatePhone } from '../utils/validation';
 import { formatDate } from '../utils/format';
 
 // Levels cơ bản cho L0 Pool (luôn hiển thị)
-const L0_BASE_LEVELS = ['L0', 'L1.KK', 'L0.R', 'L0.K'];
+const L0_BASE_LEVELS = ['L1.KK', 'L0.R', 'L0.K'];
 // Levels "tốt nghiệp" — chuyển lead sang Danh sách Lead
 const GRADUATION_LEVELS = ALL_LEVEL_CODES.filter(c => !L0_BASE_LEVELS.includes(c));
 
@@ -86,7 +86,7 @@ export default function LeadPoolPage() {
       const stats = await fetchL0UnprocessedStats();
       setUnprocessedStats(stats);
     } catch {
-      toast.error('Lỗi tải kho L0');
+      toast.error('Lỗi tải kho L1 kho kiểm');
     } finally {
       setLoading(false);
     }
@@ -200,7 +200,7 @@ export default function LeadPoolPage() {
       const levelInfo = getLevelInfo(levelCode);
       setConfirmDialog({
         open: true,
-        message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Level "${levelInfo.label}" (${levelCode}).\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L0 và xuất hiện ở Danh sách Lead.\n\nBạn có chắc chắn muốn thực hiện?`,
+        message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Level "${levelInfo.label}" (${levelCode}).\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L1 kho kiểm và xuất hiện ở Danh sách Lead.\n\nBạn có chắc chắn muốn thực hiện?`,
         onConfirm: () => {
           setConfirmDialog({ open: false, message: '', onConfirm: null });
           executeLevelChange(leadId, levelCode);
@@ -209,7 +209,7 @@ export default function LeadPoolPage() {
       return;
     }
 
-    // Level cơ bản L0 — chuyển trực tiếp
+    // Level cơ bản Kho kiểm — chuyển trực tiếp
     executeLevelChange(leadId, levelCode);
   };
 
@@ -243,7 +243,7 @@ export default function LeadPoolPage() {
     }
 
     if (!isGraduationLevel) {
-      // Level cơ bản L0 — nếu đang có pending graduation thì xóa sản phẩm này
+      // Level cơ bản Kho kiểm — nếu đang có pending graduation thì xóa sản phẩm này
       setPendingProductLevels(prev => {
         const next = { ...prev };
         if (next[leadId]) {
@@ -299,7 +299,7 @@ export default function LeadPoolPage() {
 
     setConfirmDialog({
       open: true,
-      message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Danh sách Lead với các level:\n\n${summaryLines}\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L0.\n\nBạn có chắc chắn muốn thực hiện?`,
+      message: `Lead "${lead.full_name || lead.lead_code}" sẽ được chuyển sang Danh sách Lead với các level:\n\n${summaryLines}\n\nSau khi chuyển, lead sẽ biến mất khỏi Kho L1 kho kiểm.\n\nBạn có chắc chắn muốn thực hiện?`,
       onConfirm: () => {
         setConfirmDialog({ open: false, message: '', onConfirm: null });
         // Thực hiện cập nhật lần lượt cho từng sản phẩm
@@ -765,7 +765,7 @@ export default function LeadPoolPage() {
                             lead.interested_products.map((p_code) => {
                               // Ưu tiên hiển thị pending (đang chọn) nếu có, nếu không dùng level từ DB
                               const pendingLvl = pendingProductLevels[lead.id]?.[p_code];
-                              const savedLvl = lead.lead_product_levels?.find(l => l.product_code === p_code)?.level_code || 'L0';
+                              const savedLvl = lead.lead_product_levels?.find(l => l.product_code === p_code)?.level_code || 'L1.KK';
                               const currentLvl = pendingLvl || savedLvl;
                               const isGradPending = pendingLvl && !L0_BASE_LEVELS.includes(pendingLvl);
                               const prodLvls = productLevels.filter(lvl => lvl.product_code === p_code);
@@ -784,7 +784,7 @@ export default function LeadPoolPage() {
                                         : 'bg-white dark:bg-surface-800'
                                     }`}
                                   >
-                                    <optgroup label="── Xử lý trong Kho L0 ──">
+                                    <optgroup label="── Xử lý trong Kho kiểm ──">
                                       {L0_POOL_LEVELS.map(lvl => (
                                         <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
                                       ))}
@@ -792,7 +792,7 @@ export default function LeadPoolPage() {
                                     {canGraduate(lead) && (
                                       <optgroup label="── Chuyển đi ──">
                                         {prodLvls
-                                          .filter(lvl => !['L0', 'L0.R', 'L0.K', 'L1.KK'].includes(lvl.level_code))
+                                          .filter(lvl => !['L0.R', 'L0.K', 'L1.KK'].includes(lvl.level_code))
                                           .map(lvl => (
                                             <option key={lvl.level_code} value={lvl.level_code}>
                                               {lvl.level_code} — {lvl.label}
@@ -806,12 +806,12 @@ export default function LeadPoolPage() {
                             })
                           ) : (
                             <select
-                              value={lead.level_code || 'L0'}
+                              value={lead.level_code || 'L1.KK'}
                               onChange={(e) => handleLevelChange(lead.id, e.target.value)}
                               disabled={isCenter || savingLeads[lead.id]?.level_code}
                               className="select-field py-1 px-2 text-sm w-full font-semibold"
                             >
-                              <optgroup label="── Xử lý trong Kho L0 ──">
+                              <optgroup label="── Xử lý trong Kho kiểm ──">
                                 {L0_POOL_LEVELS.map(lvl => (
                                   <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
                                 ))}

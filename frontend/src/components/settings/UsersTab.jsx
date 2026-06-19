@@ -143,7 +143,7 @@ export default function UsersTab() {
                 <input type="checkbox" checked={newUser.can_view_l0_pool}
                   onChange={(e) => setNewUser({ ...newUser, can_view_l0_pool: e.target.checked })}
                   className="rounded" />
-                Xem kho L0
+                Xem kho kiểm
               </label>
             </div>
           </div>

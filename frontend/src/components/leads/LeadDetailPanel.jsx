@@ -145,7 +145,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
         return;
       }
     }
-    const isGraduationLevel = !['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(form.level_code);
+    const isGraduationLevel = !['L1.KK', 'L0.R', 'L0.K'].includes(form.level_code);
     if (isGraduationLevel) {
       if (!form.phone) {
         toast.error('Lead ≥ L1 cần có SĐT');
@@ -206,7 +206,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       // Lưu thay đổi level của từng sản phẩm
       const levelChanges = [];
       for (const [prodCode, lvlCode] of Object.entries(formProductLevels)) {
-        const original = leadProductLevels.find(l => l.product_code === prodCode)?.level_code || 'L0';
+        const original = leadProductLevels.find(l => l.product_code === prodCode)?.level_code || 'L1.KK';
         if (lvlCode !== original) {
           levelChanges.push(supabase.rpc('rpc_update_lead_product_level', {
             p_lead_id: lead.id,
@@ -489,15 +489,15 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                     form.interested_products && form.interested_products.length > 0 ? (
                       form.interested_products.map((p_code) => {
                         const prodLvls = allProductLevels.filter(l => l.product_code === p_code);
-                        const isGraduated = !['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
+                        const isGraduated = !['L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
                         const filteredProdLvls = prodLvls.filter((lvl) => {
                           // Leads đã tốt nghiệp (không thuộc kho kiểm) → ẩn các base levels của kho kiểm
-                          if (isGraduated && ['L1.KK', 'L0.R', 'L0.K', 'L0'].includes(lvl.level_code)) {
+                          if (isGraduated && ['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
                             return false;
                           }
                           // Leads còn ở kho kiểm → chỉ hiện L1.KK/L0.R/L0.K nếu lead gốc hoặc đang chọn
                           if (['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
-                            const isOriginalPool = ['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
+                            const isOriginalPool = ['L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
                             const isCurrentlySelected = formProductLevels[p_code] === lvl.level_code;
                             return isOriginalPool || isCurrentlySelected;
                           }
@@ -507,14 +507,10 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                           <div key={p_code}>
                             <label className="block text-xs font-medium text-surface-500 mb-1">Level {p_code}</label>
                             <select 
-                              value={formProductLevels[p_code] || 'L0'} 
+                              value={formProductLevels[p_code] || 'L1.KK'} 
                               onChange={(e) => setFormProductLevels({ ...formProductLevels, [p_code]: e.target.value })}
                               className="select-field py-2 text-sm"
                             >
-                              {/* L0 option chỉ hiện cho leads trong Kho kiểm/nháp */}
-                              {['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code) && (
-                                <option value="L0">L0 — Data đầu vào</option>
-                              )}
                               {filteredProdLvls.map((lvl) => (
                                 <option key={lvl.level_code} value={lvl.level_code}>
                                   {lvl.level_code} — {lvl.label}
@@ -531,8 +527,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                     <div className="col-span-2 flex flex-wrap gap-2">
                       {lead.interested_products && lead.interested_products.length > 0 ? (
                         lead.interested_products.map((p_code) => {
-                          const currentLvlCode = formProductLevels[p_code] || 'L0';
-                          const lvlInfo = allProductLevels.find(l => l.product_code === p_code && l.level_code === currentLvlCode) || { label: 'Data đầu vào', color: '#6B7280' };
+                          const currentLvlCode = formProductLevels[p_code] || 'L1.KK';
+                          const lvlInfo = allProductLevels.find(l => l.product_code === p_code && l.level_code === currentLvlCode) || { label: 'L1 Kho kiểm', color: '#F59E0B' };
                           return (
                             <span 
                               key={p_code} 

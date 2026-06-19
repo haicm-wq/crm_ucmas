@@ -157,7 +157,7 @@ export default function DashboardPage() {
   const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
 
   const handleLevelClick = (code) => {
-    const l0Levels = ['L0', 'L1.KK', 'L0.R', 'L0.K'];
+    const l0Levels = ['L1.KK', 'L0.R', 'L0.K'];
     if (l0Levels.includes(code)) {
       navigate(`/kho-l1-kho-kiem?level_code=${code}`);
     } else {

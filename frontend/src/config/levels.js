@@ -21,7 +21,6 @@ const COLOR_STYLES = {
 
 // ─── Level Data Config (chỉ chứa data, không chứa styling) ──
 const LEVEL_DATA = {
-  'L0':     { label: 'Data đầu vào (Cũ)',          colorGroup: 'gray',    color: '#6B7280' },
   'L0.R':   { label: 'Số rác',                    colorGroup: 'red',     color: '#EF4444' },
   'L0.K':   { label: 'Khu vực khác',              colorGroup: 'blue',    color: '#3B82F6' },
   'L1':     { label: 'Đã có đủ 3 thông tin',      colorGroup: 'amber',   color: '#F59E0B' },
@@ -74,7 +73,7 @@ export function isMilestone(code) {
 }
 
 export const ALL_LEVEL_CODES = [
-  'L0', 'L0.R', 'L0.K', 'L1', 'L1.KK', 'L1.2', 'L1.3',
+  'L0.R', 'L0.K', 'L1', 'L1.KK', 'L1.2', 'L1.3',
   'L2.2A', 'L2.2B', 'L2.2O', 'L2.2OS', 'L2.3',
   'L3.O', 'L3.1', 'L3.3',
   'L4.1', 'L4.2', 'L4.3', 'L4.4', 'L4.5', 'L4.6', 'L4.7',
