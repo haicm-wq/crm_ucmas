@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { HiOutlineChevronDown, HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
 
 export default function MultiSelect({
@@ -14,26 +14,72 @@ export default function MultiSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const containerRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  // Tính toán vị trí dropdown theo viewport (position:fixed)
+  // để tránh bị clip bởi overflow:hidden/auto của parent container (e.g. scrollable table)
+  const calcDropdownPos = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const dropdownHeight = 280; // ước tính max-height
+    const openUpward = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+    setDropdownStyle({
+      position: 'fixed',
+      left: Math.min(rect.left, window.innerWidth - 292), // tránh tràn sang phải
+      width: Math.max(rect.width, 288), // min 288px
+      zIndex: 9999,
+      ...(openUpward
+        ? { bottom: window.innerHeight - rect.top + 4 }
+        : { top: rect.bottom + 4 }),
+    });
+  }, []);
+
+  const handleOpen = () => {
+    if (disabled) return;
+    if (!isOpen) {
+      calcDropdownPos();
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+      setSearch('');
+    }
+  };
 
   useEffect(() => {
+    if (!isOpen) return;
     function handleClickOutside(event) {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
+        // Kiểm tra thêm xem click có nằm trong dropdown (fixed) không
+        const dropdowns = document.querySelectorAll('[data-multiselect-dropdown]');
+        for (const el of dropdowns) {
+          if (el.contains(event.target)) return;
+        }
         setIsOpen(false);
+        setSearch('');
       }
     }
+    function handleScroll() {
+      calcDropdownPos(); // cập nhật vị trí khi scroll
+    }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', calcDropdownPos);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', calcDropdownPos);
+    };
+  }, [isOpen, calcDropdownPos]);
 
   const toggleOption = (val) => {
     const isSelected = selected.includes(val);
-    let newSelected;
-    if (isSelected) {
-      newSelected = selected.filter((v) => v !== val);
-    } else {
-      newSelected = [...selected, val];
-    }
+    const newSelected = isSelected
+      ? selected.filter((v) => v !== val)
+      : [...selected, val];
     onChange(newSelected);
   };
 
@@ -55,21 +101,16 @@ export default function MultiSelect({
     (opt.label || opt.value || '').toString().toLowerCase().includes(search.toLowerCase())
   );
 
-  // Determine button label text
   const getButtonText = () => {
     if (selected.length === 0) return placeholder;
-    
-    // Find matching labels
     const selectedLabels = selected
       .map((val) => {
         const opt = options.find((o) => o.value === val);
         return opt ? opt.label : val;
       })
       .filter(Boolean);
-      
     const prefix = labelPrefix ? `${labelPrefix}: ` : '';
     if (selectedLabels.length <= 2) {
-      // Split on ' — ' if present to make the chip cleaner
       const cleanLabels = selectedLabels.map(l => l.split(' — ')[0]);
       return `${prefix}${cleanLabels.join(', ')}`;
     }
@@ -81,9 +122,10 @@ export default function MultiSelect({
   return (
     <div className={`relative inline-block text-left ${className}`} ref={containerRef} id={id}>
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleOpen}
         className={`flex items-center justify-between w-full bg-white dark:bg-surface-800/80 border border-surface-200 dark:border-surface-700/50 rounded-xl px-4 py-2 text-sm text-surface-800 dark:text-surface-100 hover:border-surface-300 dark:hover:border-surface-600 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500 transition-all duration-150 ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         } ${
@@ -110,7 +152,11 @@ export default function MultiSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 w-72 rounded-xl bg-white dark:bg-surface-800 border border-surface-200/80 dark:border-surface-700/50 shadow-xl z-50 animate-fade-in overflow-hidden">
+        <div
+          data-multiselect-dropdown="true"
+          style={dropdownStyle}
+          className="rounded-xl bg-white dark:bg-surface-800 border border-surface-200/80 dark:border-surface-700/50 shadow-xl animate-fade-in overflow-hidden"
+        >
           {searchable && options.length > 5 && (
             <div className="p-2.5 border-b border-surface-100 dark:border-surface-700/50 relative">
               <HiOutlineSearch className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
