@@ -12,6 +12,11 @@ DROP FUNCTION IF EXISTS rpc_report_product_analytics(TIMESTAMPTZ, TIMESTAMPTZ, U
 -- 1. Cập nhật hàm trigger fn_normalize_lead()
 CREATE OR REPLACE FUNCTION fn_normalize_lead() RETURNS TRIGGER AS $$
 BEGIN
+    -- Mặc định sản phẩm quan tâm là UCMAS nếu rỗng
+    IF NEW.interested_products IS NULL OR NEW.interested_products = '{}'::text[] THEN
+        NEW.interested_products := ARRAY['UCMAS']::text[];
+    END IF;
+
     -- Computed fields
     NEW.level_group := 'L' || COALESCE(substring(NEW.level_code FROM '^L(\d)'), '0');
     IF NEW.level_group != 'L4' THEN
@@ -580,27 +585,39 @@ BEGIN
       (l.entered_l6_at >= v_from AND l.entered_l6_at <= v_to) AS is_l6_in_period
     FROM filtered_leads l
   )
-  SELECT jsonb_build_array(
-    jsonb_build_object('level_group', 'L1.KK', 'count', COUNT(*) FILTER (WHERE is_l0_in_period)), -- Đổi nhãn thành L1.KK
-    jsonb_build_object('level_group', 'L1', 'count', COUNT(*) FILTER (WHERE is_l1_in_period)),
-    jsonb_build_object('level_group', 'L2', 'count', COUNT(*) FILTER (WHERE is_l2_in_period)),
-    jsonb_build_object('level_group', 'L3', 'count', COUNT(*) FILTER (WHERE is_l3_in_period)),
-    jsonb_build_object('level_group', 'L4', 'count', COUNT(*) FILTER (WHERE is_l4_in_period)),
-    jsonb_build_object('level_group', 'L5', 'count', COUNT(*) FILTER (WHERE is_l5_in_period)),
-    jsonb_build_object('level_group', 'L6', 'count', COUNT(*) FILTER (WHERE is_l6_in_period))
-  ) INTO v_funnel FROM leads_with_milestones;
-
-  SELECT row_to_json(t)::jsonb INTO v_conv
-  FROM (
-    SELECT
+  ,
+  funnel_data AS (
+    SELECT 
       COUNT(*) FILTER (WHERE is_l0_in_period) as total_l0,
       COUNT(*) FILTER (WHERE is_l1_in_period) as reached_l1,
       COUNT(*) FILTER (WHERE is_l2_in_period) as reached_l2,
       COUNT(*) FILTER (WHERE appointment_booked_at >= v_from AND appointment_booked_at <= v_to) as booked,
       COUNT(*) FILTER (WHERE is_l3_in_period) as reached_l3,
-      COUNT(*) FILTER (WHERE is_l4_in_period) as reached_l4
+      COUNT(*) FILTER (WHERE is_l4_in_period) as reached_l4,
+      COUNT(*) FILTER (WHERE is_l5_in_period) as reached_l5,
+      COUNT(*) FILTER (WHERE is_l6_in_period) as reached_l6
     FROM leads_with_milestones
-  ) t;
+  )
+  SELECT 
+    jsonb_build_array(
+      jsonb_build_object('level_group', 'L1.KK', 'count', total_l0),
+      jsonb_build_object('level_group', 'L1', 'count', reached_l1),
+      jsonb_build_object('level_group', 'L2', 'count', reached_l2),
+      jsonb_build_object('level_group', 'L3', 'count', reached_l3),
+      jsonb_build_object('level_group', 'L4', 'count', reached_l4),
+      jsonb_build_object('level_group', 'L5', 'count', reached_l5),
+      jsonb_build_object('level_group', 'L6', 'count', reached_l6)
+    ),
+    jsonb_build_object(
+      'total_l0', total_l0,
+      'reached_l1', reached_l1,
+      'reached_l2', reached_l2,
+      'booked', booked,
+      'reached_l3', reached_l3,
+      'reached_l4', reached_l4
+    )
+  INTO v_funnel, v_conv
+  FROM funnel_data;
 
   RETURN jsonb_build_object('funnel', v_funnel, 'conversion', v_conv);
 END;
@@ -771,8 +788,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- Cấp quyền thực thi và tải lại schema cache
-GRANT EXECUTE ON FUNCTION rpc_dashboard_analytics TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION rpc_report_funnel TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION rpc_report_product_analytics TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION rpc_dashboard_analytics(TIMESTAMPTZ, TIMESTAMPTZ, UUID[], TEXT[], TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION rpc_report_funnel(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION rpc_report_product_analytics(TIMESTAMPTZ, TIMESTAMPTZ, UUID, TEXT) TO anon, authenticated;
+
+-- 5. Backfill dữ liệu cũ: Cập nhật interested_products và mốc thời gian riêng biệt cho UCMAS/UCKID
+UPDATE public.leads
+SET interested_products = ARRAY['UCMAS']::text[]
+WHERE interested_products IS NULL OR interested_products = '{}'::text[];
+
+UPDATE public.leads
+SET
+  entered_l1_ucmas_at = COALESCE(entered_l1_ucmas_at, entered_l1_at),
+  entered_l2_ucmas_at = COALESCE(entered_l2_ucmas_at, entered_l2_at, appointment_booked_at),
+  entered_l3_ucmas_at = COALESCE(entered_l3_ucmas_at, entered_l3_at),
+  entered_l4_ucmas_at = COALESCE(entered_l4_ucmas_at, entered_l4_at, entered_l4_ucmas_at)
+WHERE 'UCMAS' = ANY(interested_products);
+
+UPDATE public.leads
+SET
+  entered_l1_uckid_at = COALESCE(entered_l1_uckid_at, entered_l1_at),
+  entered_l2_uckid_at = COALESCE(entered_l2_uckid_at, entered_l2_at, appointment_booked_at),
+  entered_l3_uckid_at = COALESCE(entered_l3_uckid_at, entered_l3_at),
+  entered_l4_uckid_at = COALESCE(entered_l4_uckid_at, entered_l4_at, entered_l4_uckid_at)
+WHERE 'UCKID' = ANY(interested_products);
 
 NOTIFY pgrst, 'reload schema';
