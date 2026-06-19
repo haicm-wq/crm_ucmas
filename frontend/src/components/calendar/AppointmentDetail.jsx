@@ -105,6 +105,20 @@ export default function AppointmentDetail({ appt, onUpdate }) {
 
   return (
     <div className="space-y-4">
+      {/* Thông tin sản phẩm */}
+      {appt.interested_products && appt.interested_products.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 bg-surface-100/55 dark:bg-surface-800/25 px-3 py-2 rounded-lg border border-surface-200/40 dark:border-surface-700/20">
+          <span className="text-xs font-semibold text-surface-500">Sản phẩm đăng ký:</span>
+          <div className="flex gap-1.5 flex-wrap">
+            {appt.interested_products.map((p) => (
+              <span key={p} className="px-2 py-0.5 rounded text-xs font-bold bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/25 shadow-sm">
+                {p}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Phụ trách & Trung tâm & Đổi lịch */}
       <div className="bg-surface-50 dark:bg-surface-800/40 p-4 rounded-xl border border-surface-200/50 dark:border-surface-700/30 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
         <div className="flex-1 flex flex-col lg:flex-row gap-4">

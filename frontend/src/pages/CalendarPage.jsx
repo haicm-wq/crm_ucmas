@@ -364,6 +364,16 @@ export default function CalendarPage() {
                             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5">
                               <span className="text-sm text-surface-500 font-mono">{appt.phone}</span>
                               <span className={`badge text-xs ${levelInfo.bgClass}`}>{appt.level_code}</span>
+                              {appt.interested_products && appt.interested_products.length > 0 && (
+                                appt.interested_products.map((p) => (
+                                  <span 
+                                    key={p} 
+                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/25"
+                                  >
+                                    {p}
+                                  </span>
+                                ))
+                              )}
                               <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                                 appt.source_type === 'PUSH'
                                   ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'

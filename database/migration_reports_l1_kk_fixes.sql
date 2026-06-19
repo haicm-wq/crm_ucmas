@@ -714,13 +714,15 @@ BEGIN
   -- B. Tính toán chi tiết sự chuyển đổi các level con (Logic 1)
   SELECT COALESCE(jsonb_agg(row_to_json(t_details)), '[]'::jsonb) INTO v_details
   FROM (
-    WITH transitions AS (
-      -- Khởi tạo lead mới (mặc định vào L1.KK) trong kỳ
-      SELECT 'L1.KK'::varchar as level_code, l.id as lead_id
-      FROM leads l
-      WHERE p_product_code = ANY(l.interested_products)
-        AND l.created_at >= v_from AND l.created_at <= v_to
+    WITH transition_counts AS (
+      SELECT lpl.level_code, COUNT(DISTINCT lpl.lead_id) as count
+      FROM lead_product_levels lpl
+      JOIN leads l ON lpl.lead_id = l.id
+      WHERE lpl.product_code = p_product_code
         AND (p_center_id IS NULL OR l.assigned_center = p_center_id)
+        AND (lpl.entered_at->>lpl.level_code) IS NOT NULL
+        AND (lpl.entered_at->>lpl.level_code)::timestamptz >= v_from
+        AND (lpl.entered_at->>lpl.level_code)::timestamptz <= v_to
         AND (
           CASE 
             WHEN auth_permission_group() = 'admin' THEN TRUE
@@ -740,38 +742,7 @@ BEGIN
             ELSE FALSE
           END
         )
-      UNION ALL
-      -- Lịch sử chuyển dịch các level khác được ghi nhận trong kỳ
-      SELECT h.to_level as level_code, h.lead_id
-      FROM lead_level_history h
-      JOIN leads l ON h.lead_id = l.id
-      WHERE (h.product_code = p_product_code OR (h.product_code IS NULL AND p_product_code = ANY(l.interested_products)))
-        AND h.created_at >= v_from AND h.created_at <= v_to
-        AND (p_center_id IS NULL OR l.assigned_center = p_center_id)
-        AND (
-          CASE 
-            WHEN auth_permission_group() = 'admin' THEN TRUE
-            WHEN auth_permission_group() = 'lead_telesale' THEN TRUE
-            WHEN auth_permission_group() = 'telesale' THEN 
-              (l.assigned_staff = auth.uid() OR l.level_group = 'L0' OR l.level_code = 'L1.KK')
-            WHEN auth_permission_group() = 'center' THEN 
-              l.assigned_center = auth_center_id() AND l.level_group != 'L0' AND l.level_code != 'L1.KK'
-            WHEN auth_permission_group() = 'marketing' THEN (
-              ((l.level_group = 'L0' OR l.level_code = 'L1.KK') AND auth_can_view_l0() = true)
-              OR (
-                l.level_group != 'L0' AND l.level_code != 'L1.KK'
-                AND (auth_level_cap() IS NULL OR level_rank(l.level_group) <= level_rank(auth_level_cap()))
-                AND (auth_center_mode() = 'all' OR l.assigned_center = ANY(auth_allowed_centers()))
-              )
-            )
-            ELSE FALSE
-          END
-        )
-    ),
-    transition_counts AS (
-      SELECT level_code, COUNT(DISTINCT lead_id) as count
-      FROM transitions
-      GROUP BY level_code
+      GROUP BY lpl.level_code
     )
     SELECT pl.level_code, pl.label, pl.color, COALESCE(tc.count, 0) as count
     FROM product_levels pl
@@ -969,5 +940,29 @@ UPDATE public.product_levels SET sort_order = 1 WHERE level_code = 'L1.KK';
 ALTER TABLE public.leads ALTER COLUMN level_code SET DEFAULT 'L1.KK';
 ALTER TABLE public.leads ALTER COLUMN level_group SET DEFAULT 'L0';
 UPDATE public.leads SET level_code = 'L1.KK', level_group = 'L0' WHERE level_code = 'L0';
+
+-- 7. Cập nhật view v_trial_appointments để bổ sung interested_products (sản phẩm quan tâm)
+DROP VIEW IF EXISTS v_trial_appointments;
+CREATE OR REPLACE VIEW v_trial_appointments 
+WITH (security_invoker = true) AS
+SELECT
+  l.id, l.lead_code, l.full_name, l.phone, l.child_birth_year, l.child_name, l.address,
+  l.source_type,
+  l.interested_products, -- Bổ sung trường interested_products
+  l.assigned_center, c.name AS center_name,
+  l.assigned_staff, p.full_name AS sale_name,
+  l.level_code, l.level_group, l.trial_appointment_at, l.appointment_booked_at,
+  CASE
+    WHEN l.entered_l3_at IS NOT NULL      THEN 'attended'
+    WHEN l.level_code = 'L2.3'            THEN 'cancelled'
+    WHEN l.trial_appointment_at < NOW()   THEN 'missed'
+    ELSE 'scheduled'
+  END AS appt_status,
+  (SELECT status FROM appointment_reminders WHERE lead_id = l.id AND role = 'sale') AS sale_remind_status,
+  (SELECT status FROM appointment_reminders WHERE lead_id = l.id AND role = 'center') AS center_remind_status
+FROM leads l
+LEFT JOIN centers  c ON l.assigned_center = c.id
+LEFT JOIN profiles p ON l.assigned_staff  = p.id
+WHERE l.trial_appointment_at IS NOT NULL;
 
 NOTIFY pgrst, 'reload schema';
