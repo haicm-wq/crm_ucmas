@@ -416,7 +416,7 @@ export default function LeadsPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table" style={{ minWidth: '1850px' }} id="lead-table">
+          <table className="data-table" style={{ minWidth: '2080px' }} id="lead-table">
             <thead>
               <tr>
                 {isAdmin && (
@@ -435,6 +435,8 @@ export default function LeadsPage() {
                 <th className="w-[80px]">Năm sinh con</th>
                 <th className="w-[130px]">Trung tâm</th>
                 <th className="w-[130px]">Sale đặt lịch</th>
+                <th className="w-[110px]">Mã học sinh</th>
+                <th className="w-[130px]">Doanh thu</th>
                 <th className="w-[70px]">Nguồn</th>
                 <th className="w-[110px]">Sản phẩm</th>
                 <th className="w-[95px]">Level UCMAS</th>
@@ -453,9 +455,9 @@ export default function LeadsPage() {
             </thead>
             <tbody className={loading && leads.length > 0 ? "opacity-60 transition-opacity duration-200 pointer-events-none" : "transition-opacity duration-200"}>
               {loading && leads.length === 0 ? (
-                <tr><td colSpan={isAdmin ? 22 : 21} className="p-0"><TableSkeleton rows={8} cols={isAdmin ? 22 : 21} /></td></tr>
+                <tr><td colSpan={isAdmin ? 24 : 23} className="p-0"><TableSkeleton rows={8} cols={isAdmin ? 24 : 23} /></td></tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan={isAdmin ? 22 : 21}>
+                <tr><td colSpan={isAdmin ? 24 : 23}>
                   <EmptyState icon={HiOutlineUsers} title="Không tìm thấy lead nào"
                     description="Thử thay đổi bộ lọc hoặc thêm lead mới" />
                 </td></tr>
@@ -485,6 +487,10 @@ export default function LeadsPage() {
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.child_birth_year || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 font-mono text-xs font-medium">{lead.student_code || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 text-xs font-bold font-mono">
+                        {((lead.tuition_fee || 0) + (lead.material_fee || 0)).toLocaleString('vi-VN')} đ
+                      </td>
                       <td><span className={`text-xs font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{lead.source_type}</span></td>
                       <td>
                         <div className="flex flex-wrap gap-1">
@@ -524,6 +530,7 @@ export default function LeadsPage() {
             </tbody>
           </table>
         </div>
+
 
         {pagination.total > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-surface-200 dark:border-surface-800 gap-3">

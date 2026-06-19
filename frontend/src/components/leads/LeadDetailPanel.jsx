@@ -75,6 +75,9 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       child_name: lead.child_name || '',
       custom_fields: lead.custom_fields || {},
       l1_kk_note: lead.l1_kk_note || '',
+      student_code: lead.student_code || '',
+      tuition_fee: lead.tuition_fee ?? 0,
+      material_fee: lead.material_fee ?? 0,
     });
     setLevelNote('');
     setNoteContent('');
@@ -178,6 +181,22 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     setSaving(true);
     try {
       const changes = cleanFormChanges(form);
+      
+      // Đảm bảo Mã học sinh và học phí/học liệu được gán mặc định nếu bị trống
+      if (form.tuition_fee === '' || form.tuition_fee === null || form.tuition_fee === undefined) {
+        changes.tuition_fee = 0;
+      } else {
+        changes.tuition_fee = parseInt(form.tuition_fee);
+      }
+      if (form.material_fee === '' || form.material_fee === null || form.material_fee === undefined) {
+        changes.material_fee = 0;
+      } else {
+        changes.material_fee = parseInt(form.material_fee);
+      }
+      if (form.student_code === '') {
+        changes.student_code = null;
+      }
+
       // Bug1 fix: use levelNote (not noteContent)
       const note = form.level_code !== lead.level_code ? levelNote : null;
       await updateLead(lead.id, changes, note);
@@ -391,6 +410,72 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                     </div>
                   </div>
                 )}
+
+                {/* Doanh thu & Thông tin học sinh */}
+                <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
+                  <h4 className="col-span-3 text-xs font-semibold uppercase tracking-wider text-surface-500 flex items-center justify-between">
+                    <span>Thông tin Học sinh & Doanh thu</span>
+                    {((form.level_code || lead.level_code || '').startsWith('L4') && editing) && (
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded animate-pulse">
+                        ⚠️ Khuyến nghị nhập Mã học sinh và Nguyên học liệu khi lên L4
+                      </span>
+                    )}
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Mã học sinh</label>
+                    {editing ? (
+                      <input 
+                        type="text" 
+                        value={form.student_code || ''} 
+                        onChange={(e) => setForm({ ...form, student_code: e.target.value })}
+                        className="input-field py-2 text-sm" 
+                        placeholder="Nhập mã học sinh..."
+                      />
+                    ) : (
+                      <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{lead.student_code || '—'}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Học phí</label>
+                    {editing ? (
+                      <input 
+                        type="number" 
+                        value={form.tuition_fee ?? ''} 
+                        onChange={(e) => setForm({ ...form, tuition_fee: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        className="input-field py-2 text-sm" 
+                        placeholder="0"
+                      />
+                    ) : (
+                      <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{(lead.tuition_fee || 0).toLocaleString('vi-VN')} đ</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Nguyên học liệu</label>
+                    {editing ? (
+                      <input 
+                        type="number" 
+                        value={form.material_fee ?? ''} 
+                        onChange={(e) => setForm({ ...form, material_fee: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        className="input-field py-2 text-sm" 
+                        placeholder="0"
+                      />
+                    ) : (
+                      <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{(lead.material_fee || 0).toLocaleString('vi-VN')} đ</p>
+                    )}
+                  </div>
+
+                  {!editing && (
+                    <div className="col-span-3 bg-surface-50 dark:bg-surface-800/10 p-3 rounded-xl border border-surface-200 dark:border-surface-700/50 flex items-center justify-between text-xs">
+                      <span className="text-surface-500 font-medium">Tổng doanh thu thực tế (Học phí + Học liệu):</span>
+                      <span className="font-bold text-primary-600 dark:text-primary-400 text-sm">
+                        {((lead.tuition_fee || 0) + (lead.material_fee || 0)).toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
                   <h4 className="col-span-2 text-xs font-semibold uppercase tracking-wider text-surface-500">Level theo từng sản phẩm</h4>
