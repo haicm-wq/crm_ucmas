@@ -24,7 +24,7 @@ const TABS = [
 
 export default function ReportsPage() {
   const { centers } = useSharedData();
-  const { user, isCenter, isTelesale, isLeadTelesale } = useAuth();
+  const { user, isCenter, isTelesale, isLeadTelesale, isAdmin } = useAuth();
   
   const getFirstDayOfMonth = () => {
     const d = new Date();
