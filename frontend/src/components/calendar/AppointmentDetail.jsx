@@ -165,6 +165,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
               <div className="flex gap-2">
                 <input
                   type="datetime-local"
+                  step="300"
                   value={newApptTime}
                   onChange={(e) => setNewApptTime(e.target.value)}
                   disabled={updating}

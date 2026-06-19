@@ -607,7 +607,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Lịch học thử</label>
                   {editing ? (
-                    <input type="datetime-local" value={form.trial_appointment_at}
+                    <input type="datetime-local" step="300" value={form.trial_appointment_at}
                       onChange={(e) => setForm({ ...form, trial_appointment_at: e.target.value })}
                       className="input-field py-2 text-sm" />
                   ) : (
@@ -618,7 +618,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Follow-up</label>
                   {editing ? (
-                    <input type="datetime-local" value={form.next_followup_at}
+                    <input type="datetime-local" step="300" value={form.next_followup_at}
                       onChange={(e) => setForm({ ...form, next_followup_at: e.target.value })}
                       className="input-field py-2 text-sm" />
                   ) : (
