@@ -112,7 +112,7 @@ export default function App() {
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/" element={<DashboardPage />} />
-                    <Route path="/kho-l0" element={<LeadPoolPage />} />
+                    <Route path="/kho-l1-kho-kiem" element={<LeadPoolPage />} />
                     <Route path="/leads" element={<LeadsPage />} />
                     <Route path="/lich-hen" element={<CalendarPage />} />
                     <Route path="/bao-cao" element={<ReportsPage />} />

@@ -14,7 +14,6 @@ export const PHONE_REGEX = /^(?:0\d{9}|[1-9]\d{8})$/;
 
 /** Danh sách level cho L0 Pool (chuyển nhanh) */
 export const L0_POOL_LEVELS = [
-  { value: 'L0', label: 'L0 — Data đầu vào' },
   { value: 'L1.KK', label: 'L1 Kho kiểm' },
   { value: 'L0.R', label: 'Số rác' },
   { value: 'L0.K', label: 'Khu vực khác' },

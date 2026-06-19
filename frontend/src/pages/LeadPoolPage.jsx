@@ -323,7 +323,7 @@ export default function LeadPoolPage() {
           p_lead_id: leadId,
           p_product_code: productCode,
           p_level_code: levelCode,
-          p_note: `Cập nhật Level ${productCode} trực tiếp từ kho L0`,
+          p_note: `Cập nhật Level ${productCode} trực tiếp từ kho kiểm`,
         });
         if (error) throw error;
       }
@@ -343,7 +343,7 @@ export default function LeadPoolPage() {
         p_lead_id: leadId,
         p_product_code: productCode,
         p_level_code: levelCode,
-        p_note: `Cập nhật Level ${productCode} trực tiếp từ kho L0`,
+        p_note: `Cập nhật Level ${productCode} trực tiếp từ kho kiểm`,
       });
       if (error) throw error;
       toast.success('Đã cập nhật level sản phẩm');
@@ -379,7 +379,7 @@ export default function LeadPoolPage() {
   // Debounced realtime — avoids flood when bulk assigning
   useSupabaseRealtime('leads', () => {
     loadRef.current?.(pagination.page);
-  }, { debounceMs: 1500, filter: 'level_group=eq.L0' });
+  }, { debounceMs: 1500 });
 
   const toggleSelect = (id) => {
     const next = new Set(selected);
@@ -419,7 +419,7 @@ export default function LeadPoolPage() {
   if (!canViewL0) {
     return (
       <div className="glass-card p-12 text-center">
-        <p className="text-surface-500">Bạn không có quyền xem kho L0.</p>
+        <p className="text-surface-500">Bạn không có quyền xem kho L1 kho kiểm.</p>
       </div>
     );
   }
@@ -429,7 +429,7 @@ export default function LeadPoolPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100 flex items-center gap-2">
-            <HiOutlineInbox className="w-7 h-7 text-primary-400" /> Kho Lead L0
+            <HiOutlineInbox className="w-7 h-7 text-primary-400" /> Kho Lead L1 kho kiểm
           </h1>
           <p className="text-sm text-surface-500">
             {levelFilter ? `${filteredPool.length} lead ở level ${levelFilter}` : `${pagination.total} lead chờ phân bổ`}
@@ -442,7 +442,7 @@ export default function LeadPoolPage() {
             onChange={(e) => setLevelFilter(e.target.value)}
             className="select-field py-1.5 px-3 text-xs w-44 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
           >
-            <option value="">Tất cả Level L0</option>
+            <option value="">Tất cả Level kho kiểm</option>
             {L0_BASE_LEVELS.map(lvl => {
               const info = getLevelInfo(lvl);
               return <option key={lvl} value={lvl}>{lvl} — {info.label}</option>;
@@ -462,7 +462,7 @@ export default function LeadPoolPage() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
             </span>
             <span className="text-sm font-medium">
-              Cảnh báo: Có <strong>{unprocessedStats}</strong> lead L0 vào hệ thống quá 3 tiếng chưa được xử lý!
+              Cảnh báo: Có <strong>{unprocessedStats}</strong> lead vào hệ thống quá 3 tiếng chưa xử lý!
             </span>
           </div>
         </div>
@@ -496,7 +496,7 @@ export default function LeadPoolPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table data-table-compact" style={{ minWidth: '1240px' }}>
+          <table className="data-table data-table-compact" style={{ minWidth: '1350px' }}>
             <thead>
               <tr>
                 <th className="w-[80px]">Mã Lead</th>
@@ -507,6 +507,7 @@ export default function LeadPoolPage() {
                 <th className="w-full">Địa chỉ</th>
                 <th className="w-[120px]">Trung tâm</th>
                 <th className="w-[120px]">Sale đặt lịch</th>
+                <th className="w-[150px]">Ghi chú kho kiểm</th>
                 <th className="w-[120px]">Sản phẩm</th>
                 <th className="w-[120px]">Level</th>
                 <th className="w-[65px]">Nguồn</th>
@@ -515,16 +516,17 @@ export default function LeadPoolPage() {
             </thead>
             <tbody>
               {loading && pool.length === 0 ? (
-                <tr><td colSpan={12} className="p-0"><TableSkeleton rows={8} cols={12} /></td></tr>
+                <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
               ) : filteredPool.length === 0 ? (
-                <tr><td colSpan={12}>
-                  <EmptyState icon={HiOutlineInbox} title="Kho L0 trống"
-                    description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L0"} />
+                <tr><td colSpan={13}>
+                  <EmptyState icon={HiOutlineInbox} title="Kho L1 kho kiểm trống"
+                    description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L1 kho kiểm"} />
                 </td></tr>
               ) : (
                 filteredPool.map((lead) => {
-                  const unprocessed = lead.level_code === 'L0';
-                  const delayed = unprocessed && isOver3Hours(lead.created_at);
+                  const unprocessed = lead.level_code === 'L1.KK';
+                  const hasNoNote = !lead.l1_kk_note || lead.l1_kk_note.trim() === '';
+                  const delayed = unprocessed && hasNoNote && isOver3Hours(lead.created_at);
                   
                   let rowClass = 'hover:bg-surface-50 dark:hover:bg-surface-800/30 transition-colors duration-150 cursor-pointer';
                   if (selected.has(lead.id)) {
@@ -670,6 +672,26 @@ export default function LeadPoolPage() {
                           </select>
                           {savingLeads[lead.id]?.assigned_staff && (
                             <span className="absolute right-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Ghi chú kho kiểm */}
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="relative flex items-center min-w-[140px]">
+                          <input
+                            type="text"
+                            value={lead.l1_kk_note || ''}
+                            placeholder="Ghi chú kiểm..."
+                            onFocus={(e) => { focusedValueRef.current[`${lead.id}-l1_kk_note`] = e.target.value; }}
+                            onChange={(e) => handleInputChange(lead.id, 'l1_kk_note', e.target.value)}
+                            onBlur={(e) => handleInputBlur(lead.id, 'l1_kk_note', focusedValueRef.current[`${lead.id}-l1_kk_note`], e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+                            disabled={isCenter || savingLeads[lead.id]?.l1_kk_note}
+                            className="input-field py-1 px-2 text-xs w-full font-sans"
+                          />
+                          {savingLeads[lead.id]?.l1_kk_note && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
                           )}
                         </div>
                       </td>

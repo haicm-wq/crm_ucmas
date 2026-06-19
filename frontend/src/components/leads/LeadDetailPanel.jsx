@@ -74,6 +74,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       l4_type: lead.l4_type || '',
       child_name: lead.child_name || '',
       custom_fields: lead.custom_fields || {},
+      l1_kk_note: lead.l1_kk_note || '',
     });
     setLevelNote('');
     setNoteContent('');
@@ -139,8 +140,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
         return;
       }
     }
-    const newGroup = 'L' + (form.level_code.match(/^L(\d)/)?.[1] || '0');
-    if (newGroup !== 'L0') {
+    const isGraduationLevel = !['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(form.level_code);
+    if (isGraduationLevel) {
       if (!form.phone) {
         toast.error('Lead ≥ L1 cần có SĐT');
         return;
@@ -285,6 +286,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   { key: 'child_name', label: 'Tên của con', type: 'text' },
                   { key: 'child_birth_year', label: 'Năm sinh con', type: 'number' },
                   { key: 'address', label: 'Địa chỉ', type: 'text', full: true },
+                  { key: 'l1_kk_note', label: 'Ghi chú kho kiểm', type: 'text', full: true },
                 ].map(({ key, label, type, full }) => (
                   <div key={key} className={full ? 'col-span-2' : ''}>
                     <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{label}</label>
@@ -396,16 +398,17 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                     form.interested_products && form.interested_products.length > 0 ? (
                       form.interested_products.map((p_code) => {
                         const prodLvls = allProductLevels.filter(l => l.product_code === p_code);
+                        const isGraduated = !['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
                         const filteredProdLvls = prodLvls.filter((lvl) => {
-                          // Leads đã tốt nghiệp (level_group != 'L0') → ẩn L0 base levels
-                          if (lead.level_group !== 'L0' && ['L1.KK', 'L0.R', 'L0.K', 'L0'].includes(lvl.level_code)) {
+                          // Leads đã tốt nghiệp (không thuộc kho kiểm) → ẩn các base levels của kho kiểm
+                          if (isGraduated && ['L1.KK', 'L0.R', 'L0.K', 'L0'].includes(lvl.level_code)) {
                             return false;
                           }
-                          // Leads còn ở L0 → chỉ hiện L1.KK/L0.R/L0.K nếu lead gốc là L0 hoặc đang chọn
+                          // Leads còn ở kho kiểm → chỉ hiện L1.KK/L0.R/L0.K nếu lead gốc hoặc đang chọn
                           if (['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
-                            const isOriginalL0 = lead.level_code === 'L0';
+                            const isOriginalPool = ['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
                             const isCurrentlySelected = formProductLevels[p_code] === lvl.level_code;
-                            return isOriginalL0 || isCurrentlySelected;
+                            return isOriginalPool || isCurrentlySelected;
                           }
                           return true;
                         });
@@ -417,8 +420,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                               onChange={(e) => setFormProductLevels({ ...formProductLevels, [p_code]: e.target.value })}
                               className="select-field py-2 text-sm"
                             >
-                              {/* L0 option chỉ hiện cho leads trong Kho L0 */}
-                              {lead.level_group === 'L0' && (
+                              {/* L0 option chỉ hiện cho leads trong Kho kiểm/nháp */}
+                              {['L0', 'L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code) && (
                                 <option value="L0">L0 — Data đầu vào</option>
                               )}
                               {filteredProdLvls.map((lvl) => (

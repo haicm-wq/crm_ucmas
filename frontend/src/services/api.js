@@ -194,15 +194,9 @@ export async function fetchL0Pool({ page = 1, limit = 100 } = {}) {
 }
 
 export async function fetchL0UnprocessedStats() {
-  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
-    .from('leads')
-    .select('id', { count: 'exact', head: true })
-    .eq('level_code', 'L0')
-    .is('first_processed_at', null)
-    .lt('created_at', threeHoursAgo);
+  const { data, error } = await supabase.rpc('rpc_fetch_l1_kk_unprocessed_count');
   if (error) throw error;
-  return count || 0;
+  return parseInt(data) || 0;
 }
 
 

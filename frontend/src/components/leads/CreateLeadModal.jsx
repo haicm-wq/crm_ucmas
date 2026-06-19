@@ -49,9 +49,9 @@ export default function CreateLeadModal({ onClose, onCreated }) {
       if (!phoneCheck.valid) { toast.error(phoneCheck.message); return; }
     }
 
-    // Center bị chặn cứng nếu lead trùng đã có center hoặc đang ở L0
+    // Center bị chặn cứng nếu lead trùng đã có center hoặc đang ở L0 hoặc L1.KK (kho kiểm)
     const isCenterBlocked = isCenter && dupCheck?.exists &&
-      dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0');
+      dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0' || l.level_code === 'L1.KK');
     if (isCenterBlocked) { toast.error('Không thể tạo lead trùng SĐT này!'); return; }
 
     // Admin/Marketing/Telesale/LeadTelesale: cần xác nhận trước khi tạo trùng
@@ -204,9 +204,9 @@ export default function CreateLeadModal({ onClose, onCreated }) {
           </div>
 
           {dupCheck?.exists && (() => {
-            // Phân loại lead trùng: center khác / kho L0 / center hiện tại
+            // Phân loại lead trùng: center khác / kho L0 / L1.KK / center hiện tại
             const isBlockedByCenter = isCenter && dupCheck.leads.some(
-              (l) => l.center_name || l.level_group === 'L0'
+              (l) => l.center_name || l.level_group === 'L0' || l.level_code === 'L1.KK'
             );
 
             return (
@@ -247,7 +247,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
                             </div>
                             {isL0 ? (
                               <p className="mt-1 text-orange-700 dark:text-orange-300 font-medium">
-                                📥 Đang nằm trong <strong>Kho L0</strong> (chưa giao về trung tâm)
+                                📥 Đang nằm trong <strong>Kho L1 kho kiểm</strong> (chưa giao về trung tâm)
                                 {l.staff_name && <> — Sale đặt lịch: <strong>{l.staff_name}</strong></>}
                                 {!l.staff_name && <span className="italic"> — Chưa có Sale đặt lịch phụ trách. Hãy liên hệ quản lý để được chia lead về trung tâm.</span>}
                                 . <span className="underline">Hãy liên hệ Sale đặt lịch để xếp lead này về trung tâm của bạn.</span>
@@ -283,8 +283,8 @@ export default function CreateLeadModal({ onClose, onCreated }) {
 
           <div className="flex gap-2 pt-2">
             <button onClick={handleSubmit} disabled={saving || (dupCheck?.exists && (
-              // Center: chặn cứng khi lead đã có center hoặc đang ở L0
-              (isCenter && dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0'))
+              // Center: chặn cứng khi lead đã có center hoặc đang ở L0 hoặc L1.KK (kho kiểm)
+              (isCenter && dupCheck.leads.some((l) => l.center_name || l.level_group === 'L0' || l.level_code === 'L1.KK'))
               // Admin/Marketing/Sale đặt lịch/Lead Sale: cần xác nhận checkbox
               || (!isCenter && !dupConfirmed)
             ))}

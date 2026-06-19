@@ -21,7 +21,7 @@ const COLOR_STYLES = {
 
 // ─── Level Data Config (chỉ chứa data, không chứa styling) ──
 const LEVEL_DATA = {
-  'L0':     { label: 'Data đầu vào',              colorGroup: 'gray',    color: '#6B7280' },
+  'L0':     { label: 'Data đầu vào (Cũ)',          colorGroup: 'gray',    color: '#6B7280' },
   'L0.R':   { label: 'Số rác',                    colorGroup: 'red',     color: '#EF4444' },
   'L0.K':   { label: 'Khu vực khác',              colorGroup: 'blue',    color: '#3B82F6' },
   'L1':     { label: 'Đã có đủ 3 thông tin',      colorGroup: 'amber',   color: '#F59E0B' },

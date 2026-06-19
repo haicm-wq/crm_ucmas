@@ -159,7 +159,7 @@ export default function DashboardPage() {
   const handleLevelClick = (code) => {
     const l0Levels = ['L0', 'L1.KK', 'L0.R', 'L0.K'];
     if (l0Levels.includes(code)) {
-      navigate(`/kho-l0?level_code=${code}`);
+      navigate(`/kho-l1-kho-kiem?level_code=${code}`);
     } else {
       navigate(`/leads?level_code=${code}`);
     }
@@ -203,11 +203,11 @@ export default function DashboardPage() {
 
       // Custom queries for telesale role
       if (isTelesale && !isLeadTelesale) {
-        // Query L0 leads assigned to this telesale
+        // Query L1.KK leads assigned to this telesale
         let queryL0 = supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
-          .eq('level_group', 'L0')
+          .eq('level_code', 'L1.KK')
           .eq('assigned_staff', user.id);
 
         if (activeFilters.from) queryL0 = queryL0.gte('created_at', `${activeFilters.from}T00:00:00Z`);
@@ -337,13 +337,13 @@ export default function DashboardPage() {
       render: () => (
         <StatCard
           icon={HiOutlineInbox}
-          label="L0"
+          label="L1 KK"
           value={totalL0}
           color="yellow"
         >
           <div className="mt-2 pt-2 border-t border-surface-100 dark:border-surface-800 text-[10px] text-surface-500 space-y-0.5">
             <div className="flex justify-between">
-              <span>Kho L0:</span>
+              <span>L1 kho kiểm:</span>
               <span className="font-semibold text-surface-700 dark:text-surface-300">{countL0}</span>
             </div>
             <div className="flex justify-between">
@@ -797,7 +797,7 @@ export default function DashboardPage() {
                   <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-amber-700 dark:text-amber-400 font-extrabold">L3/L1</th>
                   
                   {/* PULL */}
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L0</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1 KK</th>
                   <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
                   <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
                   <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
@@ -806,7 +806,7 @@ export default function DashboardPage() {
                   <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-blue-700 dark:text-blue-400 font-extrabold">L3/L1</th>
 
                   {/* TỔNG */}
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L0</th>
+                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1 KK</th>
                   <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
                   <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
                   <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>

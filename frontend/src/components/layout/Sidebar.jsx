@@ -11,7 +11,7 @@ import {
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: HiOutlineHome, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
-  { path: '/kho-l0', label: 'Kho L0', icon: HiOutlineInbox, roles: ['admin', 'marketing', 'telesale', 'lead_telesale'] },
+  { path: '/kho-l1-kho-kiem', label: 'L1 kho kiểm', icon: HiOutlineInbox, roles: ['admin', 'marketing', 'telesale', 'lead_telesale'] },
   { path: '/leads', label: 'Danh sách Lead', icon: HiOutlineUsers, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
   { path: '/lich-hen', label: 'Lịch hẹn học thử', icon: HiOutlineCalendar, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
   { path: '/bao-cao', label: 'Báo cáo', icon: HiOutlineChartBar, roles: ['admin', 'marketing', 'center', 'telesale', 'lead_telesale'] },
