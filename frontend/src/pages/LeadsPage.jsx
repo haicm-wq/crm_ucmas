@@ -431,7 +431,7 @@ export default function LeadsPage() {
                 )}
                 <th className="w-[85px]">Mã Lead</th>
                 <th className="w-[110px]"><div className="leading-tight">Họ tên<br/>phụ huynh</div></th>
-                <th className="w-[100px]">Tên con</th>
+                <th className="w-[140px]">Tên con</th>
                 <th className="w-[100px]">SĐT</th>
                 <th className="w-[80px]">Năm sinh con</th>
                 <th className="w-full min-w-[130px]">Trung tâm</th>
@@ -481,9 +481,11 @@ export default function LeadsPage() {
                       )}
                       <td className="font-mono text-sm text-primary-600 dark:text-primary-400">{lead.lead_code}</td>
                       <td>
-                        <div className="font-semibold text-sm text-surface-800 dark:text-surface-100 min-w-[100px] leading-snug">{lead.full_name}</div>
+                        <div className="font-semibold text-sm text-surface-800 dark:text-surface-100 max-w-[120px] truncate leading-snug" title={lead.full_name}>{lead.full_name}</div>
                       </td>
-                      <td className="text-sm font-medium text-surface-800 dark:text-surface-200">{lead.child_name || '—'}</td>
+                      <td>
+                        <div className="min-w-[130px] leading-snug text-sm font-medium text-surface-800 dark:text-surface-200">{lead.child_name || '—'}</div>
+                      </td>
                       <td className="text-surface-800 dark:text-surface-200 font-mono text-sm font-medium">{lead.phone || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.child_birth_year || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
