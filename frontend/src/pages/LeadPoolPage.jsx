@@ -4,12 +4,12 @@ import { useSharedData } from '../contexts/SharedDataProvider';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseRealtime } from '../hooks/useShared';
 import { supabase } from '../lib/supabase';
-import { fetchL0Pool, bulkAssign, fetchL0UnprocessedStats, updateLead, updateLeadLevelAndProducts } from '../services/api';
+import { fetchL0Pool, bulkAssign, fetchL0UnprocessedStats, updateLead, updateLeadLevelAndProducts, softDeleteLeads } from '../services/api';
 import EmptyState from '../components/ui/EmptyState';
 import { TableSkeleton } from '../components/ui/SkeletonLoader';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
-import { HiOutlineRefresh, HiOutlineInbox, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
+import { HiOutlineRefresh, HiOutlineInbox, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTrash } from 'react-icons/hi';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import MultiSelect from '../components/ui/MultiSelect';
 import { PRODUCT_OPTIONS, L0_ALERT_THRESHOLD_MS, L0_POOL_LEVELS, PAGE_SIZE_OPTIONS, BIRTH_YEAR_RANGE } from '../config/constants';
@@ -24,7 +24,7 @@ const GRADUATION_LEVELS = ALL_LEVEL_CODES.filter(c => !L0_BASE_LEVELS.includes(c
 
 export default function LeadPoolPage() {
   const { centers, allStaff, productLevels } = useSharedData();
-  const { canViewL0, user, isCenter } = useAuth();
+  const { canViewL0, user, isCenter, isAdmin } = useAuth();
   const isTelesale = user?.permission_group === 'telesale';
   const [searchParams, setSearchParams] = useSearchParams();
   const [levelFilter, setLevelFilter] = useState('');
@@ -39,6 +39,8 @@ export default function LeadPoolPage() {
   const [pageSize, setPageSize] = useState(100);
   const [savingLeads, setSavingLeads] = useState({}); // { [leadId]: { [field]: boolean } }
   const [confirmDialog, setConfirmDialog] = useState({ open: false, message: '', onConfirm: null });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // Lưu tạm graduation level đang chọn cho từng sản phẩm của từng lead
   // { [leadId]: { [productCode]: levelCode } }
   const [pendingProductLevels, setPendingProductLevels] = useState({});
@@ -416,6 +418,22 @@ export default function LeadPoolPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setDeleting(true);
+    try {
+      const result = await softDeleteLeads(Array.from(selected));
+      toast.success(`Đã chuyển ${result?.deleted || selected.size} lead vào thùng rác!`);
+      setShowDeleteConfirm(false);
+      setSelected(new Set());
+      loadPool(pagination.page);
+    } catch (err) {
+      toast.error('Lỗi xóa lead: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!canViewL0) {
     return (
       <div className="glass-card p-12 text-center">
@@ -436,6 +454,16 @@ export default function LeadPoolPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Xóa đã chọn — chỉ admin */}
+          {isAdmin && selected.size > 0 && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-medium flex items-center gap-1.5 py-1.5 px-3 rounded-lg transition-colors"
+            >
+              <HiOutlineTrash className="w-4 h-4" />
+              Xóa ({selected.size})
+            </button>
+          )}
           {/* Bộ lọc Level L0 */}
           <select 
             value={levelFilter} 
@@ -496,9 +524,16 @@ export default function LeadPoolPage() {
           </div>
         )}
         <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table data-table-compact" style={{ minWidth: '1350px' }}>
+          <table className="data-table data-table-compact" style={{ minWidth: '1400px' }}>
             <thead>
               <tr>
+                <th className="w-10 px-3">
+                  <input type="checkbox"
+                    checked={filteredPool.length > 0 && selected.size === filteredPool.length}
+                    onChange={toggleAll}
+                    className="rounded border-surface-300 dark:border-surface-600 text-primary-500 cursor-pointer"
+                  />
+                </th>
                 <th className="w-[80px]">Mã Lead</th>
                 <th className="w-[150px]">Họ tên phụ huynh</th>
                 <th className="w-[100px]">Tên con</th>
@@ -516,9 +551,9 @@ export default function LeadPoolPage() {
             </thead>
             <tbody>
               {loading && pool.length === 0 ? (
-                <tr><td colSpan={13} className="p-0"><TableSkeleton rows={8} cols={13} /></td></tr>
+                <tr><td colSpan={14} className="p-0"><TableSkeleton rows={8} cols={14} /></td></tr>
               ) : filteredPool.length === 0 ? (
-                <tr><td colSpan={13}>
+                <tr><td colSpan={14}>
                   <EmptyState icon={HiOutlineInbox} title="Kho L1 kho kiểm trống"
                     description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L1 kho kiểm"} />
                 </td></tr>
@@ -538,7 +573,14 @@ export default function LeadPoolPage() {
                   }
 
                   return (
-                    <tr key={lead.id} onClick={() => setSelectedLead(lead)} className={rowClass}>
+                    <tr key={lead.id} onClick={() => { if (selected.size === 0) setSelectedLead(lead); }} className={rowClass}>
+                      <td className="px-3" onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}>
+                        <input type="checkbox"
+                          checked={selected.has(lead.id)}
+                          onChange={() => {}}
+                          className="rounded border-surface-300 dark:border-surface-600 text-primary-500 cursor-pointer"
+                        />
+                      </td>
                       <td className={`font-mono text-xs text-primary-600 dark:text-primary-400 ${delayed ? 'border-l-2 border-l-red-500 dark:border-l-red-400' : unprocessed ? 'border-l-2 border-l-amber-500 dark:border-l-amber-400' : ''}`}>
                         {lead.lead_code}
                       </td>
@@ -851,6 +893,39 @@ export default function LeadPoolPage() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog({ open: false, message: '', onConfirm: null })}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white dark:bg-surface-900 border border-red-200 dark:border-red-800/50 rounded-2xl shadow-xl w-full max-w-md mx-4 animate-slide-in"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <HiOutlineTrash className="w-7 h-7 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-surface-800 dark:text-surface-100">Xóa lead đã chọn</h3>
+                  <p className="text-sm text-surface-500">Lead sẽ được chuyển vào thùng rác</p>
+                </div>
+              </div>
+              <p className="text-sm text-surface-700 dark:text-surface-300 mb-5">
+                Bạn đã chọn <strong className="text-red-600">{selected.size} lead</strong> để xóa.
+                Lead sẽ được chuyển vào <strong>Thùng rác</strong> và có thể khôi phục sau.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={handleBulkDelete} disabled={deleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors disabled:opacity-60">
+                  {deleting ? 'Đang xóa...' : `🗑️ Chuyển vào thùng rác`}
+                </button>
+                <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary text-sm px-4">
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
