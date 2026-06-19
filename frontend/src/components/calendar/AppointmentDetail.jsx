@@ -7,6 +7,7 @@ import ReminderSection from './ReminderSection';
 import CommentSection from './CommentSection';
 import toast from 'react-hot-toast';
 import CustomDateTimePicker from '../ui/CustomDateTimePicker';
+import { toDatetimeLocal, toIsoUtcString } from '../../utils/format';
 
 export default function AppointmentDetail({ appt, onUpdate }) {
   const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
@@ -20,17 +21,10 @@ export default function AppointmentDetail({ appt, onUpdate }) {
     (isCenter && appt.assigned_center === user?.center_id) ||
     (isTelesale && appt.assigned_staff === user?.id);
 
-  const formatDateForInput = (isoString) => {
-    if (!isoString) return '';
-    const d = new Date(isoString);
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-
-  const [newApptTime, setNewApptTime] = useState(formatDateForInput(appt.trial_appointment_at));
+  const [newApptTime, setNewApptTime] = useState(toDatetimeLocal(appt.trial_appointment_at));
 
   useEffect(() => {
-    setNewApptTime(formatDateForInput(appt.trial_appointment_at));
+    setNewApptTime(toDatetimeLocal(appt.trial_appointment_at));
   }, [appt.trial_appointment_at]);
 
   const loadReminders = useCallback(async () => {
@@ -81,7 +75,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
     if (updating) return;
     setUpdating(true);
     try {
-      const formattedIso = new Date(newApptTime).toISOString();
+      const formattedIso = toIsoUtcString(newApptTime);
       await updateLead(appt.id, { trial_appointment_at: formattedIso }, 'Đổi lịch hẹn học thử');
       toast.success('Đã đổi lịch hẹn học thử');
       if (onUpdate) onUpdate();
@@ -185,7 +179,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                 />
                 <button
                   onClick={handleReschedule}
-                  disabled={updating || !newApptTime || newApptTime === formatDateForInput(appt.trial_appointment_at)}
+                  disabled={updating || !newApptTime || newApptTime === toDatetimeLocal(appt.trial_appointment_at)}
                   className="btn-primary text-xs py-1 px-3 whitespace-nowrap"
                 >
                   Đổi lịch

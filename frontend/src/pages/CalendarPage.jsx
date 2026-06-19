@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useDebounce } from '../hooks/useShared';
+import { formatDateYmd } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAppointments } from '../services/api';
 import { getLevelInfo } from '../config/levels';
@@ -109,8 +110,8 @@ export default function CalendarPage() {
   const showCenterFilter = isAdmin || isMarketing || isLeadTelesale;
 
   const [filters, setFilters] = useState({
-    from: new Date(new Date().setDate(1)).toISOString().slice(0, 10),
-    to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
+    from: formatDateYmd(new Date(new Date().setDate(1))),
+    to: formatDateYmd(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)),
     center_id: !showCenterFilter && user?.permission_group === 'center' ? (user?.center_id || '') : '',
     status: '',
     assigned_staff: '',
@@ -151,8 +152,8 @@ export default function CalendarPage() {
       const m = currentMonth.getMonth();
       setFilters((prev) => ({
         ...prev,
-        from: new Date(y, m, 1).toISOString().slice(0, 10),
-        to: new Date(y, m + 1, 0).toISOString().slice(0, 10),
+        from: formatDateYmd(new Date(y, m, 1)),
+        to: formatDateYmd(new Date(y, m + 1, 0)),
       }));
     }
   }, [currentMonth, viewMode]);

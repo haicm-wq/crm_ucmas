@@ -374,8 +374,8 @@ export async function purgeTrash() {
 export async function fetchAppointments({ from, to, center_id, status, assigned_staff } = {}) {
   return withCache('fetchAppointments', { from, to, center_id, status, assigned_staff }, async () => {
     let query = supabase.from('v_trial_appointments').select('*');
-    if (from) query = query.gte('trial_appointment_at', from);
-    if (to) query = query.lte('trial_appointment_at', to);
+    if (from) query = query.gte('trial_appointment_at', from.includes('T') ? from : `${from}T00:00:00+07:00`);
+    if (to) query = query.lte('trial_appointment_at', to.includes('T') ? to : `${to}T23:59:59+07:00`);
     if (center_id) query = query.eq('assigned_center', center_id);
     if (status) query = query.eq('appt_status', status);
     if (assigned_staff) query = query.eq('assigned_staff', assigned_staff);

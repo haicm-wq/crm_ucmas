@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDateYmd } from '../utils/format';
 import {
   fetchReportFunnel, fetchReportCenterConversion, fetchReportSalePerformance,
   fetchReportCenterComparison, fetchReportSourceCampaign, fetchReportTimeInStage,
@@ -27,10 +28,9 @@ export default function ReportsPage() {
   const { user, isCenter, isTelesale, isLeadTelesale, isAdmin } = useAuth();
   
   const getFirstDayOfMonth = () => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return formatDateYmd(new Date(new Date().setDate(1)));
   };
-  const getToday = () => new Date().toISOString().split('T')[0];
+  const getToday = () => formatDateYmd(new Date());
 
   const filteredTabs = TABS.filter((t) => {
     if (isCenter) {
@@ -82,8 +82,8 @@ export default function ReportsPage() {
     try {
       let result;
       const apiFilters = {
-        from: filters.from ? `${filters.from}T00:00:00Z` : null,
-        to: filters.to ? `${filters.to}T23:59:59Z` : null,
+        from: filters.from ? `${filters.from}T00:00:00+07:00` : null,
+        to: filters.to ? `${filters.to}T23:59:59+07:00` : null,
         center_id: filters.center_id || null,
       };
 

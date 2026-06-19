@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { fetchDashboardAnalytics } from '../services/api';
 import { supabase } from '../lib/supabase';
+import { formatDateYmd } from '../utils/format';
 
 import { CardSkeleton, ChartSkeleton } from '../components/ui/SkeletonLoader';
 import toast from 'react-hot-toast';
@@ -149,10 +150,9 @@ function MultiSelectDropdown({ label, options, selectedValues, onChange, disable
 export default function DashboardPage() {
   const navigate = useNavigate();
   const getFirstDayOfMonth = () => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return formatDateYmd(new Date(new Date().setDate(1)));
   };
-  const getToday = () => new Date().toISOString().split('T')[0];
+  const getToday = () => formatDateYmd(new Date());
 
   const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
 
@@ -193,8 +193,8 @@ export default function DashboardPage() {
       const centerFilter = isCenter ? [user.center_id] : activeFilters.selectedCenters;
 
       const result = await fetchDashboardAnalytics({
-        from: activeFilters.from ? `${activeFilters.from}T00:00:00Z` : null,
-        to: activeFilters.to ? `${activeFilters.to}T23:59:59Z` : null,
+        from: activeFilters.from ? `${activeFilters.from}T00:00:00+07:00` : null,
+        to: activeFilters.to ? `${activeFilters.to}T23:59:59+07:00` : null,
         center_ids: centerFilter.length > 0 ? centerFilter : null,
         product_codes: activeFilters.selectedProducts.length > 0 ? activeFilters.selectedProducts : null,
         source_type: activeFilters.sourceType || null,
@@ -210,8 +210,8 @@ export default function DashboardPage() {
           .eq('level_code', 'L1.KK')
           .eq('assigned_staff', user.id);
 
-        if (activeFilters.from) queryL0 = queryL0.gte('created_at', `${activeFilters.from}T00:00:00Z`);
-        if (activeFilters.to) queryL0 = queryL0.lte('created_at', `${activeFilters.to}T23:59:59Z`);
+        if (activeFilters.from) queryL0 = queryL0.gte('created_at', `${activeFilters.from}T00:00:00+07:00`);
+        if (activeFilters.to) queryL0 = queryL0.lte('created_at', `${activeFilters.to}T23:59:59+07:00`);
 
         const { count: l0Count, error: l0Err } = await queryL0;
         if (!l0Err) setCountL0(l0Count || 0);
@@ -224,8 +224,8 @@ export default function DashboardPage() {
           .eq('appt_status', 'scheduled')
           .or('sale_remind_status.is.null,sale_remind_status.neq.reminded');
 
-        if (activeFilters.from) queryPending = queryPending.gte('trial_appointment_at', `${activeFilters.from}T00:00:00Z`);
-        if (activeFilters.to) queryPending = queryPending.lte('trial_appointment_at', `${activeFilters.to}T23:59:59Z`);
+        if (activeFilters.from) queryPending = queryPending.gte('trial_appointment_at', `${activeFilters.from}T00:00:00+07:00`);
+        if (activeFilters.to) queryPending = queryPending.lte('trial_appointment_at', `${activeFilters.to}T23:59:59+07:00`);
 
         const { count: pendingCount, error: pendingErr } = await queryPending;
         if (!pendingErr) setCountPending(pendingCount || 0);

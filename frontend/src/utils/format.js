@@ -14,6 +14,7 @@ export function formatDate(dt) {
     day: '2-digit',
     month: '2-digit',
     year: '2-digit',
+    timeZone: 'Asia/Ho_Chi_Minh',
   });
 }
 
@@ -30,6 +31,7 @@ export function formatDateTime(dt) {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Ho_Chi_Minh',
   });
 }
 
@@ -46,11 +48,34 @@ export function formatRelativeTime(dt) {
   if (diffSec < 60) return 'Vừa xong';
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)} phút trước`;
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
-  return d.toLocaleDateString('vi-VN');
+  return d.toLocaleDateString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+  });
 }
 
 /**
- * Convert value → datetime-local input format (yyyy-MM-ddTHH:mm)
+ * Convert Date to yyyy-MM-dd format in Vietnam timezone
+ * @param {string|Date} date
+ * @returns {string}
+ */
+export function formatDateYmd(date) {
+  if (!date) return '';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  try {
+    const formatter = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    return formatter.format(d);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Convert value → datetime-local input format (yyyy-MM-ddTHH:mm) in Vietnam timezone
  * Safe: returns '' on invalid input
  * @param {string|Date|null} val
  * @returns {string}
@@ -58,9 +83,40 @@ export function formatRelativeTime(dt) {
 export function toDatetimeLocal(val) {
   if (!val) return '';
   try {
-    const d = typeof val === 'string' ? val : new Date(val).toISOString();
-    return d.slice(0, 16);
+    const d = typeof val === 'string' ? new Date(val) : val;
+    if (isNaN(d.getTime())) return '';
+    const formatter = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const formatted = formatter.format(d); // "yyyy-MM-dd HH:mm"
+    const parts = formatted.split(' ');
+    const datePart = parts[0];
+    const timePart = parts[1].slice(0, 5);
+    return `${datePart}T${timePart}`;
   } catch {
     return '';
+  }
+}
+
+/**
+ * Convert zone-less local datetime string (yyyy-MM-ddTHH:mm) back to UTC ISO string in Asia/Ho_Chi_Minh (+07:00)
+ * @param {string} val 
+ * @returns {string|null}
+ */
+export function toIsoUtcString(val) {
+  if (!val) return null;
+  try {
+    if (val.includes('+') || val.endsWith('Z')) {
+      return new Date(val).toISOString();
+    }
+    return new Date(`${val}:00+07:00`).toISOString();
+  } catch {
+    return null;
   }
 }

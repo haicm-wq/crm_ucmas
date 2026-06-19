@@ -2,6 +2,7 @@
  * UCMAS CRM — Shared validation utilities
  */
 import { PHONE_REGEX } from '../config/constants';
+import { toIsoUtcString } from './format';
 
 /**
  * Validate SĐT Việt Nam
@@ -34,6 +35,8 @@ export function cleanFormChanges(form) {
       changes[k] = null;
     } else if (v === '') {
       continue; // skip empty optional text fields
+    } else if (k === 'trial_appointment_at' || k === 'next_followup_at') {
+      changes[k] = toIsoUtcString(v);
     } else {
       changes[k] = v;
     }

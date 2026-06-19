@@ -341,7 +341,7 @@ BEGIN
         WHERE is_milestone = true ORDER BY last_level_change_at DESC LIMIT 10) t;
 
   SELECT COUNT(*) INTO v_appt_today FROM leads
-  WHERE trial_appointment_at >= CURRENT_DATE AND trial_appointment_at < CURRENT_DATE + INTERVAL '1 day';
+  WHERE (trial_appointment_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 
   SELECT row_to_json(t)::jsonb INTO v_conversion
   FROM (SELECT
