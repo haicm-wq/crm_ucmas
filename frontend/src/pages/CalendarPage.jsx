@@ -58,35 +58,35 @@ function CalendarGridView({ appointments, currentMonth, onMonthChange }) {
 
       <div className="grid grid-cols-7">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="text-center py-2 text-[10px] font-bold uppercase tracking-wider text-surface-500 border-b border-surface-200 dark:border-surface-700">{d}</div>
+          <div key={d} className="text-center py-2 text-xs font-bold uppercase tracking-wider text-surface-500 border-b border-surface-200 dark:border-surface-700">{d}</div>
         ))}
         {cells.map((day, idx) => {
-          if (day === null) return <div key={`empty-${idx}`} className="min-h-[80px] bg-surface-50/50 dark:bg-surface-800/20" />;
+          if (day === null) return <div key={`empty-${idx}`} className="min-h-[120px] bg-surface-50/50 dark:bg-surface-800/20" />;
           const key = `${year}-${month}-${day}`;
           const dayAppts = dateMap[key] || [];
           const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
 
           return (
-            <div key={day} className={`min-h-[80px] border-b border-r border-surface-200/50 dark:border-surface-700/30 p-1.5 transition-colors ${
+            <div key={day} className={`min-h-[120px] border-b border-r border-surface-200/50 dark:border-surface-700/30 p-1.5 transition-colors ${
               isToday ? 'bg-primary-50 dark:bg-primary-500/5' : 'hover:bg-surface-50 dark:hover:bg-surface-800/20'
             }`}>
-              <span className={`text-xs font-medium ${isToday ? 'w-6 h-6 rounded-full bg-primary-500 text-white flex items-center justify-center' : 'text-surface-600 dark:text-surface-400'}`}>
+              <span className={`text-sm font-medium ${isToday ? 'w-7 h-7 rounded-full bg-primary-500 text-white flex items-center justify-center' : 'text-surface-600 dark:text-surface-400'}`}>
                 {day}
               </span>
-              <div className="mt-1 space-y-0.5">
-                {dayAppts.slice(0, 3).map((a) => {
+              <div className="mt-1 space-y-1">
+                {dayAppts.slice(0, 4).map((a) => {
                   const st = STATUS_MAP[a.appt_status] || STATUS_MAP.scheduled;
                   return (
-                    <div key={a.id} className="flex items-center gap-1 px-1 py-0.5 rounded text-[9px] bg-surface-100 dark:bg-surface-800/50 truncate" title={`${a.full_name} — Nguồn: ${a.source_type || 'PULL'} — ${st.label}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${st.dot}`} />
+                    <div key={a.id} className="flex items-center gap-1.5 px-1 py-0.5 rounded text-xs bg-surface-100 dark:bg-surface-800/50 truncate" title={`${a.full_name} — Nguồn: ${a.source_type || 'PULL'} — ${st.label}`}>
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${st.dot}`} />
                       <span className="truncate text-surface-700 dark:text-surface-300">
                         {new Date(a.trial_appointment_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} {a.full_name} ({a.source_type || 'PULL'})
                       </span>
                     </div>
                   );
                 })}
-                {dayAppts.length > 3 && (
-                  <p className="text-[9px] text-primary-500 font-medium px-1">+{dayAppts.length - 3} hẹn</p>
+                {dayAppts.length > 4 && (
+                  <p className="text-xs text-primary-500 font-medium px-1">+{dayAppts.length - 4} hẹn</p>
                 )}
               </div>
             </div>
