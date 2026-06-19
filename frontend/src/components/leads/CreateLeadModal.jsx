@@ -15,6 +15,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
     address: '', source_type: 'PULL', ad_campaign: '',
     interested_products: [],
     custom_fields: {},
+    fanpage: '',
   });
   // Performance: dùng cached customFieldsDef từ SharedDataProvider
   const { customFieldsDef } = useSharedData();
@@ -126,10 +127,15 @@ export default function CreateLeadModal({ onClose, onCreated }) {
               <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
                 className="input-field py-2 text-sm" />
             </div>
-            <div className="col-span-2">
+            <div>
+              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Fanpage</label>
+              <input value={form.fanpage || ''} onChange={(e) => setForm({ ...form, fanpage: e.target.value })}
+                className="input-field py-2 text-sm" placeholder="Tên Fanpage..." />
+            </div>
+            <div>
               <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Chiến dịch QC</label>
               <input value={form.ad_campaign} onChange={(e) => setForm({ ...form, ad_campaign: e.target.value })}
-                className="input-field py-2 text-sm" />
+                className="input-field py-2 text-sm" placeholder="Chiến dịch..." />
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Sản phẩm quan tâm</label>

@@ -44,6 +44,7 @@ export default function SyncTab() {
     { value: 'address', label: 'Địa chỉ' },
     { value: 'source_type', label: 'Nguồn (PULL/PUSH)' },
     { value: 'ad_campaign', label: 'Chiến dịch QC' },
+    { value: 'fanpage', label: 'Fanpage' },
     { value: 'interested_products', label: 'Sản phẩm quan tâm' },
     ...customFields.map((f) => ({
       value: `custom_fields.${f.key}`,
@@ -64,6 +65,7 @@ export default function SyncTab() {
     { key: 'staff_name', label: 'Tên Sale đặt lịch', defaultHeader: 'Sale đặt lịch' },
     { key: 'source_type', label: 'Nguồn', defaultHeader: 'Nguồn' },
     { key: 'ad_campaign', label: 'Chiến dịch QC', defaultHeader: 'Chiến dịch QC' },
+    { key: 'fanpage', label: 'Fanpage', defaultHeader: 'Fanpage' },
     { key: 'interested_products', label: 'Sản phẩm quan tâm', defaultHeader: 'Sản phẩm' },
     { key: 'entered_l1_ucmas_at', label: 'Thời điểm lên L1 UCMAS', defaultHeader: 'Mốc L1 UCMAS' },
     { key: 'entered_l1_uckid_at', label: 'Thời điểm lên L1 UCKID', defaultHeader: 'Mốc L1 UCKID' },

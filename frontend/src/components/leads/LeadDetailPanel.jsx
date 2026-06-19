@@ -78,6 +78,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
       student_code: lead.student_code || '',
       tuition_fee: lead.tuition_fee ?? 0,
       material_fee: lead.material_fee ?? 0,
+      fanpage: lead.fanpage || '',
     });
     setLevelNote('');
     setNoteContent('');
@@ -306,6 +307,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   { key: 'phone', label: 'SĐT', type: 'text' },
                   { key: 'child_name', label: 'Tên của con', type: 'text' },
                   { key: 'child_birth_year', label: 'Năm sinh con', type: 'number' },
+                  { key: 'fanpage', label: 'Fanpage', type: 'text' },
+                  { key: 'ad_campaign', label: 'Chiến dịch QC', type: 'text' },
                   { key: 'address', label: 'Địa chỉ', type: 'text', full: true },
                   { key: 'l1_kk_note', label: 'Ghi chú kho kiểm', type: 'text', full: true },
                 ].map(({ key, label, type, full }) => (

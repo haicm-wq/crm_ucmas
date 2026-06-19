@@ -49,6 +49,7 @@ const CRM_EXPORT_FIELDS = [
   { key: 'staff_name', label: 'Tên Sale đặt lịch', defaultHeader: 'Sale đặt lịch' },
   { key: 'source_type', label: 'Nguồn', defaultHeader: 'Nguồn' },
   { key: 'ad_campaign', label: 'Chiến dịch QC', defaultHeader: 'Chiến dịch QC' },
+  { key: 'fanpage', label: 'Fanpage', defaultHeader: 'Fanpage' },
   { key: 'interested_products', label: 'Sản phẩm quan tâm', defaultHeader: 'Sản phẩm' },
   { key: 'entered_l1_ucmas_at', label: 'Thời điểm lên L1 UCMAS', defaultHeader: 'Mốc L1 UCMAS' },
   { key: 'entered_l1_uckid_at', label: 'Thời điểm lên L1 UCKID', defaultHeader: 'Mốc L1 UCKID' },
@@ -393,6 +394,9 @@ function mapRowToPayload(headers, rowValues, mapping, sheetName, row) {
         break;
       case 'ad_campaign':
         payload.p_ad_campaign = val ? String(val).trim() : null;
+        break;
+      case 'fanpage':
+        payload.p_fanpage = val ? String(val).trim() : null;
         break;
       case 'child_name':
         payload.p_child_name = val ? String(val).trim() : null;
