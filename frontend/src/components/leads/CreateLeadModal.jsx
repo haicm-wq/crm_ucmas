@@ -18,7 +18,11 @@ export default function CreateLeadModal({ onClose, onCreated }) {
     fanpage: '',
   });
   // Performance: dùng cached customFieldsDef từ SharedDataProvider
-  const { customFieldsDef } = useSharedData();
+  const { customFieldsDef, subSources } = useSharedData();
+
+  const filteredSubSources = (subSources || []).filter(
+    (s) => s.source_type === form.source_type && s.is_active
+  );
   const [saving, setSaving] = useState(false);
   const [dupCheck, setDupCheck] = useState(null);
   const [dupConfirmed, setDupConfirmed] = useState(false);
@@ -116,7 +120,7 @@ export default function CreateLeadModal({ onClose, onCreated }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Nguồn</label>
-              <select value={form.source_type} onChange={(e) => setForm({ ...form, source_type: e.target.value })}
+              <select value={form.source_type} onChange={(e) => setForm({ ...form, source_type: e.target.value, ad_campaign: '' })}
                 className="select-field py-2 text-sm">
                 <option value="PULL">PULL (Quảng cáo)</option>
                 <option value="PUSH">PUSH (Giới thiệu)</option>
@@ -133,9 +137,22 @@ export default function CreateLeadModal({ onClose, onCreated }) {
                 className="input-field py-2 text-sm" placeholder="Tên Fanpage..." />
             </div>
             <div>
-              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Chiến dịch QC</label>
-              <input value={form.ad_campaign} onChange={(e) => setForm({ ...form, ad_campaign: e.target.value })}
-                className="input-field py-2 text-sm" placeholder="Chiến dịch..." />
+              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Chiến dịch QC (Nguồn con)</label>
+              <select
+                value={form.ad_campaign}
+                onChange={(e) => setForm({ ...form, ad_campaign: e.target.value })}
+                className="select-field py-2 text-sm"
+              >
+                <option value="">— Chọn nguồn con —</option>
+                {filteredSubSources.map((sub) => (
+                  <option key={sub.id} value={sub.name}>
+                    {sub.name}
+                  </option>
+                ))}
+                {form.ad_campaign && !filteredSubSources.some(s => s.name === form.ad_campaign) && (
+                  <option value={form.ad_campaign}>{form.ad_campaign} (Ngoài danh sách)</option>
+                )}
+              </select>
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Sản phẩm quan tâm</label>

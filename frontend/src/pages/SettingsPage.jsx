@@ -5,10 +5,12 @@ import CentersTab from '../components/settings/CentersTab';
 import SyncTab from '../components/settings/SyncTab';
 import FieldsTab from '../components/settings/FieldsTab';
 import ProductsTab from '../components/settings/ProductsTab';
+import SourcesTab from '../components/settings/SourcesTab';
 import ProfileTab from '../components/settings/ProfileTab';
 import { 
   HiOutlineUsers, HiOutlineOfficeBuilding, HiOutlineRefresh, 
-  HiOutlineAdjustments, HiOutlineCollection, HiOutlineLockClosed 
+  HiOutlineAdjustments, HiOutlineCollection, HiOutlineLockClosed,
+  HiOutlineFilter
 } from 'react-icons/hi';
 
 const ALL_TABS = [
@@ -17,6 +19,7 @@ const ALL_TABS = [
   { id: 'sync', label: 'Đồng bộ Sheet', icon: HiOutlineRefresh, adminOnly: true },
   { id: 'fields', label: 'Trường dữ liệu', icon: HiOutlineAdjustments, adminOnly: true },
   { id: 'products', label: 'Sản phẩm & Level', icon: HiOutlineCollection, adminOnly: true },
+  { id: 'sources', label: 'Nguồn lead con', icon: HiOutlineFilter, adminOnly: true },
   { id: 'profile', label: 'Đổi mật khẩu', icon: HiOutlineLockClosed, adminOnly: false },
 ];
 
@@ -49,8 +52,10 @@ export default function SettingsPage() {
       {activeTab === 'sync' && isAdmin && <SyncTab />}
       {activeTab === 'fields' && isAdmin && <FieldsTab />}
       {activeTab === 'products' && isAdmin && <ProductsTab />}
+      {activeTab === 'sources' && isAdmin && <SourcesTab />}
       {activeTab === 'profile' && <ProfileTab />}
     </div>
   );
 }
+
 

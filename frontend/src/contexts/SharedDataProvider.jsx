@@ -4,7 +4,7 @@
  * Giảm API calls từ 5+/panel → chỉ fetch lead-specific data
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { fetchCenters, fetchAllStaff, fetchProductLevels, fetchSettings } from '../services/api';
+import { fetchCenters, fetchAllStaff, fetchProductLevels, fetchSettings, fetchSubSources } from '../services/api';
 import { supabase } from '../lib/supabase';
 
 const SharedDataContext = createContext(null);
@@ -15,6 +15,7 @@ export function SharedDataProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [productLevels, setProductLevels] = useState([]);
   const [customFieldsDef, setCustomFieldsDef] = useState([]);
+  const [subSources, setSubSources] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadCenters = useCallback(async () => {
@@ -67,6 +68,15 @@ export function SharedDataProvider({ children }) {
     }
   }, []);
 
+  const loadSubSources = useCallback(async () => {
+    try {
+      const data = await fetchSubSources();
+      setSubSources(data);
+    } catch (err) {
+      console.error('SharedData: Error loading sub-sources', err);
+    }
+  }, []);
+
   useEffect(() => {
     Promise.all([
       loadCenters(),
@@ -74,8 +84,9 @@ export function SharedDataProvider({ children }) {
       loadProducts(),
       loadProductLevels(),
       loadSettings(),
+      loadSubSources(),
     ]).finally(() => setLoading(false));
-  }, [loadCenters, loadStaff, loadProducts, loadProductLevels, loadSettings]);
+  }, [loadCenters, loadStaff, loadProducts, loadProductLevels, loadSettings, loadSubSources]);
 
   const refreshCenters = useCallback(() => loadCenters(), [loadCenters]);
   const refreshStaff = useCallback(() => loadStaff(), [loadStaff]);
@@ -84,6 +95,7 @@ export function SharedDataProvider({ children }) {
     await loadProductLevels();
   }, [loadProducts, loadProductLevels]);
   const refreshSettings = useCallback(() => loadSettings(), [loadSettings]);
+  const refreshSubSources = useCallback(() => loadSubSources(), [loadSubSources]);
 
   return (
     <SharedDataContext.Provider value={{
@@ -92,11 +104,13 @@ export function SharedDataProvider({ children }) {
       products,
       productLevels,
       customFieldsDef,
+      subSources,
       loading,
       refreshCenters,
       refreshStaff,
       refreshProducts,
       refreshSettings,
+      refreshSubSources,
     }}>
       {children}
     </SharedDataContext.Provider>

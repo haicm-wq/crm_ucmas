@@ -473,22 +473,24 @@ export async function fetchDashboardCenter(centerId) {
   }, 60000);
 }
 
-export async function fetchDashboardAnalytics({ from, to, center_ids, product_codes, source_type } = {}) {
+export async function fetchDashboardAnalytics({ from, to, center_ids, product_codes, source_type, sub_source } = {}) {
   const sortedCenters = Array.isArray(center_ids) ? [...center_ids].sort() : center_ids;
   const sortedProducts = Array.isArray(product_codes) ? [...product_codes].sort() : product_codes;
   
-  return withCache('fetchDashboardAnalytics', { from, to, center_ids: sortedCenters, product_codes: sortedProducts, source_type }, async () => {
+  return withCache('fetchDashboardAnalytics', { from, to, center_ids: sortedCenters, product_codes: sortedProducts, source_type, sub_source }, async () => {
     const { data, error } = await supabase.rpc('rpc_dashboard_analytics', {
       p_from: from || null,
       p_to: to || null,
       p_center_ids: sortedCenters || null,
       p_product_codes: sortedProducts || null,
       p_source_type: source_type || null,
+      p_sub_source: sub_source || null,
     });
     if (error) throw error;
     return data;
   }, 30000);
 }
+
 
 export async function fetchReportBookingSalePerformance({ from, to, center_id } = {}) {
   return withCache('fetchReportBookingSalePerformance', { from, to, center_id }, async () => {
@@ -778,5 +780,52 @@ export async function resetUserPassword(userId) {
   }
   return data;
 }
+
+// ============================================================
+// LEAD SUB-SOURCES (Nguồn lead con)
+// ============================================================
+
+export async function fetchSubSources() {
+  const { data, error } = await supabase
+    .from('lead_sub_sources')
+    .select('*')
+    .order('source_type', { ascending: true })
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createSubSource(sourceData) {
+  const { data, error } = await supabase
+    .from('lead_sub_sources')
+    .insert(sourceData)
+    .select()
+    .single();
+  if (error) throw error;
+  clearCache();
+  return data;
+}
+
+export async function updateSubSource(id, changes) {
+  const { data, error } = await supabase
+    .from('lead_sub_sources')
+    .update(changes)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  clearCache();
+  return data;
+}
+
+export async function deleteSubSource(id) {
+  const { error } = await supabase
+    .from('lead_sub_sources')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  clearCache();
+}
+
 
 

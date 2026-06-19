@@ -164,7 +164,7 @@ export default function DashboardPage() {
       navigate(`/leads?level_code=${code}`);
     }
   };
-  const { centers, products, productLevels } = useSharedData();
+  const { centers, products, productLevels, subSources } = useSharedData();
 
   // Filters State
   const [from, setFrom] = useState(getFirstDayOfMonth());
@@ -172,6 +172,7 @@ export default function DashboardPage() {
   const [selectedCenters, setSelectedCenters] = useState(isCenter ? [user.center_id] : []);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [selectedSourceType, setSelectedSourceType] = useState(isCenter ? 'PULL' : ''); // Center mặc định xem PULL
+  const [selectedSubSource, setSelectedSubSource] = useState('');
 
   const [activeFilters, setActiveFilters] = useState({
     from: getFirstDayOfMonth(),
@@ -179,7 +180,20 @@ export default function DashboardPage() {
     selectedCenters: isCenter ? [user.center_id] : [],
     selectedProducts: [],
     sourceType: isCenter ? 'PULL' : '',
+    subSource: '',
   });
+
+  const filteredSubSources = useMemo(() => {
+    const list = subSources || [];
+    if (!selectedSourceType) return list.filter((s) => s.is_active);
+    return list.filter((s) => s.source_type === selectedSourceType && s.is_active);
+  }, [subSources, selectedSourceType]);
+
+  useEffect(() => {
+    if (selectedSubSource && !filteredSubSources.some((s) => s.name === selectedSubSource)) {
+      setSelectedSubSource('');
+    }
+  }, [selectedSourceType, filteredSubSources, selectedSubSource]);
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -198,6 +212,7 @@ export default function DashboardPage() {
         center_ids: centerFilter.length > 0 ? centerFilter : null,
         product_codes: activeFilters.selectedProducts.length > 0 ? activeFilters.selectedProducts : null,
         source_type: activeFilters.sourceType || null,
+        sub_source: activeFilters.subSource || null,
       });
       setData(result);
 
@@ -249,6 +264,7 @@ export default function DashboardPage() {
       selectedCenters,
       selectedProducts,
       sourceType: selectedSourceType,
+      subSource: selectedSubSource,
     });
   };
 
@@ -258,12 +274,14 @@ export default function DashboardPage() {
     const defaultCenters = isCenter ? [user.center_id] : [];
     const defaultProducts = [];
     const defaultSource = isCenter ? 'PULL' : '';
+    const defaultSubSource = '';
 
     setFrom(defaultFrom);
     setTo(defaultTo);
     setSelectedCenters(defaultCenters);
     setSelectedProducts(defaultProducts);
     setSelectedSourceType(defaultSource);
+    setSelectedSubSource(defaultSubSource);
 
     setActiveFilters({
       from: defaultFrom,
@@ -271,6 +289,7 @@ export default function DashboardPage() {
       selectedCenters: defaultCenters,
       selectedProducts: defaultProducts,
       sourceType: defaultSource,
+      subSource: defaultSubSource,
     });
   };
 
@@ -601,21 +620,36 @@ export default function DashboardPage() {
           placeholder="Tất cả sản phẩm"
         />
 
-        {/* Nguồn lead — chỉ hiện cho Trung tâm */}
-        {isCenter && (
-          <div>
-            <label className="block text-xs text-surface-500 mb-1">Nguồn lead</label>
-            <select
-              value={selectedSourceType}
-              onChange={(e) => setSelectedSourceType(e.target.value)}
-              className="select-field py-2 text-sm"
-            >
-              <option value="PULL">Chỉ PULL (Quảng cáo)</option>
-              <option value="PUSH">Chỉ PUSH (Giới thiệu)</option>
-              <option value="">Tất cả (PULL + PUSH)</option>
-            </select>
-          </div>
-        )}
+        {/* Nguồn lead — hiện cho mọi vai trò */}
+        <div>
+          <label className="block text-xs text-surface-500 mb-1">Nguồn lead</label>
+          <select
+            value={selectedSourceType}
+            onChange={(e) => setSelectedSourceType(e.target.value)}
+            className="select-field py-2 text-sm"
+          >
+            <option value="">Tất cả nguồn</option>
+            <option value="PULL">Chỉ PULL (Quảng cáo)</option>
+            <option value="PUSH">Chỉ PUSH (Giới thiệu)</option>
+          </select>
+        </div>
+
+        {/* Nguồn con */}
+        <div>
+          <label className="block text-xs text-surface-500 mb-1">Nguồn con</label>
+          <select
+            value={selectedSubSource}
+            onChange={(e) => setSelectedSubSource(e.target.value)}
+            className="select-field py-2 text-sm min-w-[140px]"
+          >
+            <option value="">Tất cả nguồn con</option>
+            {filteredSubSources.map((sub) => (
+              <option key={sub.id} value={sub.name}>
+                {sub.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="flex gap-2">
           <button 

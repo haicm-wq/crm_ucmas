@@ -21,7 +21,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   // Chỉ admin hoặc sale (không phải trung tâm) mới được đổi Sale đặt lịch
   const canEditStaff = isAdmin || !isCenter;
   // Performance: dùng cached data từ SharedDataProvider thay vì fetch mỗi lần mở panel
-  const { products: allProducts, productLevels: allProductLevels, customFieldsDef } = useSharedData();
+  const { products: allProducts, productLevels: allProductLevels, customFieldsDef, subSources } = useSharedData();
   const [activeTab, setActiveTab] = useState('info');
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
@@ -35,6 +35,10 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
   const [siblings, setSiblings] = useState([]);
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
+
+  const filteredSubSources = (subSources || []).filter(
+    (s) => s.source_type === (form.source_type || lead.source_type) && s.is_active
+  );
 
   // States cho level theo sản phẩm (chỉ lead-specific data)
   const [leadProductLevels, setLeadProductLevels] = useState([]);
@@ -316,8 +320,26 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   <div key={key} className={full ? 'col-span-2' : ''}>
                     <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{label}</label>
                     {editing ? (
-                      <input type={type} value={form[key] || ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                        className="input-field py-2 text-sm" />
+                      key === 'ad_campaign' ? (
+                        <select
+                          value={form.ad_campaign || ''}
+                          onChange={(e) => setForm({ ...form, ad_campaign: e.target.value })}
+                          className="select-field py-2 text-sm"
+                        >
+                          <option value="">— Chọn nguồn con —</option>
+                          {filteredSubSources.map((sub) => (
+                            <option key={sub.id} value={sub.name}>
+                              {sub.name}
+                            </option>
+                          ))}
+                          {form.ad_campaign && !filteredSubSources.some(s => s.name === form.ad_campaign) && (
+                            <option value={form.ad_campaign}>{form.ad_campaign} (Ngoài danh sách)</option>
+                          )}
+                        </select>
+                      ) : (
+                        <input type={type} value={form[key] || ''} onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                          className="input-field py-2 text-sm" />
+                      )
                     ) : (
                       <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{lead[key] || '—'}</p>
                     )}
@@ -626,7 +648,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   {editing ? (
                     <select
                       value={form.source_type || 'PULL'}
-                      onChange={(e) => setForm({ ...form, source_type: e.target.value })}
+                      onChange={(e) => setForm({ ...form, source_type: e.target.value, ad_campaign: '' })}
                       disabled={!isAdmin}
                       className="select-field py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                     >
