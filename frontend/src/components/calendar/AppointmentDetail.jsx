@@ -6,6 +6,7 @@ import { HiOutlinePhone, HiOutlineOfficeBuilding, HiOutlineUser } from 'react-ic
 import ReminderSection from './ReminderSection';
 import CommentSection from './CommentSection';
 import toast from 'react-hot-toast';
+import CustomDateTimePicker from '../ui/CustomDateTimePicker';
 
 export default function AppointmentDetail({ appt, onUpdate }) {
   const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
@@ -163,13 +164,10 @@ export default function AppointmentDetail({ appt, onUpdate }) {
             </label>
             {canEditAppointment ? (
               <div className="flex gap-2">
-                <input
-                  type="datetime-local"
-                  step="300"
+                <CustomDateTimePicker
                   value={newApptTime}
-                  onChange={(e) => setNewApptTime(e.target.value)}
+                  onChange={setNewApptTime}
                   disabled={updating}
-                  className="input-field text-xs py-1 px-2 font-mono flex-1 min-w-[140px]"
                 />
                 <button
                   onClick={handleReschedule}

@@ -10,6 +10,7 @@ import { HiOutlineX, HiOutlinePencil, HiOutlineChatAlt, HiOutlineClock, HiOutlin
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import CustomDateTimePicker from '../ui/CustomDateTimePicker';
 
 // Bug9 fix: toDatetimeLocal is now in utils/format.js
 
@@ -607,9 +608,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Lịch học thử</label>
                   {editing ? (
-                    <input type="datetime-local" step="300" value={form.trial_appointment_at}
-                      onChange={(e) => setForm({ ...form, trial_appointment_at: e.target.value })}
-                      className="input-field py-2 text-sm" />
+                    <CustomDateTimePicker value={form.trial_appointment_at}
+                      onChange={(val) => setForm({ ...form, trial_appointment_at: val })} />
                   ) : (
                     <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{formatDt(lead.trial_appointment_at)}</p>
                   )}
@@ -618,9 +618,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Follow-up</label>
                   {editing ? (
-                    <input type="datetime-local" step="300" value={form.next_followup_at}
-                      onChange={(e) => setForm({ ...form, next_followup_at: e.target.value })}
-                      className="input-field py-2 text-sm" />
+                    <CustomDateTimePicker value={form.next_followup_at}
+                      onChange={(val) => setForm({ ...form, next_followup_at: val })} />
                   ) : (
                     <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{formatDt(lead.next_followup_at)}</p>
                   )}
