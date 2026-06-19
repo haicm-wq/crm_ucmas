@@ -99,7 +99,7 @@ function CalendarGridView({ appointments, currentMonth, onMonthChange }) {
 
 // ─── Main CalendarPage ──────────────────────────────────────
 export default function CalendarPage() {
-  const { centers } = useSharedData();
+  const { centers, allStaff } = useSharedData();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
@@ -113,6 +113,7 @@ export default function CalendarPage() {
     to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10),
     center_id: !showCenterFilter && user?.permission_group === 'center' ? (user?.center_id || '') : '',
     status: '',
+    assigned_staff: '',
   });
 
   // Đồng bộ center_id khi thông tin user profile tải xong
@@ -293,6 +294,15 @@ export default function CalendarPage() {
               <option value="cancelled">Hủy</option>
             </select>
           </div>
+          <div>
+            <label className="block text-xs text-surface-500 mb-1">Sale đặt lịch</label>
+            <select value={filters.assigned_staff}
+              onChange={(e) => setFilters({ ...filters, assigned_staff: e.target.value })}
+              className="select-field py-2 text-sm">
+              <option value="">Tất cả</option>
+              {(allStaff || []).map((s) => (<option key={s.id} value={s.id}>{s.full_name}</option>))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -316,7 +326,7 @@ export default function CalendarPage() {
           Object.entries(groupedByDate).map(([date, appts]) => (
             <div key={date} className="glass-card overflow-hidden">
               <div className="px-4 py-3 bg-surface-100 dark:bg-surface-800/50 border-b border-surface-200 dark:border-surface-700">
-                <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200">{date} — {appts.length} hẹn</h3>
+                <h3 className="text-base font-semibold text-surface-800 dark:text-surface-200">{date} — {appts.length} hẹn</h3>
               </div>
               <div className="divide-y divide-surface-200 dark:divide-surface-800/50">
                 {appts.map((appt) => {
@@ -332,42 +342,42 @@ export default function CalendarPage() {
                         }`}
                       >
                         <div className="flex items-start sm:items-center gap-4 min-w-0">
-                          <div className="text-center min-w-[70px] pt-1 sm:pt-0 flex flex-col items-center justify-center">
+                          <div className="text-center min-w-[80px] pt-1 sm:pt-0 flex flex-col items-center justify-center">
                             {appt.lead_code && (
-                              <span className="text-[10px] font-mono font-semibold text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800/80 px-1 rounded mb-1">
+                              <span className="text-xs font-mono font-semibold text-surface-400 dark:text-surface-500 bg-surface-100 dark:bg-surface-800/80 px-1.5 rounded mb-1">
                                 {appt.lead_code}
                               </span>
                             )}
-                            <p className="text-base sm:text-lg font-bold text-primary-600 dark:text-primary-400 leading-none">
+                            <p className="text-lg sm:text-xl font-bold text-primary-600 dark:text-primary-400 leading-none">
                               {new Date(appt.trial_appointment_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>
                           <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <p className="text-sm font-semibold text-surface-800 dark:text-surface-100">{appt.full_name}</p>
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                              <p className="text-base font-semibold text-surface-800 dark:text-surface-100">{appt.full_name}</p>
                               {(appt.child_name || appt.child_birth_year || appt.address) && (
-                                <span className="text-[11px] text-surface-500 dark:text-surface-400 bg-surface-100/50 dark:bg-surface-800/30 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                <span className="text-xs sm:text-sm text-surface-500 dark:text-surface-400 bg-surface-100/50 dark:bg-surface-800/30 px-2 py-0.5 rounded-md flex items-center gap-1">
                                   👶 {appt.child_name || 'Chưa có tên con'}{appt.child_birth_year ? ` (${appt.child_birth_year})` : ''}{appt.address ? ` - 📍 ${appt.address}` : ''}
                                 </span>
                               )}
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                              <span className="text-xs text-surface-500 font-mono">{appt.phone}</span>
-                              <span className={`badge text-[10px] ${levelInfo.bgClass}`}>{appt.level_code}</span>
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1.5">
+                              <span className="text-sm text-surface-500 font-mono">{appt.phone}</span>
+                              <span className={`badge text-xs ${levelInfo.bgClass}`}>{appt.level_code}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                                 appt.source_type === 'PUSH'
                                   ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
                                   : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                               }`}>
                                 {appt.source_type || 'PULL'}
                               </span>
-                              <span className="text-xs text-surface-500">{appt.center_name}</span>
-                              {appt.sale_name && <span className="text-xs text-surface-600 dark:text-surface-400">· {appt.sale_name}</span>}
+                              <span className="text-sm text-surface-500">{appt.center_name}</span>
+                              {appt.sale_name && <span className="text-sm text-surface-600 dark:text-surface-400">· {appt.sale_name}</span>}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 pl-[76px] sm:pl-0">
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${st.color}`}>{st.label}</span>
+                        <div className="flex items-center gap-2 pl-[86px] sm:pl-0">
+                          <span className={`text-sm font-medium px-2.5 py-1 rounded-full ${st.color}`}>{st.label}</span>
                           <HiOutlineChevronDown className={`w-4 h-4 text-surface-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                         </div>
                       </div>

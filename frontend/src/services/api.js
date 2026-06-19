@@ -371,13 +371,14 @@ export async function purgeTrash() {
 // APPOINTMENTS
 // ============================================================
 
-export async function fetchAppointments({ from, to, center_id, status } = {}) {
-  return withCache('fetchAppointments', { from, to, center_id, status }, async () => {
+export async function fetchAppointments({ from, to, center_id, status, assigned_staff } = {}) {
+  return withCache('fetchAppointments', { from, to, center_id, status, assigned_staff }, async () => {
     let query = supabase.from('v_trial_appointments').select('*');
     if (from) query = query.gte('trial_appointment_at', from);
     if (to) query = query.lte('trial_appointment_at', to);
     if (center_id) query = query.eq('assigned_center', center_id);
     if (status) query = query.eq('appt_status', status);
+    if (assigned_staff) query = query.eq('assigned_staff', assigned_staff);
     query = query.order('trial_appointment_at', { ascending: true });
 
     const { data, error } = await query;
