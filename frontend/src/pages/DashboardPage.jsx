@@ -173,6 +173,7 @@ export default function DashboardPage() {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [selectedSourceType, setSelectedSourceType] = useState(isCenter ? 'PULL' : ''); // Center mặc định xem PULL
   const [selectedSubSource, setSelectedSubSource] = useState('');
+  const [isL4Expanded, setIsL4Expanded] = useState(false);
 
   const [activeFilters, setActiveFilters] = useState({
     from: getFirstDayOfMonth(),
@@ -754,45 +755,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Snapshot panel of current active level codes */}
-      <div className="glass-card p-5">
-        <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4 flex items-center gap-2">
-          📊 Phân bố trạng thái chi tiết hiện tại (Snapshot hoạt động)
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(groupedBaseline).map(([groupName, items]) => (
-            <div key={groupName} className="p-4 bg-surface-50 dark:bg-surface-800/20 border border-surface-100 dark:border-surface-800 rounded-xl space-y-3">
-              <h4 className="text-xs font-bold text-surface-500 uppercase tracking-wider border-b border-surface-200/50 dark:border-surface-700/50 pb-2">
-                Nhóm {groupName}
-              </h4>
-              <div className="space-y-2">
-                {items.map((item) => (
-                  <div 
-                    key={item.code} 
-                    onClick={() => handleLevelClick(item.code)}
-                    className="flex items-center justify-between text-xs cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 p-1 rounded transition-colors group"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                      <span className="font-mono text-surface-500 group-hover:text-primary-500 transition-colors">{item.code}</span>
-                      <span className="text-surface-700 dark:text-surface-300 truncate group-hover:text-surface-900 dark:group-hover:text-surface-100 transition-colors" title={item.label}>
-                        {item.label}
-                      </span>
-                    </div>
-                    <span className="font-bold text-surface-900 dark:text-surface-100 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-md min-w-[20px] text-center group-hover:bg-primary-100 dark:group-hover:bg-primary-500/20 transition-colors">
-                      {item.count}
-                    </span>
-                  </div>
-                ))}
-                {items.length === 0 && (
-                  <p className="text-center text-xs text-surface-400 py-4">Không có dữ liệu</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Detailed Center Summary Table — HQ only */}
       {isHQ && !isTelesale && byCenterDetailed.length > 0 && (
         <div className="glass-card p-5 space-y-4">
@@ -959,6 +921,76 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Snapshot panel of current active level codes */}
+      <div className="glass-card p-5">
+        <h3 className="text-sm font-semibold text-surface-800 dark:text-surface-200 mb-4 flex items-center gap-2">
+          📊 Phân bố trạng thái chi tiết hiện tại (Snapshot hoạt động)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(groupedBaseline).map(([groupName, items]) => {
+            const displayedItems = groupName === 'L4' && !isL4Expanded
+              ? items.filter(item => {
+                  const match = item.code.match(/^L4\.(\d+)/);
+                  return match ? parseInt(match[1], 10) <= 6 : false;
+                })
+              : items;
+
+            return (
+              <div key={groupName} className="p-4 bg-surface-50 dark:bg-surface-800/20 border border-surface-100 dark:border-surface-800 rounded-xl space-y-3">
+                <h4 className="text-xs font-bold text-surface-500 uppercase tracking-wider border-b border-surface-200/50 dark:border-surface-700/50 pb-2">
+                  Nhóm {groupName}
+                </h4>
+                <div className="space-y-2">
+                  {displayedItems.map((item) => (
+                    <div 
+                      key={item.code} 
+                      onClick={() => handleLevelClick(item.code)}
+                      className="flex items-center justify-between text-xs cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 p-1 rounded transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="font-mono text-surface-500 group-hover:text-primary-500 transition-colors">{item.code}</span>
+                        <span className="text-surface-700 dark:text-surface-300 truncate group-hover:text-surface-900 dark:group-hover:text-surface-100 transition-colors" title={item.label}>
+                          {item.label}
+                        </span>
+                      </div>
+                      <span className="font-bold text-surface-900 dark:text-surface-100 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-md min-w-[20px] text-center group-hover:bg-primary-100 dark:group-hover:bg-primary-500/20 transition-colors">
+                        {item.count}
+                      </span>
+                    </div>
+                  ))}
+                  {displayedItems.length === 0 && (
+                    <p className="text-center text-xs text-surface-400 py-4">Không có dữ liệu</p>
+                  )}
+                  {groupName === 'L4' && items.length > displayedItems.length && (
+                    <button
+                      onClick={() => setIsL4Expanded(true)}
+                      className="flex items-center justify-center gap-1 w-full mt-2 py-1.5 text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-lg transition-all duration-200 border border-dashed border-primary-200 dark:border-primary-800/30"
+                    >
+                      <span>Xem thêm ({items.length - displayedItems.length})</span>
+                      <svg className="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
+                  {groupName === 'L4' && isL4Expanded && items.length > 6 && (
+                    <button
+                      onClick={() => setIsL4Expanded(false)}
+                      className="flex items-center justify-center gap-1 w-full mt-2 py-1.5 text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-500/10 rounded-lg transition-all duration-200 border border-dashed border-primary-200 dark:border-primary-800/30"
+                    >
+                      <span>Thu gọn</span>
+                      <svg className="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* HQ extras: milestones */}
       {isHQ && !isTelesale && data.recentMilestones?.length > 0 && (
