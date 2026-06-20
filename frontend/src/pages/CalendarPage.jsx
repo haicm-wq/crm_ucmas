@@ -234,8 +234,8 @@ export default function CalendarPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="flex bg-surface-100 dark:bg-surface-800 rounded-lg p-0.5">
+          {/* View mode toggle - hidden on mobile */}
+          <div className="hidden sm:flex bg-surface-100 dark:bg-surface-800 rounded-lg p-0.5">
             <button onClick={() => setViewMode('list')}
               className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-surface-700 shadow-sm' : 'text-surface-500 hover:text-surface-700'}`}
               title="Danh sách" aria-label="Xem dạng danh sách">

@@ -524,7 +524,9 @@ export default function LeadPoolPage() {
             <div className="h-full bg-primary-500 animate-pulse w-full" />
           </div>
         )}
-        <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
+        
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-auto max-h-[calc(100vh-320px)] relative">
           <table className="data-table data-table-compact" style={{ minWidth: '1500px' }}>
             <thead>
               <tr>
@@ -856,6 +858,137 @@ export default function LeadPoolPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card List View */}
+        <div className="md:hidden overflow-auto max-h-[calc(100vh-320px)] p-2.5 space-y-3 relative bg-surface-50/30 dark:bg-transparent">
+          {loading && pool.length === 0 ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="glass-card p-4 animate-pulse space-y-2">
+                  <div className="h-4 bg-surface-200 dark:bg-surface-700 w-1/4 rounded" />
+                  <div className="h-6 bg-surface-300 dark:bg-surface-600 w-1/2 rounded" />
+                  <div className="h-4 bg-surface-200 dark:bg-surface-700 w-3/4 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : filteredPool.length === 0 ? (
+            <EmptyState icon={HiOutlineInbox} title="Kho L1 kho kiểm trống"
+              description={levelFilter ? `Chưa có lead nào ở level ${levelFilter}` : "Chưa có lead nào ở mức L1 kho kiểm"} />
+          ) : (
+            filteredPool.map((lead) => {
+              const unprocessed = lead.level_code === 'L1.KK';
+              const hasNoNote = !lead.l1_kk_note || lead.l1_kk_note.trim() === '';
+              const delayed = unprocessed && hasNoNote && isOver3Hours(lead.created_at);
+              
+              let cardBorderClass = 'border-surface-200 dark:border-surface-700';
+              let cardBgClass = 'bg-white dark:bg-surface-900';
+              
+              if (selected.has(lead.id)) {
+                cardBgClass = 'bg-primary-50/50 dark:bg-primary-500/5';
+                cardBorderClass = 'border-primary-300 dark:border-primary-800';
+              } else if (delayed) {
+                cardBgClass = 'bg-red-500/5 dark:bg-red-500/5';
+                cardBorderClass = 'border-red-300 dark:border-red-900/50';
+              } else if (unprocessed) {
+                cardBgClass = 'bg-amber-500/5 dark:bg-amber-500/5';
+                cardBorderClass = 'border-amber-300 dark:border-amber-900/50';
+              }
+
+              return (
+                <div
+                  key={lead.id}
+                  onClick={() => { if (selected.size === 0) setSelectedLead(lead); }}
+                  className={`glass-card p-4 relative cursor-pointer border hover:border-primary-500/30 transition-colors ${cardBgClass} ${cardBorderClass}`}
+                >
+                  {/* Checkbox select */}
+                  <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(lead.id)}
+                      onChange={() => toggleSelect(lead.id)}
+                      className="rounded border-surface-300 dark:border-surface-600 text-primary-500 w-4.5 h-4.5 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Header info */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-500/10 px-2 py-0.5 rounded font-semibold">
+                      {lead.lead_code}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      lead.source_type === 'PULL' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                    }`}>
+                      {lead.source_type}
+                    </span>
+                    {delayed && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 animate-pulse">
+                        Trễ
+                      </span>
+                    )}
+                    {unprocessed && !delayed && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-850 dark:text-amber-400">
+                        Mới
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Parent name */}
+                  <h4 className="text-base font-bold text-surface-800 dark:text-surface-100 mt-2">
+                    {lead.full_name || '—'}
+                  </h4>
+
+                  {/* Child info */}
+                  {(lead.child_name || lead.child_birth_year) && (
+                    <p className="text-xs text-surface-500 mt-0.5">
+                      Con: <strong className="text-surface-700 dark:text-surface-300">{lead.child_name || '—'}</strong> {lead.child_birth_year ? `(${lead.child_birth_year})` : ''}
+                    </p>
+                  )}
+
+                  {/* Address */}
+                  {lead.address && (
+                    <p className="text-xs text-surface-500 mt-0.5 truncate pr-8">
+                      📍 {lead.address}
+                    </p>
+                  )}
+
+                  {/* Note kho kiểm */}
+                  {lead.l1_kk_note && (
+                    <p className="text-xs text-surface-600 dark:text-surface-400 bg-surface-100 dark:bg-surface-800 p-2 rounded-lg mt-2 font-medium">
+                      📝 {lead.l1_kk_note}
+                    </p>
+                  )}
+
+                  {/* Phone & Direct Call */}
+                  {lead.phone && (
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-100 dark:border-surface-800/60">
+                      <span className="font-mono text-sm text-surface-700 dark:text-surface-300 font-semibold">
+                        📞 {lead.phone}
+                      </span>
+                      <a
+                        href={`tel:${lead.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-500/20 transition-colors"
+                        title="Gọi điện trực tiếp"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Center & Staff & Level badges */}
+                  <div className="flex flex-wrap items-center justify-between mt-3 text-[11px] text-surface-500 gap-2">
+                    <span className="font-semibold">🏫 {lead.center_name || 'Chưa gán TT'}</span>
+                    <span className="badge text-[10px] bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20 font-mono">
+                      {lead.level_code}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Pagination */}

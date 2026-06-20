@@ -416,7 +416,8 @@ export default function LeadsPage() {
             <div className="h-full bg-primary-500 animate-pulse w-full" />
           </div>
         )}
-        <div className="overflow-auto max-h-[calc(100vh-320px)] relative">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-auto max-h-[calc(100vh-320px)] relative">
           <table className="data-table" style={{ minWidth: '2080px' }} id="lead-table">
             <thead>
               <tr>
@@ -532,6 +533,116 @@ export default function LeadsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card List View */}
+        <div className="md:hidden overflow-auto max-h-[calc(100vh-320px)] p-2.5 space-y-3 relative bg-surface-50/30 dark:bg-transparent">
+          {loading && leads.length === 0 ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="glass-card p-4 animate-pulse space-y-2">
+                  <div className="h-4 bg-surface-200 dark:bg-surface-700 w-1/4 rounded" />
+                  <div className="h-6 bg-surface-300 dark:bg-surface-600 w-1/2 rounded" />
+                  <div className="h-4 bg-surface-200 dark:bg-surface-700 w-3/4 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : leads.length === 0 ? (
+            <EmptyState icon={HiOutlineUsers} title="Không tìm thấy lead nào"
+              description="Thử thay đổi bộ lọc hoặc thêm lead mới" />
+          ) : (
+            leads.map((lead) => {
+              const milestone = isMilestone(lead.level_code);
+              return (
+                <div
+                  key={lead.id}
+                  onClick={() => { if (!isAdmin || selectedIds.size === 0) setSelectedLead(lead); }}
+                  className={`glass-card p-4 relative cursor-pointer border hover:border-primary-500/30 transition-colors ${
+                    milestone ? 'border-l-4 border-l-accent-500' : ''
+                  } ${
+                    selectedIds.has(lead.id) ? 'bg-primary-50/50 dark:bg-primary-900/10 border-primary-300 dark:border-primary-800' : ''
+                  }`}
+                >
+                  {/* Checkbox select (only for admins) */}
+                  {isAdmin && (
+                    <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(lead.id)}
+                        onChange={(e) => toggleSelectLead(e, lead.id)}
+                        className="rounded border-surface-300 dark:border-surface-600 text-primary-500 w-4.5 h-4.5 cursor-pointer"
+                      />
+                    </div>
+                  )}
+
+                  {/* Header info */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-500/10 px-2 py-0.5 rounded font-semibold">
+                      {lead.lead_code}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      lead.source_type === 'PULL' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                    }`}>
+                      {lead.source_type}
+                    </span>
+                  </div>
+
+                  {/* Parent name */}
+                  <h4 className="text-base font-bold text-surface-800 dark:text-surface-100 mt-2">
+                    {lead.full_name}
+                  </h4>
+
+                  {/* Child info */}
+                  {lead.child_name && (
+                    <p className="text-xs text-surface-500 mt-0.5">
+                      Con: <strong className="text-surface-700 dark:text-surface-300">{lead.child_name}</strong> {lead.child_birth_year ? `(${lead.child_birth_year})` : ''}
+                    </p>
+                  )}
+
+                  {/* Contact phone */}
+                  {lead.phone && (
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-100 dark:border-surface-800/60">
+                      <span className="font-mono text-sm text-surface-700 dark:text-surface-300 font-semibold">
+                        📞 {lead.phone}
+                      </span>
+                      <a
+                        href={`tel:${lead.phone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 hover:bg-primary-500/20 transition-colors"
+                        title="Gọi điện trực tiếp"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Products & Levels */}
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {/* Level UCMAS */}
+                    {lead.lead_product_levels?.some(l => l.product_code === 'UCMAS') && (
+                      <div className="flex-shrink-0">
+                        {renderProductLevelBadge(lead, 'UCMAS')}
+                      </div>
+                    )}
+                    {/* Level UCKID */}
+                    {lead.lead_product_levels?.some(l => l.product_code === 'UCKID') && (
+                      <div className="flex-shrink-0">
+                        {renderProductLevelBadge(lead, 'UCKID')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Center & Staff */}
+                  <div className="flex items-center justify-between mt-2.5 text-[11px] text-surface-500">
+                    <span>🏫 {lead.center_name || 'Chưa gán trung tâm'}</span>
+                    {lead.staff_name && <span>👤 {lead.staff_name}</span>}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
 

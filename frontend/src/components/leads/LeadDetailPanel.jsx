@@ -261,8 +261,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
   return (
     <>
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-slide-in mx-4 will-change-transform" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay items-end sm:items-center" onClick={onClose}>
+      <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-t-2xl rounded-b-none sm:rounded-2xl shadow-xl w-full max-w-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] overflow-hidden animate-slide-in sm:mx-4 will-change-transform" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b border-surface-200 dark:border-surface-700">
           <div>
             <h2 className="text-lg font-semibold text-surface-800 dark:text-surface-100">{lead.full_name}</h2>
@@ -289,10 +289,10 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1 p-1 bg-surface-50 dark:bg-surface-800/30 border-b border-surface-200 dark:border-surface-700">
+        <div className="flex overflow-x-auto flex-nowrap whitespace-nowrap gap-1 p-1 bg-surface-50 dark:bg-surface-800/30 border-b border-surface-200 dark:border-surface-700 scrollbar-none">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 flex-shrink-0 ${
                 activeTab === tab.id
                   ? 'bg-primary-500/20 text-primary-600 dark:text-primary-400 font-semibold'
                   : 'text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200'
@@ -302,11 +302,10 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
           ))}
         </div>
 
-        <div className="p-5 overflow-y-auto max-h-[60vh]">
+        <div className="p-5 overflow-y-auto h-[calc(95vh-125px)] sm:h-auto sm:max-h-[60vh]">
           {activeTab === 'info' && (
             <div className="space-y-4">
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {[
                   { key: 'full_name', label: 'Họ tên phụ huynh', type: 'text' },
                   { key: 'phone', label: 'SĐT', type: 'text' },
@@ -317,7 +316,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   { key: 'address', label: 'Địa chỉ', type: 'text', full: true },
                   { key: 'l1_kk_note', label: 'Ghi chú kho kiểm', type: 'text', full: true },
                 ].map(({ key, label, type, full }) => (
-                  <div key={key} className={full ? 'col-span-2' : ''}>
+                  <div key={key} className={full ? 'col-span-1 sm:col-span-2' : 'col-span-1'}>
                     <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{label}</label>
                     {editing ? (
                       key === 'ad_campaign' ? (
@@ -346,7 +345,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   </div>
                 ))}
 
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Sản phẩm quan tâm</label>
                   {editing ? (
                     <div className="flex flex-wrap gap-4 mt-1">
@@ -381,11 +380,11 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 </div>
 
                 {customFieldsDef.length > 0 && (
-                  <div className="col-span-2 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
+                  <div className="col-span-1 sm:col-span-2 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-surface-500 mb-3">Thông tin bổ sung</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {customFieldsDef.map((field) => (
-                        <div key={field.key} className={field.type === 'text' && field.key.includes('dia_chi') ? 'col-span-2' : ''}>
+                        <div key={field.key} className={field.type === 'text' && field.key.includes('dia_chi') ? 'col-span-1 sm:col-span-2' : 'col-span-1'}>
                           <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">{field.label}</label>
                           {editing ? (
                             field.type === 'select' ? (
@@ -440,7 +439,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 )}
 
                 {/* Doanh thu & Thông tin học sinh */}
-                <div className="col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
+                <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
                   <h4 className="col-span-3 text-xs font-semibold uppercase tracking-wider text-surface-500 flex items-center gap-3 flex-wrap">
                     <span>Thông tin Học sinh & Doanh thu</span>
                     {((form.level_code || lead.level_code || '').startsWith('L4') && editing) && (
@@ -505,8 +504,8 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                   )}
                 </div>
 
-                <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
-                  <h4 className="col-span-2 text-xs font-semibold uppercase tracking-wider text-surface-500">Level theo từng sản phẩm</h4>
+                <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 border-t border-surface-200 dark:border-surface-700/50 pt-4 mt-2">
+                  <h4 className="col-span-1 sm:col-span-2 text-xs font-semibold uppercase tracking-wider text-surface-500">Level theo từng sản phẩm</h4>
                   {editing ? (
                     form.interested_products && form.interested_products.length > 0 ? (
                       form.interested_products.map((p_code) => {
@@ -695,7 +694,7 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
 
               {/* Bug1 fix: separate levelNote for level change */}
               {editing && form.level_code !== lead.level_code && (
-                <div>
+                <div className="col-span-1 sm:col-span-2">
                   <label className="block text-xs font-medium text-surface-500 mb-1">Ghi chú đổi level</label>
                   <textarea value={levelNote} onChange={(e) => setLevelNote(e.target.value)}
                     className="input-field py-2 text-sm h-20" placeholder="Lý do đổi level..." />

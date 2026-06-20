@@ -27,10 +27,22 @@ export default function MultiSelect({
     const dropdownHeight = 280; // ước tính max-height
     const openUpward = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
 
+    const margin = 8;
+    // Giới hạn chiều rộng dropdown không vượt quá chiều rộng màn hình trừ margin
+    let dropdownWidth = Math.max(rect.width, 288);
+    dropdownWidth = Math.min(dropdownWidth, window.innerWidth - margin * 2);
+
+    // Căn trái đảm bảo dropdown nằm gọn trong khung nhìn màn hình
+    let left = rect.left;
+    if (left + dropdownWidth > window.innerWidth - margin) {
+      left = window.innerWidth - dropdownWidth - margin;
+    }
+    left = Math.max(margin, left);
+
     setDropdownStyle({
       position: 'fixed',
-      left: Math.min(rect.left, window.innerWidth - 292), // tránh tràn sang phải
-      width: Math.max(rect.width, 288), // min 288px
+      left: left,
+      width: dropdownWidth,
       zIndex: 9999,
       ...(openUpward
         ? { bottom: window.innerHeight - rect.top + 4 }
