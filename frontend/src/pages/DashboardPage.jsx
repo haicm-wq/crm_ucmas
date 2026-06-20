@@ -768,22 +768,26 @@ export default function DashboardPage() {
             </div>
             
             {/* Column filter tab bar */}
-            <div className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar gap-1 p-0.5 bg-surface-100 dark:bg-surface-800/80 rounded-xl border border-surface-200/40 dark:border-surface-700/40 self-start sm:self-auto max-w-full w-full sm:w-auto">
-              {[
-                { id: 'all', label: 'Tất cả' },
-                { id: 'push', label: 'Nguồn PUSH' },
-                { id: 'pull', label: 'Nguồn PULL' },
-                { id: 'total', label: 'Tổng hợp' },
-                { id: 'cohort', label: 'Báo cáo tồn' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setTableTab(tab.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all duration-200 ${tableTab === tab.id ? 'bg-white dark:bg-surface-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className="relative max-w-full w-full sm:w-auto self-start sm:self-auto">
+              <div className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar gap-1 p-0.5 bg-surface-100 dark:bg-surface-800/80 rounded-xl border border-surface-200/40 dark:border-surface-700/40 w-full pr-8">
+                {[
+                  { id: 'all', label: 'Tất cả' },
+                  { id: 'push', label: 'PUSH' },
+                  { id: 'pull', label: 'PULL' },
+                  { id: 'total', label: 'Tổng hợp' },
+                  { id: 'cohort', label: 'Báo cáo tồn' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setTableTab(tab.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all duration-200 ${tableTab === tab.id ? 'bg-white dark:bg-surface-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              {/* Fade indicator to hint at more items on the right (visible on mobile only) */}
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-surface-800 to-transparent sm:hidden rounded-r-xl"></div>
             </div>
           </div>
 
