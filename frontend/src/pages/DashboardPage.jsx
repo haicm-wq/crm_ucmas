@@ -174,6 +174,7 @@ export default function DashboardPage() {
   const [selectedSourceType, setSelectedSourceType] = useState(isCenter ? 'PULL' : ''); // Center mặc định xem PULL
   const [selectedSubSource, setSelectedSubSource] = useState('');
   const [isL4Expanded, setIsL4Expanded] = useState(false);
+  const [tableTab, setTableTab] = useState('all'); // 'all', 'push', 'pull', 'total', 'cohort'
 
   const [activeFilters, setActiveFilters] = useState({
     from: getFirstDayOfMonth(),
@@ -758,11 +759,32 @@ export default function DashboardPage() {
       {/* Detailed Center Summary Table — HQ only */}
       {isHQ && !isTelesale && byCenterDetailed.length > 0 && (
         <div className="glass-card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-surface-800 dark:text-surface-200">
-              📊 Báo cáo tổng hợp các Trung tâm
-            </h3>
-            <span className="text-[10px] text-surface-500">Đơn vị: data tuyển sinh</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-surface-800 dark:text-surface-200">
+                📊 Báo cáo tổng hợp các Trung tâm
+              </h3>
+              <p className="text-[10px] text-surface-500 mt-0.5">Đơn vị: data tuyển sinh</p>
+            </div>
+            
+            {/* Column filter tab bar */}
+            <div className="flex flex-wrap gap-1 p-0.5 bg-surface-100 dark:bg-surface-800/80 rounded-xl border border-surface-200/40 dark:border-surface-700/40 self-start sm:self-auto">
+              {[
+                { id: 'all', label: 'Tất cả' },
+                { id: 'push', label: 'Nguồn PUSH' },
+                { id: 'pull', label: 'Nguồn PULL' },
+                { id: 'total', label: 'Tổng hợp' },
+                { id: 'cohort', label: 'Báo cáo tồn' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setTableTab(tab.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${tableTab === tab.id ? 'bg-white dark:bg-surface-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="overflow-x-auto border border-surface-200 dark:border-surface-700 rounded-lg shadow-sm">
@@ -772,57 +794,81 @@ export default function DashboardPage() {
                   <th rowSpan={2} className="p-3 sticky left-0 z-40 bg-surface-100 dark:bg-surface-800 border-b-2 border-r-2 border-surface-300 dark:border-surface-600 w-[140px] min-w-[140px] text-center">
                     Trung Tâm
                   </th>
-                  <th colSpan={6} className="p-2 bg-amber-500/10 text-amber-800 dark:text-amber-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
-                    Nguồn PUSH Marketing
-                  </th>
-                  <th colSpan={7} className="p-2 bg-blue-500/10 text-blue-800 dark:text-blue-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
-                    Nguồn PULL Marketing
-                  </th>
-                  <th colSpan={7} className="p-2 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
-                    Tổng
-                  </th>
-                  <th colSpan={10} className="p-2 bg-red-500/10 text-red-800 dark:text-red-300 border-b border-surface-200 dark:border-surface-700 text-center font-bold">
-                    Báo cáo tồn (Cohort trong kỳ)
-                  </th>
+                  {(tableTab === 'all' || tableTab === 'push') && (
+                    <th colSpan={6} className="p-2 bg-amber-500/10 text-amber-800 dark:text-amber-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
+                      Nguồn PUSH Marketing
+                    </th>
+                  )}
+                  {(tableTab === 'all' || tableTab === 'pull') && (
+                    <th colSpan={7} className="p-2 bg-blue-500/10 text-blue-800 dark:text-blue-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
+                      Nguồn PULL Marketing
+                    </th>
+                  )}
+                  {(tableTab === 'all' || tableTab === 'total') && (
+                    <th colSpan={7} className="p-2 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-b border-r border-surface-200 dark:border-surface-700 text-center font-bold">
+                      Tổng
+                    </th>
+                  )}
+                  {(tableTab === 'all' || tableTab === 'cohort') && (
+                    <th colSpan={10} className="p-2 bg-red-500/10 text-red-800 dark:text-red-300 border-b border-surface-200 dark:border-surface-700 text-center font-bold">
+                      Báo cáo tồn (Cohort trong kỳ)
+                    </th>
+                  )}
                 </tr>
                 <tr className="bg-surface-50 dark:bg-surface-800 text-center">
                   {/* PUSH */}
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-amber-700 dark:text-amber-400 font-extrabold">L4/L1</th>
-                  <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-amber-700 dark:text-amber-400 font-extrabold">L3/L1</th>
+                  {(tableTab === 'all' || tableTab === 'push') && (
+                    <>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-amber-700 dark:text-amber-400 font-extrabold">L4/L1</th>
+                      <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-amber-700 dark:text-amber-400 font-extrabold">L3/L1</th>
+                    </>
+                  )}
                   
                   {/* PULL */}
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1 KK</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-blue-700 dark:text-blue-400 font-extrabold">L4/L1</th>
-                  <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-blue-700 dark:text-blue-400 font-extrabold">L3/L1</th>
+                  {(tableTab === 'all' || tableTab === 'pull') && (
+                    <>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1 KK</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-blue-700 dark:text-blue-400 font-extrabold">L4/L1</th>
+                      <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-blue-700 dark:text-blue-400 font-extrabold">L3/L1</th>
+                    </>
+                  )}
 
                   {/* TỔNG */}
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1 KK</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-emerald-700 dark:text-emerald-400 font-extrabold">L4/L1</th>
-                  <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-emerald-700 dark:text-emerald-400 font-extrabold">L3/L1</th>
+                  {(tableTab === 'all' || tableTab === 'total') && (
+                    <>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1 KK</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700 text-emerald-700 dark:text-emerald-400 font-extrabold">L4/L1</th>
+                      <th className="p-2 border-b border-r-2 border-surface-300 dark:border-surface-600 text-emerald-700 dark:text-emerald-400 font-extrabold">L3/L1</th>
+                    </>
+                  )}
 
                   {/* TỒN */}
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1.2</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1.3</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.2A</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.2B</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.3</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3.1</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3.3</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4.1</th>
-                  <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4.2</th>
-                  <th className="p-2 border-b border-surface-200 dark:border-surface-700">L4.3+</th>
+                  {(tableTab === 'all' || tableTab === 'cohort') && (
+                    <>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1.2</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L1.3</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.2A</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.2B</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L2.3</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3.1</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L3.3</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4.1</th>
+                      <th className="p-2 border-b border-r border-surface-200 dark:border-surface-700">L4.2</th>
+                      <th className="p-2 border-b border-surface-200 dark:border-surface-700">L4.3+</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-200 dark:divide-surface-700 bg-white dark:bg-surface-900">
@@ -833,42 +879,58 @@ export default function DashboardPage() {
                     </td>
                     
                     {/* PUSH */}
-                    {renderNumberCell(row.push_l1)}
-                    {renderNumberCell(row.push_l2)}
-                    {renderNumberCell(row.push_l3)}
-                    {renderNumberCell(row.push_l4)}
-                    {renderRateCell(row.push_l4, row.push_l1)}
-                    {renderRateCell(row.push_l3, row.push_l1, true)}
+                    {(tableTab === 'all' || tableTab === 'push') && (
+                      <>
+                        {renderNumberCell(row.push_l1)}
+                        {renderNumberCell(row.push_l2)}
+                        {renderNumberCell(row.push_l3)}
+                        {renderNumberCell(row.push_l4)}
+                        {renderRateCell(row.push_l4, row.push_l1)}
+                        {renderRateCell(row.push_l3, row.push_l1, true)}
+                      </>
+                    )}
 
                     {/* PULL */}
-                    {renderNumberCell(row.pull_l0)}
-                    {renderNumberCell(row.pull_l1)}
-                    {renderNumberCell(row.pull_l2)}
-                    {renderNumberCell(row.pull_l3)}
-                    {renderNumberCell(row.pull_l4)}
-                    {renderRateCell(row.pull_l4, row.pull_l1)}
-                    {renderRateCell(row.pull_l3, row.pull_l1, true)}
+                    {(tableTab === 'all' || tableTab === 'pull') && (
+                      <>
+                        {renderNumberCell(row.pull_l0)}
+                        {renderNumberCell(row.pull_l1)}
+                        {renderNumberCell(row.pull_l2)}
+                        {renderNumberCell(row.pull_l3)}
+                        {renderNumberCell(row.pull_l4)}
+                        {renderRateCell(row.pull_l4, row.pull_l1)}
+                        {renderRateCell(row.pull_l3, row.pull_l1, true)}
+                      </>
+                    )}
 
                     {/* TỔNG */}
-                    {renderNumberCell(row.total_l0)}
-                    {renderNumberCell(row.total_l1)}
-                    {renderNumberCell(row.total_l2)}
-                    {renderNumberCell(row.total_l3)}
-                    {renderNumberCell(row.total_l4)}
-                    {renderRateCell(row.total_l4, row.total_l1)}
-                    {renderRateCell(row.total_l3, row.total_l1, true)}
+                    {(tableTab === 'all' || tableTab === 'total') && (
+                      <>
+                        {renderNumberCell(row.total_l0)}
+                        {renderNumberCell(row.total_l1)}
+                        {renderNumberCell(row.total_l2)}
+                        {renderNumberCell(row.total_l3)}
+                        {renderNumberCell(row.total_l4)}
+                        {renderRateCell(row.total_l4, row.total_l1)}
+                        {renderRateCell(row.total_l3, row.total_l1, true)}
+                      </>
+                    )}
 
                     {/* TỒN */}
-                    {renderNumberCell(row.ton_l1_2)}
-                    {renderNumberCell(row.ton_l1_3)}
-                    {renderNumberCell(row.ton_l2_2a)}
-                    {renderNumberCell(row.ton_l2_2b)}
-                    {renderNumberCell(row.ton_l2_3)}
-                    {renderNumberCell(row.ton_l3_1)}
-                    {renderNumberCell(row.ton_l3_3)}
-                    {renderNumberCell(row.ton_l4_1)}
-                    {renderNumberCell(row.ton_l4_2)}
-                    {renderNumberCell(row.ton_l4_3_plus)}
+                    {(tableTab === 'all' || tableTab === 'cohort') && (
+                      <>
+                        {renderNumberCell(row.ton_l1_2)}
+                        {renderNumberCell(row.ton_l1_3)}
+                        {renderNumberCell(row.ton_l2_2a)}
+                        {renderNumberCell(row.ton_l2_2b)}
+                        {renderNumberCell(row.ton_l2_3)}
+                        {renderNumberCell(row.ton_l3_1)}
+                        {renderNumberCell(row.ton_l3_3)}
+                        {renderNumberCell(row.ton_l4_1)}
+                        {renderNumberCell(row.ton_l4_2)}
+                        {renderNumberCell(row.ton_l4_3_plus)}
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -879,42 +941,58 @@ export default function DashboardPage() {
                   </td>
                   
                   {/* PUSH */}
-                  {renderNumberCell(totals.push_l1)}
-                  {renderNumberCell(totals.push_l2)}
-                  {renderNumberCell(totals.push_l3)}
-                  {renderNumberCell(totals.push_l4)}
-                  {renderRateCell(totals.push_l4, totals.push_l1)}
-                  {renderRateCell(totals.push_l3, totals.push_l1, true)}
+                  {(tableTab === 'all' || tableTab === 'push') && (
+                    <>
+                      {renderNumberCell(totals.push_l1)}
+                      {renderNumberCell(totals.push_l2)}
+                      {renderNumberCell(totals.push_l3)}
+                      {renderNumberCell(totals.push_l4)}
+                      {renderRateCell(totals.push_l4, totals.push_l1)}
+                      {renderRateCell(totals.push_l3, totals.push_l1, true)}
+                    </>
+                  )}
 
                   {/* PULL */}
-                  {renderNumberCell(totals.pull_l0)}
-                  {renderNumberCell(totals.pull_l1)}
-                  {renderNumberCell(totals.pull_l2)}
-                  {renderNumberCell(totals.pull_l3)}
-                  {renderNumberCell(totals.pull_l4)}
-                  {renderRateCell(totals.pull_l4, totals.pull_l1)}
-                  {renderRateCell(totals.pull_l3, totals.pull_l1, true)}
+                  {(tableTab === 'all' || tableTab === 'pull') && (
+                    <>
+                      {renderNumberCell(totals.pull_l0)}
+                      {renderNumberCell(totals.pull_l1)}
+                      {renderNumberCell(totals.pull_l2)}
+                      {renderNumberCell(totals.pull_l3)}
+                      {renderNumberCell(totals.pull_l4)}
+                      {renderRateCell(totals.pull_l4, totals.pull_l1)}
+                      {renderRateCell(totals.pull_l3, totals.pull_l1, true)}
+                    </>
+                  )}
 
                   {/* TỔNG */}
-                  {renderNumberCell(totals.total_l0)}
-                  {renderNumberCell(totals.total_l1)}
-                  {renderNumberCell(totals.total_l2)}
-                  {renderNumberCell(totals.total_l3)}
-                  {renderNumberCell(totals.total_l4)}
-                  {renderRateCell(totals.total_l4, totals.total_l1)}
-                  {renderRateCell(totals.total_l3, totals.total_l1, true)}
+                  {(tableTab === 'all' || tableTab === 'total') && (
+                    <>
+                      {renderNumberCell(totals.total_l0)}
+                      {renderNumberCell(totals.total_l1)}
+                      {renderNumberCell(totals.total_l2)}
+                      {renderNumberCell(totals.total_l3)}
+                      {renderNumberCell(totals.total_l4)}
+                      {renderRateCell(totals.total_l4, totals.total_l1)}
+                      {renderRateCell(totals.total_l3, totals.total_l1, true)}
+                    </>
+                  )}
 
                   {/* TỒN */}
-                  {renderNumberCell(totals.ton_l1_2)}
-                  {renderNumberCell(totals.ton_l1_3)}
-                  {renderNumberCell(totals.ton_l2_2a)}
-                  {renderNumberCell(totals.ton_l2_2b)}
-                  {renderNumberCell(totals.ton_l2_3)}
-                  {renderNumberCell(totals.ton_l3_1)}
-                  {renderNumberCell(totals.ton_l3_3)}
-                  {renderNumberCell(totals.ton_l4_1)}
-                  {renderNumberCell(totals.ton_l4_2)}
-                  {renderNumberCell(totals.ton_l4_3_plus)}
+                  {(tableTab === 'all' || tableTab === 'cohort') && (
+                    <>
+                      {renderNumberCell(totals.ton_l1_2)}
+                      {renderNumberCell(totals.ton_l1_3)}
+                      {renderNumberCell(totals.ton_l2_2a)}
+                      {renderNumberCell(totals.ton_l2_2b)}
+                      {renderNumberCell(totals.ton_l2_3)}
+                      {renderNumberCell(totals.ton_l3_1)}
+                      {renderNumberCell(totals.ton_l3_3)}
+                      {renderNumberCell(totals.ton_l4_1)}
+                      {renderNumberCell(totals.ton_l4_2)}
+                      {renderNumberCell(totals.ton_l4_3_plus)}
+                    </>
+                  )}
                 </tr>
               </tfoot>
             </table>
