@@ -76,7 +76,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 // Custom Premium Multi-select Dropdown
-function MultiSelectDropdown({ label, options, selectedValues, onChange, disabled, placeholder = 'Tất cả' }) {
+function MultiSelectDropdown({ label, options, selectedValues, onChange, disabled, placeholder = 'Tất cả', className = "min-w-[150px] max-w-[220px]" }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -109,7 +109,7 @@ function MultiSelectDropdown({ label, options, selectedValues, onChange, disable
       : `Đã chọn ${selectedLabels.length}`;
 
   return (
-    <div ref={containerRef} className="relative min-w-[150px] max-w-[220px] text-sm">
+    <div ref={containerRef} className={`relative text-sm ${className}`}>
       <label className="block text-xs text-surface-500 mb-1">{label}</label>
       <button
         type="button"
@@ -563,40 +563,40 @@ export default function DashboardPage() {
 
   return (
     <div className={`space-y-6 ${loading ? 'opacity-65 pointer-events-none transition-opacity duration-200' : 'transition-opacity duration-200'}`}>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex justify-between items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-surface-800 dark:text-surface-100">
+          <h1 className="text-xl sm:text-2xl font-bold text-surface-800 dark:text-surface-100">
             {isHQ ? 'Dashboard Tổng quan' : `Dashboard ${data.center?.name || ''}`}
           </h1>
-          <p className="text-sm text-surface-500">
+          <p className="text-xs sm:text-sm text-surface-500 mt-1">
             {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={loadDashboard} className="btn-ghost" aria-label="Làm mới">
-            <HiOutlineRefresh className="w-5 h-5" />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={loadDashboard} className="btn-ghost p-2" aria-label="Làm mới">
+            <HiOutlineRefresh className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Premium Filter Bar */}
-      <div className="glass-card p-4 flex flex-wrap items-end gap-3 bg-surface-50/50 dark:bg-surface-800/10">
-        <div>
+      <div className="glass-card p-4 grid grid-cols-6 sm:flex sm:flex-wrap items-end gap-3 bg-surface-50/50 dark:bg-surface-800/10">
+        <div className="col-span-3 sm:col-span-auto w-full sm:w-auto">
           <label className="block text-xs text-surface-500 mb-1">Từ ngày</label>
           <input 
             type="date" 
             value={from} 
             onChange={(e) => setFrom(e.target.value)}
-            className="input-field py-2 text-sm" 
+            className="input-field py-2 text-sm w-full" 
           />
         </div>
-        <div>
+        <div className="col-span-3 sm:col-span-auto w-full sm:w-auto">
           <label className="block text-xs text-surface-500 mb-1">Đến ngày</label>
           <input 
             type="date" 
             value={to} 
             onChange={(e) => setTo(e.target.value)}
-            className="input-field py-2 text-sm" 
+            className="input-field py-2 text-sm w-full" 
           />
         </div>
 
@@ -608,6 +608,7 @@ export default function DashboardPage() {
             selectedValues={selectedCenters}
             onChange={setSelectedCenters}
             placeholder="Tất cả trung tâm"
+            className="col-span-3 sm:col-span-auto w-full sm:w-auto sm:min-w-[150px] sm:max-w-[220px]"
           />
         )}
 
@@ -618,15 +619,16 @@ export default function DashboardPage() {
           selectedValues={selectedProducts}
           onChange={setSelectedProducts}
           placeholder="Tất cả sản phẩm"
+          className="col-span-3 sm:col-span-auto w-full sm:w-auto sm:min-w-[150px] sm:max-w-[220px]"
         />
 
         {/* Nguồn lead — hiện cho mọi vai trò */}
-        <div>
+        <div className="col-span-3 sm:col-span-auto w-full sm:w-auto">
           <label className="block text-xs text-surface-500 mb-1">Nguồn lead</label>
           <select
             value={selectedSourceType}
             onChange={(e) => setSelectedSourceType(e.target.value)}
-            className="select-field py-2 text-sm"
+            className="select-field py-2 text-sm w-full"
           >
             <option value="">Tất cả nguồn</option>
             <option value="PULL">Chỉ PULL (Quảng cáo)</option>
@@ -635,12 +637,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Nguồn con */}
-        <div>
+        <div className="col-span-3 sm:col-span-auto w-full sm:w-auto">
           <label className="block text-xs text-surface-500 mb-1">Nguồn con</label>
           <select
             value={selectedSubSource}
             onChange={(e) => setSelectedSubSource(e.target.value)}
-            className="select-field py-2 text-sm min-w-[140px]"
+            className="select-field py-2 text-sm w-full"
           >
             <option value="">Tất cả nguồn con</option>
             {filteredSubSources.map((sub) => (
@@ -651,11 +653,11 @@ export default function DashboardPage() {
           </select>
         </div>
 
-        <div className="flex gap-2">
+        <div className="col-span-6 sm:col-span-auto flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <button 
             onClick={handleApplyFilters} 
             disabled={loading}
-            className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-primary text-sm px-4 py-2 flex items-center justify-center gap-1.5 flex-1 sm:flex-none disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -670,7 +672,7 @@ export default function DashboardPage() {
           <button 
             onClick={handleResetFilters} 
             disabled={loading}
-            className="btn-ghost text-sm px-3 py-2 border border-surface-200 dark:border-surface-700 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-ghost text-sm px-3 py-2 flex items-center justify-center flex-1 sm:flex-none border border-surface-200 dark:border-surface-700 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Reset
           </button>

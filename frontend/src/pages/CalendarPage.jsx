@@ -255,54 +255,57 @@ export default function CalendarPage() {
 
       {/* Filters */}
       <div className="glass-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-end gap-3">
           {viewMode === 'list' && (
-            <>
-              <div>
+            <div className="grid grid-cols-2 gap-3 w-full sm:w-auto sm:flex sm:items-end sm:gap-3">
+              <div className="w-full sm:w-auto">
                 <label className="block text-xs text-surface-500 mb-1">Từ ngày</label>
                 <input type="date" value={filters.from}
                   onChange={(e) => setFilters({ ...filters, from: e.target.value })}
-                  className="input-field py-2 text-sm" />
+                  className="input-field py-2 text-sm w-full" />
               </div>
-              <div>
+              <div className="w-full sm:w-auto">
                 <label className="block text-xs text-surface-500 mb-1">Đến ngày</label>
                 <input type="date" value={filters.to}
                   onChange={(e) => setFilters({ ...filters, to: e.target.value })}
-                  className="input-field py-2 text-sm" />
+                  className="input-field py-2 text-sm w-full" />
               </div>
-            </>
-          )}
-          {showCenterFilter && (
-            <div>
-              <label className="block text-xs text-surface-500 mb-1">Trung tâm</label>
-              <select value={filters.center_id}
-                onChange={(e) => setFilters({ ...filters, center_id: e.target.value })}
-                className="select-field py-2 text-sm">
-                <option value="">Tất cả</option>
-                {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-              </select>
             </div>
           )}
-          <div>
-            <label className="block text-xs text-surface-500 mb-1">Trạng thái</label>
-            <select value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-              className="select-field py-2 text-sm">
-              <option value="">Tất cả</option>
-              <option value="scheduled">Đã hẹn</option>
-              <option value="attended">Đã học thử</option>
-              <option value="missed">Bỏ lỡ</option>
-              <option value="cancelled">Hủy</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-surface-500 mb-1">Sale đặt lịch</label>
-            <select value={filters.assigned_staff}
-              onChange={(e) => setFilters({ ...filters, assigned_staff: e.target.value })}
-              className="select-field py-2 text-sm">
-              <option value="">Tất cả</option>
-              {(allStaff || []).map((s) => (<option key={s.id} value={s.id}>{s.full_name}</option>))}
-            </select>
+          
+          <div className={`grid ${showCenterFilter ? 'grid-cols-3' : 'grid-cols-2'} gap-3 w-full sm:w-auto sm:flex sm:items-end sm:gap-3`}>
+            {showCenterFilter && (
+              <div className="w-full sm:w-auto">
+                <label className="block text-xs text-surface-500 mb-1">Trung tâm</label>
+                <select value={filters.center_id}
+                  onChange={(e) => setFilters({ ...filters, center_id: e.target.value })}
+                  className="select-field py-2 text-sm w-full">
+                  <option value="">Tất cả</option>
+                  {centers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+            )}
+            <div className="w-full sm:w-auto">
+              <label className="block text-xs text-surface-500 mb-1">Trạng thái</label>
+              <select value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="select-field py-2 text-sm w-full">
+                <option value="">Tất cả</option>
+                <option value="scheduled">Đã hẹn</option>
+                <option value="attended">Đã học thử</option>
+                <option value="missed">Bỏ lỡ</option>
+                <option value="cancelled">Hủy</option>
+              </select>
+            </div>
+            <div className="w-full sm:w-auto">
+              <label className="block text-xs text-surface-500 mb-1">Sale đặt lịch</label>
+              <select value={filters.assigned_staff}
+                onChange={(e) => setFilters({ ...filters, assigned_staff: e.target.value })}
+                className="select-field py-2 text-sm w-full">
+                <option value="">Tất cả</option>
+                {(allStaff || []).map((s) => (<option key={s.id} value={s.id}>{s.full_name}</option>))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
