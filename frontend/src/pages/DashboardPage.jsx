@@ -768,7 +768,7 @@ export default function DashboardPage() {
             </div>
             
             {/* Column filter tab bar */}
-            <div className="flex flex-wrap gap-1 p-0.5 bg-surface-100 dark:bg-surface-800/80 rounded-xl border border-surface-200/40 dark:border-surface-700/40 self-start sm:self-auto">
+            <div className="flex flex-row flex-nowrap overflow-x-auto no-scrollbar gap-1 p-0.5 bg-surface-100 dark:bg-surface-800/80 rounded-xl border border-surface-200/40 dark:border-surface-700/40 self-start sm:self-auto max-w-full w-full sm:w-auto">
               {[
                 { id: 'all', label: 'Tất cả' },
                 { id: 'push', label: 'Nguồn PUSH' },
@@ -779,7 +779,7 @@ export default function DashboardPage() {
                 <button
                   key={tab.id}
                   onClick={() => setTableTab(tab.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${tableTab === tab.id ? 'bg-white dark:bg-surface-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'}`}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all duration-200 ${tableTab === tab.id ? 'bg-white dark:bg-surface-700 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-surface-500 hover:text-surface-800 dark:hover:text-surface-200'}`}
                 >
                   {tab.label}
                 </button>
