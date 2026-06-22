@@ -659,8 +659,20 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                 <div>
                   <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">Lịch học thử</label>
                   {editing ? (
-                    <CustomDateTimePicker value={form.trial_appointment_at}
-                      onChange={(val) => setForm({ ...form, trial_appointment_at: val })} />
+                    <div className="flex items-center gap-2">
+                      <CustomDateTimePicker value={form.trial_appointment_at}
+                        onChange={(val) => setForm({ ...form, trial_appointment_at: val })} />
+                      {isAdmin && form.trial_appointment_at && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, trial_appointment_at: '' })}
+                          className="px-2.5 py-2 text-xs font-semibold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-colors flex-shrink-0"
+                          title="Xóa lịch hẹn"
+                        >
+                          Xóa
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <p className="text-sm text-surface-800 dark:text-surface-200 font-medium">{formatDt(lead.trial_appointment_at)}</p>
                   )}

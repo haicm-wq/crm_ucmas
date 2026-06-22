@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useDebounce } from '../hooks/useShared';
 import { formatDateYmd } from '../utils/format';
@@ -101,17 +102,22 @@ function CalendarGridView({ appointments, currentMonth, onMonthChange }) {
 // ─── Main CalendarPage ──────────────────────────────────────
 export default function CalendarPage() {
   const { centers, allStaff } = useSharedData();
+  const [searchParams] = useSearchParams();
+  const paramFrom = searchParams.get('from');
+  const paramTo = searchParams.get('to');
+  const paramExpand = searchParams.get('expand');
+
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useState(paramExpand || null);
   const [viewMode, setViewMode] = useState('list'); // list | grid
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(paramFrom ? new Date(paramFrom) : new Date());
   const { user, isAdmin, isMarketing, isLeadTelesale } = useAuth();
   const showCenterFilter = isAdmin || isMarketing || isLeadTelesale;
 
   const [filters, setFilters] = useState({
-    from: formatDateYmd(new Date(new Date().setDate(1))),
-    to: formatDateYmd(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)),
+    from: paramFrom || formatDateYmd(new Date(new Date().setDate(1))),
+    to: paramTo || formatDateYmd(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)),
     center_id: !showCenterFilter && user?.permission_group === 'center' ? (user?.center_id || '') : '',
     status: '',
     assigned_staff: '',

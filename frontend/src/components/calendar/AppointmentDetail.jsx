@@ -184,6 +184,28 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                 >
                   Đổi lịch
                 </button>
+                {isAdmin && appt.trial_appointment_at && (
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("Bạn có chắc chắn muốn xóa lịch hẹn của lead này không?")) {
+                        setUpdating(true);
+                        try {
+                          await updateLead(appt.id, { trial_appointment_at: null }, 'Xóa lịch hẹn học thử');
+                          toast.success('Đã xóa lịch hẹn học thử');
+                          if (onUpdate) onUpdate();
+                        } catch (err) {
+                          toast.error('Lỗi xóa lịch hẹn: ' + (err.message || ''));
+                        } finally {
+                          setUpdating(false);
+                        }
+                      }
+                    }}
+                    disabled={updating}
+                    className="px-2.5 py-2 text-xs font-semibold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg transition-colors flex-shrink-0"
+                  >
+                    Xóa
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-xs font-medium text-surface-700 dark:text-surface-300 pl-5.5 py-1">

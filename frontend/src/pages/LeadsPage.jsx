@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSharedData } from '../contexts/SharedDataProvider';
 import { useAuth } from '../contexts/AuthContext';
 import { useDebounce, useSupabaseRealtime } from '../hooks/useShared';
 import { fetchLeads, fetchProductLevels, softDeleteLeads } from '../services/api';
 import { getLevelInfo, isMilestone, ALL_LEVEL_CODES } from '../config/levels';
 import { PRODUCTS, PAGE_SIZE_OPTIONS } from '../config/constants';
-import { formatDate } from '../utils/format';
+import { formatDate, formatDateTime, formatDateYmd } from '../utils/format';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import BulkImportModal from '../components/leads/BulkImportModal';
 import CreateLeadModal from '../components/leads/CreateLeadModal';
@@ -43,6 +43,7 @@ export default function LeadsPage() {
   const { centers, allStaff } = useSharedData();
   const { isAdmin } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
@@ -418,7 +419,7 @@ export default function LeadsPage() {
         )}
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-auto max-h-[calc(100vh-320px)] relative">
-          <table className="data-table" style={{ minWidth: '2080px' }} id="lead-table">
+          <table className="data-table" style={{ minWidth: '2230px' }} id="lead-table">
             <thead>
               <tr>
                 {isAdmin && (
@@ -437,12 +438,13 @@ export default function LeadsPage() {
                 <th className="w-[80px]">Năm sinh con</th>
                 <th className="w-full min-w-[130px]">Trung tâm</th>
                 <th className="w-[130px]">Sale đặt lịch</th>
-                <th className="w-[110px]">Mã học sinh</th>
-                <th className="w-[130px]">Doanh thu</th>
                 <th className="w-[70px]">Nguồn</th>
                 <th className="w-[110px]">Sản phẩm</th>
                 <th className="w-[95px]">Level UCMAS</th>
                 <th className="w-[95px]">Level UCKID</th>
+                <th className="w-[150px]">Lịch hẹn</th>
+                <th className="w-[110px]">Mã học sinh</th>
+                <th className="w-[130px]">Doanh thu</th>
                 <th className="w-[85px]">L1 UCMAS</th>
                 <th className="w-[85px]">L2 UCMAS</th>
                 <th className="w-[85px]">L3 UCMAS</th>
@@ -457,9 +459,9 @@ export default function LeadsPage() {
             </thead>
             <tbody className={loading && leads.length > 0 ? "opacity-60 transition-opacity duration-200 pointer-events-none" : "transition-opacity duration-200"}>
               {loading && leads.length === 0 ? (
-                <tr><td colSpan={isAdmin ? 24 : 23} className="p-0"><TableSkeleton rows={8} cols={isAdmin ? 24 : 23} /></td></tr>
+                <tr><td colSpan={isAdmin ? 25 : 24} className="p-0"><TableSkeleton rows={8} cols={isAdmin ? 25 : 24} /></td></tr>
               ) : leads.length === 0 ? (
-                <tr><td colSpan={isAdmin ? 24 : 23}>
+                <tr><td colSpan={isAdmin ? 25 : 24}>
                   <EmptyState icon={HiOutlineUsers} title="Không tìm thấy lead nào"
                     description="Thử thay đổi bộ lọc hoặc thêm lead mới" />
                 </td></tr>
@@ -491,10 +493,6 @@ export default function LeadsPage() {
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.child_birth_year || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.center_name || '—'}</td>
                       <td className="text-surface-800 dark:text-surface-200 text-sm font-medium">{lead.staff_name || '—'}</td>
-                      <td className="text-surface-800 dark:text-surface-200 font-mono text-sm font-medium">{lead.student_code || '—'}</td>
-                      <td className="text-surface-800 dark:text-surface-200 text-sm font-bold font-mono">
-                        {((lead.tuition_fee || 0) + (lead.material_fee || 0)).toLocaleString('vi-VN')} đ
-                      </td>
                       <td><span className={`text-sm font-semibold ${lead.source_type === 'PULL' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`}>{lead.source_type}</span></td>
                       <td>
                         <div className="flex flex-wrap gap-1">
@@ -514,6 +512,34 @@ export default function LeadsPage() {
                       {/* Level UCKID */}
                       <td>
                         {renderProductLevelBadge(lead, 'UCKID')}
+                      </td>
+                      {/* Lịch hẹn */}
+                      <td 
+                        onClick={(e) => {
+                          if (lead.trial_appointment_at) {
+                            e.stopPropagation();
+                            const dateYmd = formatDateYmd(lead.trial_appointment_at);
+                            navigate(`/lich-hen?from=${dateYmd}&to=${dateYmd}&expand=${lead.id}`);
+                          }
+                        }}
+                        className={`text-sm font-mono font-medium ${
+                          lead.trial_appointment_at 
+                            ? 'text-primary-600 hover:text-primary-800 underline cursor-pointer' 
+                            : lead.level_code === 'L2.2B'
+                              ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 font-bold border border-red-200 dark:border-red-900/30'
+                              : 'text-surface-500'
+                        }`}
+                      >
+                        {lead.trial_appointment_at 
+                          ? formatDateTime(lead.trial_appointment_at)
+                          : lead.level_code === 'L2.2B'
+                            ? '⚠️ Thiếu lịch hẹn!'
+                            : '—'
+                        }
+                      </td>
+                      <td className="text-surface-800 dark:text-surface-200 font-mono text-sm font-medium">{lead.student_code || '—'}</td>
+                      <td className="text-surface-800 dark:text-surface-200 text-sm font-bold font-mono">
+                        {((lead.tuition_fee || 0) + (lead.material_fee || 0)).toLocaleString('vi-VN')} đ
                       </td>
                       {/* L1 -> L4 UCMAS */}
                       <td className="text-sm font-mono">{renderTimeCell(getProductLevelTime(lead, 'UCMAS', 'L1'))}</td>
