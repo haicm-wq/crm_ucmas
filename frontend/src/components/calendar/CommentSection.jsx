@@ -8,8 +8,8 @@ export default function CommentSection({ leadId, apptStatus, refreshKey }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingCmt, setLoadingCmt] = useState(true);
-  const [checkingMissed, setCheckingMissed] = useState(false);
   const scrollRef = useRef(null);
+  const isAddingMissed = useRef(false);
 
   const loadComments = useCallback(async () => {
     try {
@@ -26,7 +26,7 @@ export default function CommentSection({ leadId, apptStatus, refreshKey }) {
   useEffect(() => { loadComments(); }, [loadComments, refreshKey]);
 
   useEffect(() => {
-    if (loadingCmt || checkingMissed || apptStatus !== 'missed') return;
+    if (loadingCmt || isAddingMissed.current || apptStatus !== 'missed') return;
 
     const hasMissedCmt = comments.some(c =>
       c.content.includes('Lịch hẹn đã bị bỏ lỡ') ||
@@ -34,15 +34,17 @@ export default function CommentSection({ leadId, apptStatus, refreshKey }) {
     );
 
     if (!hasMissedCmt) {
-      setCheckingMissed(true);
+      isAddingMissed.current = true;
       addAppointmentComment(leadId, 'Hệ thống: Lịch hẹn đã bị bỏ lỡ (quá 6 tiếng từ giờ hẹn nhưng chưa được chuyển trạng thái L3/L4).')
         .then(() => {
           loadComments();
         })
-        .catch(err => console.error('Lỗi tự động thêm bình luận bỏ lỡ:', err))
-        .finally(() => setCheckingMissed(false));
+        .catch(err => {
+          console.error('Lỗi tự động thêm bình luận bỏ lỡ:', err);
+          isAddingMissed.current = false;
+        });
     }
-  }, [comments, loadingCmt, apptStatus, leadId, checkingMissed, loadComments]);
+  }, [comments, loadingCmt, apptStatus, leadId, loadComments]);
 
   const handleSend = async () => {
     if (!text.trim() || sending) return;

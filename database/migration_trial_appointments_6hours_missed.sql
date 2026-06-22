@@ -133,4 +133,30 @@ AFTER INSERT OR UPDATE ON appointment_reminders
 FOR EACH ROW
 EXECUTE FUNCTION fn_log_reminder_changes();
 
+-- 4. Ngăn chặn trùng lặp thông báo hệ thống về lịch bị bỏ lỡ
+DROP TRIGGER IF EXISTS trg_prevent_duplicate_missed_comment ON appointment_comments;
+DROP FUNCTION IF EXISTS fn_prevent_duplicate_missed_comment();
+
+CREATE OR REPLACE FUNCTION fn_prevent_duplicate_missed_comment()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.content LIKE 'Hệ thống: Lịch hẹn đã bị bỏ lỡ%' OR NEW.content LIKE 'Hệ thống: Lịch hẹn bị bỏ lỡ%' THEN
+    IF EXISTS (
+      SELECT 1 FROM appointment_comments 
+      WHERE lead_id = NEW.lead_id 
+        AND (content LIKE 'Hệ thống: Lịch hẹn đã bị bỏ lỡ%' OR content LIKE 'Hệ thống: Lịch hẹn bị bỏ lỡ%')
+    ) THEN
+      -- Bỏ qua dòng insert này bằng cách trả về NULL
+      RETURN NULL;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trg_prevent_duplicate_missed_comment
+BEFORE INSERT ON appointment_comments
+FOR EACH ROW
+EXECUTE FUNCTION fn_prevent_duplicate_missed_comment();
+
 NOTIFY pgrst, 'reload schema';
