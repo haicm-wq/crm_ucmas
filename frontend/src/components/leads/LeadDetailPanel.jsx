@@ -140,6 +140,40 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
     try { setSiblings(await fetchSiblings(lead.id)); } catch (err) { console.error(err); }
   }, [lead.id]);
 
+  // Đồng bộ form.level_code dựa trên level cao nhất của các sản phẩm quan tâm (tương thích ngược)
+  useEffect(() => {
+    if (!editing) return;
+    const interested = form.interested_products || [];
+    if (interested.length === 0) return;
+
+    let maxLvlCode = null;
+    let maxSortOrder = -1;
+
+    interested.forEach((p_code) => {
+      const currentLvlCode = formProductLevels[p_code] || 'L1.KK';
+      const lvlDef = allProductLevels.find(
+        (l) => l.product_code === p_code && l.level_code === currentLvlCode
+      );
+      if (lvlDef) {
+        if (lvlDef.sort_order > maxSortOrder) {
+          maxSortOrder = lvlDef.sort_order;
+          maxLvlCode = currentLvlCode;
+        }
+      } else {
+        // Fallback
+        const fallbackSort = currentLvlCode === 'L1.KK' ? 1 : 0;
+        if (fallbackSort > maxSortOrder) {
+          maxSortOrder = fallbackSort;
+          maxLvlCode = currentLvlCode;
+        }
+      }
+    });
+
+    if (maxLvlCode && maxLvlCode !== form.level_code) {
+      setForm((prev) => ({ ...prev, level_code: maxLvlCode }));
+    }
+  }, [formProductLevels, form.interested_products, allProductLevels, editing]);
+
   const handleSave = async () => {
     // Frontend validation
     if (form.phone) {
@@ -512,15 +546,15 @@ export default function LeadDetailPanel({ lead, centers, onClose, onUpdate }) {
                         const prodLvls = allProductLevels.filter(l => l.product_code === p_code);
                         const isGraduated = !['L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
                         const filteredProdLvls = prodLvls.filter((lvl) => {
-                          // Leads đã tốt nghiệp (không thuộc kho kiểm) → ẩn các base levels của kho kiểm
-                          if (isGraduated && ['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
+                          // Leads đã tốt nghiệp (không thuộc kho kiểm) → ẩn các base levels của kho kiểm (Trừ Admin)
+                          if (!isAdmin && isGraduated && ['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
                             return false;
                           }
                           // Leads còn ở kho kiểm → chỉ hiện L1.KK/L0.R/L0.K nếu lead gốc hoặc đang chọn
                           if (['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
                             const isOriginalPool = ['L1.KK', 'L0.R', 'L0.K'].includes(lead.level_code);
                             const isCurrentlySelected = formProductLevels[p_code] === lvl.level_code;
-                            return isOriginalPool || isCurrentlySelected;
+                            return isOriginalPool || isCurrentlySelected || isAdmin;
                           }
                           return true;
                         });
