@@ -8,13 +8,21 @@ import CommentSection from './CommentSection';
 import toast from 'react-hot-toast';
 import CustomDateTimePicker from '../ui/CustomDateTimePicker';
 import { toDatetimeLocal, toIsoUtcString } from '../../utils/format';
+import { supabase } from '../../lib/supabase';
 
 export default function AppointmentDetail({ appt, onUpdate }) {
   const { user, isAdmin, isMarketing, isCenter, isTelesale, isLeadTelesale } = useAuth();
-  const { centers, allStaff } = useSharedData();
+  const { centers, allStaff, productLevels } = useSharedData();
   const [reminders, setReminders] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [leadProductLevels, setLeadProductLevels] = useState([]);
+  const [savingLevels, setSavingLevels] = useState(false);
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
 
   const canAssign = isAdmin || isMarketing || isLeadTelesale;
   const canEditAppointment = isAdmin || isLeadTelesale || isMarketing ||
@@ -26,6 +34,22 @@ export default function AppointmentDetail({ appt, onUpdate }) {
   useEffect(() => {
     setNewApptTime(toDatetimeLocal(appt.trial_appointment_at));
   }, [appt.trial_appointment_at]);
+
+  const loadLeadProductLevels = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('lead_product_levels')
+        .select('*')
+        .eq('lead_id', appt.id);
+      setLeadProductLevels(data || []);
+    } catch (err) {
+      console.error('Lỗi tải level sản phẩm:', err);
+    }
+  }, [appt.id]);
+
+  useEffect(() => {
+    loadLeadProductLevels();
+  }, [loadLeadProductLevels]);
 
   const loadReminders = useCallback(async () => {
     try {
@@ -78,6 +102,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
       const formattedIso = toIsoUtcString(newApptTime);
       await updateLead(appt.id, { trial_appointment_at: formattedIso }, 'Đổi lịch hẹn học thử');
       toast.success('Đã đổi lịch hẹn học thử');
+      triggerRefresh();
       if (onUpdate) onUpdate();
     } catch (err) {
       toast.error('Lỗi đổi lịch hẹn: ' + (err.message || ''));
@@ -192,6 +217,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
                         try {
                           await updateLead(appt.id, { trial_appointment_at: null }, 'Xóa lịch hẹn học thử');
                           toast.success('Đã xóa lịch hẹn học thử');
+                          triggerRefresh();
                           if (onUpdate) onUpdate();
                         } catch (err) {
                           toast.error('Lỗi xóa lịch hẹn: ' + (err.message || ''));
@@ -221,6 +247,78 @@ export default function AppointmentDetail({ appt, onUpdate }) {
         )}
       </div>
 
+      {/* Level theo sản phẩm */}
+      <div className="bg-surface-50 dark:bg-surface-800/40 p-4 rounded-xl border border-surface-200/50 dark:border-surface-700/30">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-surface-500 mb-3">Level theo từng sản phẩm</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {appt.interested_products && appt.interested_products.map((p_code) => {
+            const prodLvls = (productLevels || []).filter(l => l.product_code === p_code);
+            const isGraduated = !['L1.KK', 'L0.R', 'L0.K'].includes(appt.level_code);
+            const filteredProdLvls = prodLvls.filter((lvl) => {
+              if (!isAdmin && isGraduated && ['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
+                return false;
+              }
+              if (['L1.KK', 'L0.R', 'L0.K'].includes(lvl.level_code)) {
+                const isOriginalPool = ['L1.KK', 'L0.R', 'L0.K'].includes(appt.level_code);
+                const currentLvl = leadProductLevels.find(l => l.product_code === p_code)?.level_code || 'L1.KK';
+                const isCurrentlySelected = currentLvl === lvl.level_code;
+                return isOriginalPool || isCurrentlySelected || isAdmin;
+              }
+              return true;
+            });
+
+            const currentLvl = leadProductLevels.find(l => l.product_code === p_code)?.level_code || 'L1.KK';
+            
+            return (
+              <div key={p_code} className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-surface-500">Level {p_code}</label>
+                {canEditAppointment ? (
+                  <select
+                    value={currentLvl}
+                    onChange={async (e) => {
+                      const newLvl = e.target.value;
+                      setSavingLevels(true);
+                      try {
+                        const { error } = await supabase.rpc('rpc_update_lead_product_level', {
+                          p_lead_id: appt.id,
+                          p_product_code: p_code,
+                          p_level_code: newLvl,
+                          p_note: `Cập nhật Level ${p_code} từ Lịch hẹn học thử`,
+                        });
+                        if (error) throw error;
+                        toast.success(`Đã cập nhật Level ${p_code} thành ${newLvl}`);
+                        await loadLeadProductLevels();
+                        triggerRefresh();
+                        if (onUpdate) onUpdate();
+                      } catch (err) {
+                        toast.error('Lỗi cập nhật level: ' + (err.message || ''));
+                      } finally {
+                        setSavingLevels(false);
+                      }
+                    }}
+                    disabled={savingLevels}
+                    className="select-field text-xs py-1.5 px-3"
+                  >
+                    {filteredProdLvls.map((lvl) => (
+                      <option key={lvl.level_code} value={lvl.level_code}>
+                        {lvl.level_code} — {lvl.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-xs font-medium text-surface-700 dark:text-surface-300">
+                    {currentLvl}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+          {(!appt.interested_products || appt.interested_products.length === 0) && (
+            <p className="text-xs text-surface-500 col-span-2">Không có sản phẩm quan tâm nào được thiết lập.</p>
+          )}
+        </div>
+      </div>
+
       <div className="border-t border-surface-200 dark:border-surface-700" />
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -230,7 +328,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
           label="Sale nhắc lịch"
           icon={HiOutlinePhone}
           reminder={saleReminder}
-          onUpdate={loadReminders}
+          onUpdate={() => { loadReminders(); triggerRefresh(); }}
         />
         <div className="hidden sm:block w-px bg-surface-200 dark:bg-surface-700" />
         <ReminderSection
@@ -239,11 +337,11 @@ export default function AppointmentDetail({ appt, onUpdate }) {
           label="Trung tâm nhắc lịch"
           icon={HiOutlineOfficeBuilding}
           reminder={centerReminder}
-          onUpdate={loadReminders}
+          onUpdate={() => { loadReminders(); triggerRefresh(); }}
         />
       </div>
       <div className="border-t border-surface-200 dark:border-surface-700" />
-      <CommentSection leadId={appt.id} />
+      <CommentSection leadId={appt.id} apptStatus={appt.appt_status} refreshKey={refreshKey} />
     </div>
   );
 }

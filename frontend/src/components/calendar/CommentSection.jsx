@@ -3,11 +3,12 @@ import { fetchAppointmentComments, addAppointmentComment } from '../../services/
 import toast from 'react-hot-toast';
 import { HiOutlineChat } from 'react-icons/hi';
 
-export default function CommentSection({ leadId }) {
+export default function CommentSection({ leadId, apptStatus, refreshKey }) {
   const [comments, setComments] = useState([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingCmt, setLoadingCmt] = useState(true);
+  const [checkingMissed, setCheckingMissed] = useState(false);
   const scrollRef = useRef(null);
 
   const loadComments = useCallback(async () => {
@@ -22,7 +23,26 @@ export default function CommentSection({ leadId }) {
     }
   }, [leadId]);
 
-  useEffect(() => { loadComments(); }, [loadComments]);
+  useEffect(() => { loadComments(); }, [loadComments, refreshKey]);
+
+  useEffect(() => {
+    if (loadingCmt || checkingMissed || apptStatus !== 'missed') return;
+
+    const hasMissedCmt = comments.some(c =>
+      c.content.includes('Lịch hẹn đã bị bỏ lỡ') ||
+      c.content.includes('Lịch hẹn bị bỏ lỡ')
+    );
+
+    if (!hasMissedCmt) {
+      setCheckingMissed(true);
+      addAppointmentComment(leadId, 'Hệ thống: Lịch hẹn đã bị bỏ lỡ (quá 6 tiếng từ giờ hẹn nhưng chưa được chuyển trạng thái L3/L4).')
+        .then(() => {
+          loadComments();
+        })
+        .catch(err => console.error('Lỗi tự động thêm bình luận bỏ lỡ:', err))
+        .finally(() => setCheckingMissed(false));
+    }
+  }, [comments, loadingCmt, apptStatus, leadId, checkingMissed, loadComments]);
 
   const handleSend = async () => {
     if (!text.trim() || sending) return;
