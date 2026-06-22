@@ -132,7 +132,7 @@ BEGIN
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_schema = 'auth' AND table_name = 'users'
-        AND column_name IN ('confirmation_token', 'recovery_token', 'email_change_token_new', 'email_change_token_current', 'email_change', 'reauthentication_token')
+        AND column_name IN ('confirmation_token', 'recovery_token', 'email_change_token_new', 'email_change_token_current', 'email_change', 'reauthentication_token', 'phone_change_token')
     LOOP
       query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = '''' WHERE ' || quote_ident(col.column_name) || ' IS NULL;';
       EXECUTE query_str;
@@ -145,6 +145,16 @@ BEGIN
         AND column_name IN ('is_sso_user', 'is_anonymous')
     LOOP
       query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = false WHERE ' || quote_ident(col.column_name) || ' IS NULL;';
+      EXECUTE query_str;
+    END LOOP;
+
+    FOR col IN 
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'auth' AND table_name = 'users'
+        AND column_name IN ('email_change_confirm_status')
+    LOOP
+      query_str := 'UPDATE auth.users SET ' || quote_ident(col.column_name) || ' = 0 WHERE ' || quote_ident(col.column_name) || ' IS NULL;';
       EXECUTE query_str;
     END LOOP;
   END;
