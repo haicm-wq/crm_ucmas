@@ -341,7 +341,7 @@ export default function AppointmentDetail({ appt, onUpdate }) {
         />
       </div>
       <div className="border-t border-surface-200 dark:border-surface-700" />
-      <CommentSection leadId={appt.id} apptStatus={appt.appt_status} refreshKey={refreshKey} />
+      <CommentSection leadId={appt.id} apptStatus={appt.appt_status} refreshKey={refreshKey} trialAppointmentAt={appt.trial_appointment_at} />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { fetchAppointmentComments, addAppointmentComment } from '../../services/
 import toast from 'react-hot-toast';
 import { HiOutlineChat } from 'react-icons/hi';
 
-export default function CommentSection({ leadId, apptStatus, refreshKey }) {
+export default function CommentSection({ leadId, apptStatus, refreshKey, trialAppointmentAt }) {
   const [comments, setComments] = useState([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -26,16 +26,22 @@ export default function CommentSection({ leadId, apptStatus, refreshKey }) {
   useEffect(() => { loadComments(); }, [loadComments, refreshKey]);
 
   useEffect(() => {
-    if (loadingCmt || isAddingMissed.current || apptStatus !== 'missed') return;
+    if (loadingCmt || isAddingMissed.current || apptStatus !== 'missed' || !trialAppointmentAt) return;
 
-    const hasMissedCmt = comments.some(c =>
-      c.content.includes('Lịch hẹn đã bị bỏ lỡ') ||
-      c.content.includes('Lịch hẹn bị bỏ lỡ')
-    );
+    const formattedTime = new Date(trialAppointmentAt).toLocaleString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const missedText = `Hệ thống: Lịch hẹn lúc ${formattedTime} đã bị bỏ lỡ (quá 6 tiếng từ giờ hẹn nhưng chưa được chuyển trạng thái L3/L4).`;
+
+    const hasMissedCmt = comments.some(c => c.content === missedText);
 
     if (!hasMissedCmt) {
       isAddingMissed.current = true;
-      addAppointmentComment(leadId, 'Hệ thống: Lịch hẹn đã bị bỏ lỡ (quá 6 tiếng từ giờ hẹn nhưng chưa được chuyển trạng thái L3/L4).')
+      addAppointmentComment(leadId, missedText)
         .then(() => {
           loadComments();
         })
@@ -44,7 +50,7 @@ export default function CommentSection({ leadId, apptStatus, refreshKey }) {
           isAddingMissed.current = false;
         });
     }
-  }, [comments, loadingCmt, apptStatus, leadId, loadComments]);
+  }, [comments, loadingCmt, apptStatus, leadId, trialAppointmentAt, loadComments]);
 
   const handleSend = async () => {
     if (!text.trim() || sending) return;
